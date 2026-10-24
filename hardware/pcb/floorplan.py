@@ -640,7 +640,7 @@ def draw_stackup(path: str) -> None:
     svg.text(SX(head_x1 + 0.3), SZ(lens_z + 3.8), "24-pin FPC (exits the head sideways, loops back)", size=8, fill="#e67e22")
     # lens axis
     svg.line(SX(barrel_x0 - 2.5), SZ(lens_z), SX(1.0), SZ(lens_z), stroke="#c0392b", sw=0.8, dash="6 3")
-    svg.text(SX(head_x1 + 0.2), SZ(lens_z) - 8, f"lens axis z = {lens_z:.1f}", size=9, fill="#c0392b")
+    svg.text(SX(barrel_x0 - POD["wall"]) - 48, SZ(lens_z) - 8, f"lens axis z = {lens_z:.1f}", size=9, fill="#c0392b", anchor="end")
     # pod walls
     pod_front = barrel_x0 - POD["wall"] + POD["barrel_len"] * 0 - 0.0   # barrel front flush with the pod face
     pod_front = barrel_x0
