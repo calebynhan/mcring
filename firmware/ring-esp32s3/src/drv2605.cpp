@@ -45,7 +45,7 @@ bool drv2605_init(bool lra, uint8_t addr) {
   // Feedback control: bit7 N_ERM_LRA, FB_BRAKE_FACTOR=3 (bits 6:4 = 011), LOOP_GAIN=1 (bits 3:2 = 01)
   wr(REG_FEEDBACK, (lra ? 0x80 : 0x00) | 0x36);
   if (lra) {
-    wr(REG_RATED_V, 0x3E);                  // ~1.8 Vrms for 8 mm 235 Hz LRA (tune per datasheet)
+    wr(REG_RATED_V, 0x3E);                  // ≈1.6 Vrms at 235 Hz per the DRV2605L RATED_VOLTAGE formula (docs/build-helpers/tuning_calc.py); raise to 0x46 for a 1.8 Vrms part
     wr(REG_OD_CLAMP, 0x8C);
     wr(REG_LIB, 6);                          // LRA library
     // CTRL3: default closed-loop LRA; RTP data signed (default)

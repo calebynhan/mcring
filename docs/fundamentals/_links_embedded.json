@@ -604,5 +604,53 @@
     "title": "Punch Through: 4 Tips to Make Android BLE Actually Work",
     "verified_by": "WebSearch 'Punch Through Android BLE operation queue article': result '4 Tips to Make Android BLE Actually Work' https://punchthrough.com/android-ble-development-tips/",
     "section": "4.9"
+  },
+  {
+    "url": "https://falstad.com/circuit/",
+    "title": "Falstad Circuit Simulator",
+    "verified_by": "Re-used from docs/fundamentals/_links_electronics.json (section 01-electronics-basics.md 1.1), whose entry records: WebSearch 'falstad.com' https://falstad.com/circuit/ (JavaScript circuit simulator with scope and example circuits). Re-verification by search/fetch was not possible in this pass (search budget exhausted, egress proxy denied), so the earlier verification record is carried over.",
+    "section": "3.8"
+  },
+  {
+    "url": "https://xiph.org/video/vid2.shtml",
+    "title": "Xiph.org: Digital Show & Tell (Monty Montgomery)",
+    "verified_by": "Same URL as this file's section 3.10 entry: WebSearch 'Xiph.org Monty \"Digital Show and Tell\" video': result 'xiph.org' https://xiph.org/video/vid2.shtml plus press page and wiki.xiph.org/Videos/Digital_Show_and_Tell. Re-verification by search/fetch was not possible in this pass (search budget exhausted, egress proxy denied), so the earlier verification record is carried over.",
+    "section": "3.8"
+  },
+  {
+    "url": "https://bluetooth.com/wp-content/uploads/2022/05/the-bluetooth-le-primer-v1.2.0.pdf",
+    "title": "Bluetooth SIG: The Bluetooth LE Primer v1.2.0 (PDF)",
+    "verified_by": "Same URL as this file's section 4.1/4.6 entry: WebSearch 'Bluetooth SIG \"The Bluetooth Low Energy Primer\" PDF': result 'the bluetooth le primer v1.2.0' at this URL (v1.2.0, updated 15 March 2024). Re-verification by search/fetch was not possible in this pass (search budget exhausted, egress proxy denied), so the earlier verification record is carried over.",
+    "section": "4.10"
+  },
+  {
+    "url": "https://academy.nordicsemi.com/courses/bluetooth-low-energy-fundamentals/",
+    "title": "Nordic DevAcademy: Bluetooth Low Energy Fundamentals (course landing; lesson 1 is the protocol-stack / physical-layer lesson)",
+    "verified_by": "Same URL as this file's section 4.1 entry: WebSearch 'Nordic DevAcademy Bluetooth Low Energy Fundamentals course': course page (?p=6036) and lesson URLs returned; free, 6 lessons. Re-verification by search/fetch was not possible in this pass (search budget exhausted, egress proxy denied), so the earlier verification record is carried over.",
+    "section": "4.10"
+  },
+  {
+    "url": "https://www.espressif.com/sites/default/files/documentation/esp32-s3_datasheet_en.pdf",
+    "title": "ESP32-S3 Series Datasheet (PDF)",
+    "verified_by": "Same URL as this file's section 3.1 entry: WebSearch '\"esp32-s3_datasheet_en.pdf\" espressif.com': KeyeStudio docs and Flux parts library cite this exact URL; HTML version shows 'ESP32-S3 Series Datasheet v2.1'; also verified independently in _links_electronics.json (2.6) as 'ESP32-S3 Series Datasheet Version 2.2'. Re-verification by search/fetch was not possible in this pass (search budget exhausted, egress proxy denied), so the earlier verification record is carried over.",
+    "section": "4.10"
+  },
+  {
+    "url": "https://infocenter.nordicsemi.com/pdf/nRF52840_PS_v1.8.pdf",
+    "title": "nRF52840 Product Specification v1.8 (PDF)",
+    "verified_by": "Same URL as this file's section 3.1 entry: WebSearch 'nRF52840 Product Specification docs.nordicsemi.com': result 'nRF52840 PS v1.8' at this URL dated 2023-12-01; also in _links_electronics.json (2.6). Re-verification by search/fetch was not possible in this pass (search budget exhausted, egress proxy denied), so the earlier verification record is carried over.",
+    "section": "4.10"
+  },
+  {
+    "url": "https://interrupt.memfault.com/blog/smart-ring-development-part-2",
+    "title": "Memfault Interrupt: Smart Ring Development (Part 2) - Hardware Design",
+    "verified_by": "Re-used from docs/fundamentals/_links_electronics.json (section 02-batteries-and-power-budgets.md 2.2), whose entry records: WebSearch (interrupt.memfault.com): 'Smart Ring Development (Part 2) － Hardware Design' at this exact URL (Mikolaj Stawiski, 10 July 2025; BQ25125, DA14531 vs nRF52805, rigid-flex). Re-verification by search/fetch was not possible in this pass (search budget exhausted, egress proxy denied), so the earlier verification record is carried over.",
+    "section": "4.10"
+  },
+  {
+    "url": "https://www.nordicsemi.com/Products/Development-tools/nRF-Connect-for-mobile",
+    "title": "nRF Connect for Mobile (Nordic Semiconductor)",
+    "verified_by": "Same URL as this file's section 4.7 entry: WebSearch 'nRF Connect for Mobile app Nordic Semiconductor product page': result 'nRF Connect for Mobile Mobile app' at this URL. Re-verification by search/fetch was not possible in this pass (search budget exhausted, egress proxy denied), so the earlier verification record is carried over.",
+    "section": "4.10"
   }
 ]

@@ -2,7 +2,7 @@
 
 The stage-1 board is **26.5 × 18.0 × 0.6 mm, two layers, 87 placed parts**, and it does not exist yet as a layout: the repo stops at a Python netlist model (`hardware/electrical/mcring_v1.py` → `out/mcring_v1.net`, ERC clean in `out/erc.md`), a to-scale floorplan with placement and routing rules (`hardware/pcb/floorplan.py` → `floorplan.md`, `board_params.json`) and an order/assembly procedure (`docs/07-build-guide.md` §2.1–2.4). Turning that into a fabricated, populated, working board is the job this chapter prepares you for: KiCad layout from the netlist, a fab order with stencils, a two-pass reflow on a hot plate, and a power-first bring-up over the eight test pads. Read it with `hardware/pcb/out/floorplan_top.png`, `floorplan_bottom.png` and `hardware/electrical/README.md` §4–5 open.
 
-Rows in the "Learn it" tables whose resource carries no link could not be link-checked when this chapter was built — search the exact title given. Links marked *(root)* point at a documentation home page and the "Why this one" column says where to go from there. `docs/fundamentals/_links_making.json` records how every link was checked.
+Every external resource in the "Learn it" tables is linked, and `docs/fundamentals/_links_making.json` records how each link was checked (a search result, or the project's own README, GitHub profile or package-registry metadata). Links marked *(root)* point at a home page and the "Why this one" column says where to go from there; rows marked *(this repo)* point at files in this repository.
 
 ## 7.1 Schematic → netlist → layout: what each artefact is and how KiCad consumes it
 
@@ -14,10 +14,9 @@ Rows in the "Learn it" tables whose resource carries no link could not be link-c
 
 | Resource | Type | Time | Why this one |
 |---|---|---|---|
-| [KiCad documentation](https://docs.kicad.org/) *(root)* | docs | 3–4 h | Start with *Getting Started in KiCad* (one small board end to end), then the PCB Editor manual's *Import Netlist*, *Board Setup*, *Net classes* and *DRC* chapters — the exact dialogs `hardware/electrical/README.md` §4 steps through |
-| Digi-Key "Introduction to KiCad" video series (Shawn Hymel, Digi-Key YouTube channel) | video course | 3 h | Schematic → footprint assignment → layout → Gerbers, one episode per step; the best first watch if you have never laid out a board |
-| Phil's Lab, "KiCad hardware design" tutorials (YouTube channel) | video | 2–4 h | Full professional-style flows (MCU boards with switchers and USB) in KiCad; watch for how he organises net classes, decoupling and the power path before routing |
-| Contextual Electronics, "Getting to Blinky" (Chris Gammell, free KiCad course) | course | 2 h | Short, deliberately simple; the fastest way to learn KiCad's editing idioms before touching a 87-part board |
+| [KiCad](https://www.kicad.org/) *(root)* → Documentation | docs | 3–4 h | Start with *Getting Started in KiCad* (one small board end to end), then the PCB Editor manual's *Import Netlist*, *Board Setup*, *Net classes* and *DRC* chapters — the exact dialogs `hardware/electrical/README.md` §4 steps through |
+| [Contextual Electronics: Getting to Blinky](https://github.com/ContextualElectronics/GettingToBlinky) (Chris Gammell; the course videos are on [contextualelectronics.com](https://contextualelectronics.com)) | course + code | 2 h | "A project to show how to use KiCad and build a tiny blinking PCB": deliberately simple, schematic → footprints → layout → Gerbers; the fastest way to learn KiCad's editing idioms before touching an 87-part board |
+| [Phil's Lab (Philip Salmony)](http://www.phils-lab.net) | video | 2–4 h | His site indexes his KiCad hardware-design videos: full professional-style flows (MCU boards with switchers and USB); watch for how he organises net classes, decoupling and the power path before routing |
 | [Memfault Interrupt: A Schematic Review Checklist for Firmware Engineers](https://interrupt.memfault.com/blog/schematic-review-checklist) | article | 20 min | Run it on `out/sch_mcu.svg` before layout: boot straps, pull directions, test points, decoupling — the review that produced items 10–17 in `hardware/electrical/README.md` §1 |
 | `hardware/electrical/netlist_model.py` (this repo) | code | 30 min | Read `to_kicad_netlist()` and `erc()`: 480 lines that show what a netlist *is* better than any glossary |
 
@@ -50,9 +49,8 @@ Rows in the "Learn it" tables whose resource carries no link could not be link-c
 | [TI AN-1112 (SNVA009): DSBGA Wafer Level Chip Scale Package](https://www.ti.com/lit/snva009) | app note | 45 min | The pad size, NSMD rule, stencil and reflow guidance for exactly the YFP packages of U2/U7/U9/U11 |
 | [JLCPCB: IC package types explained](https://jlcpcb.com/blog/ic-package-types-guide) | article | 20 min | A picture of every package family on this board (SOT, VSSOP, QFN, LGA, WLCSP) and what each means for assembly |
 | [Electronics Notes: SMD passive sizes, imperial vs metric trap](https://www.electronics-notes.com/articles/electronic_components/surface-mount-technology-smd-smt/passive-component-size-codes-overlap-trap.php) | article | 10 min | Why the netlist says `0402_1005Metric` and never just "0402" |
-| [SparkFun: How to Read a Datasheet](https://www.sparkfun.com/tutorials/223) | article | 30 min | Where the package drawing and the recommended land pattern live in a datasheet, and how to read the tolerances |
-| TI application report "QFN/SON PCB Attachment" (SLUA271) | app note | 30 min | Exposed-pad paste coverage, thermal vias and the stencil rules for U10's 16-TQFN; find it on ti.com by its document number |
-| KiCad Library Conventions (KLC) site | reference | 30 min | The footprint naming and pad rules the stock KiCad library follows; copy them for the eleven custom `mcring` footprints so they look and behave like the rest |
+| [SparkFun: How to Read a Datasheet](https://www.sparkfun.com/tutorials/223) | article | 30 min | Where the package drawing, the recommended land pattern and the exposed-pad paste guidance live in a datasheet (U10's 16-TQFN included), and how to read the tolerances |
+| [KiCad Library Conventions (KLC)](https://klc.kicad.org/) | reference | 30 min | The footprint naming and pad rules the stock KiCad library follows; copy them for the eleven custom `mcring` footprints so they look and behave like the rest |
 | [TI TPS22916 product page / datasheet](https://www.ti.com/product/TPS22916) | datasheet | 20 min | Section "Layout" of the datasheet: the recommended DSBGA-4 land pattern you will draw as `TPS22916_DSBGA-4_YFP` |
 
 **Check yourself.**
@@ -81,12 +79,10 @@ Rows in the "Learn it" tables whose resource carries no link could not be link-c
 
 | Resource | Type | Time | Why this one |
 |---|---|---|---|
-| Rick Hartley, "How to Achieve Proper Grounding" (Altium / AltiumLive talk, YouTube) | video | 2 h | The talk that explains return currents and why a pour under every signal matters; after it the §5 layer plan reads as obvious |
-| [Eric Bogatin on Robert Feranec's channel: decoupling capacitor value and placement](https://fedevel.com/blog/what-decoupling-capacitor-value-to-use-and-where-to-place-them-eric-bogatin) | video | ~1 h | Measured: near vs far, one vs two, 1000 µF vs 1 µF; settles "within 1 mm" and "100 nF + 10 µF" with data |
+| [Eric Bogatin on Robert Feranec's channel: decoupling capacitor value and placement](https://fedevel.com/blog/what-decoupling-capacitor-value-to-use-and-where-to-place-them-eric-bogatin) | video | ~1 h | Measured: near vs far, one vs two, 1000 µF vs 1 µF; settles "within 1 mm" and "100 nF + 10 µF" with data, and makes the return-current argument for a pour under every signal |
 | [EEVblog #859: Bypass Capacitor Tutorial](https://www.eevblog.com/2016/03/11/eevblog-859-bypass-capacitor-tutorial) | video | 33 min | Loop inductance and self-resonance on an analyser; why C26 sits at U10's pins and not "somewhere on the 3V3 net" |
 | [TI TPS62840 product page / datasheet](https://www.ti.com/product/TPS62840) | datasheet | 30 min | The *Layout Guidelines* and *Layout Example* sections: the exact CIN/L/COUT/VOS arrangement `floorplan.md` §6 asks for |
-| Saturn PCB Design Toolkit (free Windows calculator) | tool | 20 min | Trace width vs current, via resistance/inductance, crosstalk; check the 25 mΩ trunk figure above and the 3:1 via |
-| Phil's Lab, PCB design and layout videos (YouTube channel) | video | 1–2 h | Hands-on routing of switchers, decoupling and return paths in KiCad; the "do it with me" complement to Hartley's theory |
+| [Phil's Lab (Philip Salmony)](http://www.phils-lab.net) | video | 1–2 h | Hands-on routing of switchers, decoupling and return paths in KiCad; the "do it with me" complement to Bogatin's measurements |
 | [Memfault Interrupt: Smart Ring Development (Part 2) — Hardware Design](https://interrupt.memfault.com/blog/smart-ring-development-part-2) | article | 30 min | What changes when this board becomes a rigid-flex at stage 2: stack-ups, flex bends, antenna, assembly |
 
 **Check yourself.**
@@ -116,9 +112,7 @@ Rows in the "Learn it" tables whose resource carries no link could not be link-c
 | Resource | Type | Time | Why this one |
 |---|---|---|---|
 | [ESP32-S3 Series Datasheet (Espressif)](https://www.espressif.com/sites/default/files/documentation/esp32-s3_datasheet_en.pdf) | datasheet | 30 min | GPIO drive strength and edge rates, the camera interface pins, the RF section; pair it with the MINI-1/MINI-1U module datasheet linked from `hardware/bom/stage1-ring.csv` |
-| Espressif "ESP32-S3 Hardware Design Guidelines" (docs.espressif.com, esp-hardware-design-guidelines) | docs | 1 h | The module placement, ground-via and antenna-clearance rules §5 paraphrases; find the ESP32-S3 edition of the guidelines |
-| TI "High-Speed Layout Guidelines" (SCAA082) | app note | 45 min | Edge rate vs trace length, when a trace is a transmission line, crosstalk and the 3W rule — written for faster buses but the reasoning is the DVP corridor's |
-| TI "Antenna Selection Guide" (SWRA161) | app note | 45 min | Monopole/dipole/chip/PCB antennas at 2.4 GHz, ground-plane and keep-out effects, cable loss; the vocabulary for choosing the flex antenna |
+| [Espressif: ESP32-S3 Hardware Design Guidelines](https://docs.espressif.com/projects/esp-hardware-design-guidelines/en/latest/esp32s3/index.html) | docs | 1 h | The module placement, ground-via and antenna-clearance rules §5 paraphrases, plus Espressif's own PCB-layout and RF chapters (trace spacing, crosstalk, what to keep away from the antenna and how far) |
 | [Punch Through: Maximizing BLE Throughput on iOS and Android (Part 1)](https://punchthrough.com/maximizing-ble-throughput-on-ios-and-android/) | article | 30 min | What a marginal antenna costs you in practice: retries and interval, i.e. the "many `resend N chunks`" row of `docs/07` §4 |
 | [Nordic DevAcademy: Designing Low-Power Bluetooth LE Products](https://academy.nordicsemi.com/courses/designing-low-power-bluetooth-le-products/) | course | 3 h | Includes antenna and RF layout lessons for the nRF52840 stage-2 board (printed microstrip antenna, rigid-flex) |
 
@@ -150,10 +144,9 @@ Rows in the "Learn it" tables whose resource carries no link could not be link-c
 |---|---|---|---|
 | [JLCPCB](https://jlcpcb.com/) *(root)* | fab | 20 min | Open *Capabilities → PCB* and *SMT stencil*: confirm 0.10/0.10 mm and 0.20 mm drill on 2-layer 0.6 mm before you believe `docs/07` §2.2 for your order date |
 | [PCBWay](https://www.pcbway.com/) *(root)* | fab | 20 min | Same check on the second fab; their capability page lists the "advanced" tiers and ENIG/stencil options side by side |
-| [KiCad documentation](https://docs.kicad.org/) *(root)* | docs | 1 h | PCB Editor manual → *Design rule checking* and *Fabrication outputs* (Gerbers, drill, pick-and-place, paste layers) |
+| [KiCad](https://www.kicad.org/) *(root)* → Documentation | docs | 1 h | PCB Editor manual → *Design rule checking* and *Fabrication outputs* (Gerbers, drill, pick-and-place, paste layers), then the *Gerber Viewer* manual: open every exported layer before uploading — a mirrored bottom, missing paste on the EP or a stray outline all show up there |
 | [Adafruit: SMT Manufacturing](https://learn.adafruit.com/smt-manufacturing) | article | 30 min | What a stencil, a paste layer, a fiducial and a reflow profile are for, from a small manufacturer's floor |
 | [TI AN-1112 (SNVA009): DSBGA Wafer Level Chip Scale Package](https://www.ti.com/lit/snva009) | app note | 20 min | The stencil aperture and foil-thickness recommendations for the DSBGA pads — the source of the "1:1, don't shrink" instruction |
-| Gerber viewer (your fab's online viewer, or KiCad's own *Gerber Viewer*) | tool | 15 min | Open every exported layer before uploading: mirrored bottom, missing paste on the EP, a stray outline all show up here |
 
 **Check yourself.**
 
@@ -183,10 +176,8 @@ Rows in the "Learn it" tables whose resource carries no link could not be link-c
 |---|---|---|---|
 | [Adafruit: SMT Manufacturing](https://learn.adafruit.com/smt-manufacturing) | article | 30 min | Stencil printing, placement and reflow as a small shop does it; the mental model for the two-pass build |
 | [Adafruit Guide to Excellent Soldering: Surface Mount Components](https://learn.adafruit.com/adafruit-guide-excellent-soldering/surface-mount) | article | 30 min | Good/bad joint photos for chips, SOTs and QFNs — what you are inspecting for after each pass |
-| SparkFun learn guide "Electronics Assembly" (learn.sparkfun.com) | article | 30 min | Stencil, paste, reflow and inspection stations explained with photos; search the title on the SparkFun learn site |
 | [TI AN-1112 (SNVA009): DSBGA Wafer Level Chip Scale Package](https://www.ti.com/lit/snva009) | app note | 20 min | The reflow profile window and the "no underfill needed" notes for the YFP parts; what peak and time-above-liquidus the balls tolerate |
-| Phil's Lab, PCB assembly / reflow / rework videos (YouTube channel) | video | 1 h | Stencil alignment by hand, hot-plate reflow of fine-pitch parts, hot-air placement of modules — the exact operations of §2.3 on camera |
-| Mr SolderFix (YouTube channel) | video | 1 h | Hot-air technique, flux use and rework of QFN/BGA parts by a repair technician; watch a few before the module pass |
+| [Phil's Lab (Philip Salmony)](http://www.phils-lab.net) | video | 1 h | His assembly and rework videos: stencil alignment by hand, hot-plate reflow of fine-pitch parts, hot-air placement of modules — the exact operations of §2.3 on camera |
 
 **Check yourself.**
 
@@ -215,11 +206,9 @@ Rows in the "Learn it" tables whose resource carries no link could not be link-c
 | Resource | Type | Time | Why this one |
 |---|---|---|---|
 | [Adafruit Guide to Excellent Soldering: Surface Mount Components](https://learn.adafruit.com/adafruit-guide-excellent-soldering/surface-mount) | article | 30 min | 0402/SOT/QFN hand techniques with "good / too little / too much / bridged" photos |
-| EEVblog "Soldering Tutorial" series (Dave Jones, YouTube: parts 1–3, part 3 is surface mount) | video | 1.5 h | Iron, tips, flux, drag soldering of fine pitch, QFN with hot air; the classic that most people learned from |
-| Mr SolderFix (YouTube channel) | video | 1 h | Removal and replacement of QFN/BGA with hot air and low-melt alloy; flux discipline; exactly the rework you will do on U7/U8 |
-| NASA Workmanship Standards (workmanship.nasa.gov pictorial reference) | reference | 30 min | Photos of acceptable and rejectable joints for wires, chips and leaded parts — the inspection standard for the 30 AWG wire pads |
+| [Contextual Electronics: Soldering Obstacle Course](https://github.com/ContextualElectronics/Soldering-Obstacle-Course) | practice board (KiCad project) | 1 h + a board | "Practice your soldering!": a small board of progressively harder joints; have a few made with the ring order and do your first 0402s, SOTs and a QFN on it, not on the ring |
 | [EOS/ESD Association: Fundamentals Part 1 — An Introduction to ESD](https://www.esda.org/esd-overview/esd-fundamentals/part-1-an-introduction-to-esd/) | article | 20 min | Why the bench needs a strap and a mat before the module and the IMU go on, in the standards body's words |
-| GreatScott! (YouTube channel) | video | 30 min | Short, practical SMD soldering and hot-air demonstrations aimed at first-time builders; pick the "how to solder SMD" videos |
+| `docs/07-build-guide.md` §2.3 (wire pads) and §2.6 (assembly sequence) (this repo) | procedure | 20 min | The order, lengths and strain-relief rule for the eleven wires and the band contacts, and why the cell leads go on last — read before the iron goes near the board |
 
 **Check yourself.**
 
@@ -247,7 +236,7 @@ Rows in the "Learn it" tables whose resource carries no link could not be link-c
 
 | Resource | Type | Time | Why this one |
 |---|---|---|---|
-| [Making Embedded Systems, 2nd ed. (Elecia White)](https://www.oreilly.com/library/view/making-embedded-systems/9781098151539/) | book | 2 h (the board bring-up chapter) | The hardware/firmware handshake: reading schematics, bring-up order, what to test before the first flash — the chapter `docs/07` §2.3–2.4 follows |
+| [Making Embedded Systems, 2nd ed. (Elecia White)](https://www.oreilly.com/library/view/making-embedded-systems/9781098151539/), with the author's [companion repo](https://github.com/eleciawhite/making-embedded-systems) | book + code | 2 h (the board bring-up chapter) | The hardware/firmware handshake: reading schematics, bring-up order, what to test before the first flash — the chapter `docs/07` §2.3–2.4 follows; the repo's chapter folders hold the links and spreadsheets the book leans on |
 | [Memfault Interrupt: A Schematic Review Checklist for Firmware Engineers](https://interrupt.memfault.com/blog/schematic-review-checklist) | article | 20 min | The test-point, boot-strap and debug-access items are a bring-up plan in disguise; tick them against the eight pads |
 | [Nordic Power Profiler Kit II](https://www.nordicsemi.com/Products/Development-hardware/Power-Profiler-Kit-2) | tool | 30 min | The source-meter the build guide names for the ≤ 130 µA sleep check; its *Get started* page shows ampere-meter vs source modes |
 | [EEVblog µCurrent GOLD](https://eevblog.com/projects/ucurrent) | tool | 15 min | The cheaper way to see microamps with a normal multimeter without burden-voltage lies |

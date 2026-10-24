@@ -1,35 +1,43 @@
 
 == ESP32-S3 + OV2640, camera power-gated, BLE off in sleep (stage 1 best case)
-   deep sleep 7-8 uA + IMU 1 uA + regulator/charger leakage; wake on tap/button
-   per shot: 153.61 µAh   standby: 0.60 mAh/day
+   deep sleep 7-8 uA + IMU 1 uA + regulator/charger leakage; wake on tap/button; answer spoken by the phone
+   per shot: 123.06 µAh   standby: 0.60 mAh/day
     battery  usable  shots (no standby)    days @ 30/day  standby-only days
-       20mAh   16.0                 104              3.1               26.7
-       40mAh   32.0                 208              6.1               53.3
-      100mAh   80.0                 521             15.4              133.3
+       20mAh   16.0                 130              3.7               26.7
+       40mAh   32.0                 260              7.5               53.3
+      100mAh   80.0                 650             18.6              133.3
+
+== ESP32-S3 + OV2640, camera power-gated, answer played on the RING SPEAKER (10 s)
+   as above plus a 10 s MAX98357A playback at ~120 mA: the speaker, not the photo, dominates
+   per shot: 456.39 µAh   standby: 0.60 mAh/day
+    battery  usable  shots (no standby)    days @ 30/day  standby-only days
+       20mAh   16.0                  35              1.1               26.7
+       40mAh   32.0                  70              2.2               53.3
+      100mAh   80.0                 175              5.6              133.3
 
 == ESP32-S3 + OV2640, BLE connection kept alive (light sleep)
    XIAO-class light sleep with BLE ~380 uA (third-party measurement)
-   per shot: 153.61 µAh   standby: 9.12 mAh/day
+   per shot: 123.06 µAh   standby: 9.12 mAh/day
     battery  usable  shots (no standby)    days @ 30/day  standby-only days
-       20mAh   16.0                 104              1.2                1.8
-       40mAh   32.0                 208              2.3                3.5
-      100mAh   80.0                 521              5.8                8.8
+       20mAh   16.0                 130              1.2                1.8
+       40mAh   32.0                 260              2.5                3.5
+      100mAh   80.0                 650              6.2                8.8
 
 == ESP32-S3 dev kit as-is (camera board not power-gated)
    measured ~3 mA deep sleep with the Sense camera board attached
-   per shot: 153.61 µAh   standby: 72.00 mAh/day
+   per shot: 123.06 µAh   standby: 72.00 mAh/day
     battery  usable  shots (no standby)    days @ 30/day  standby-only days
-       20mAh   16.0                 104              0.2                0.2
-       40mAh   32.0                 208              0.4                0.4
-      100mAh   80.0                 521              1.0                1.1
+       20mAh   16.0                 130              0.2                0.2
+       40mAh   32.0                 260              0.4                0.4
+      100mAh   80.0                 650              1.1                1.1
 
 == nRF52840 + HM01B0 160x120 mono, slow BLE connection maintained (stage 2 target)
-   radio 5 mA peaks; HM01B0 <2 mW; the 10 s haptic Morse reply (8 mm LRA ~75 mA at 50% duty) dominates per-shot energy
-   per shot: 113.22 µAh   standby: 0.72 mAh/day
+   radio 5 mA peaks; HM01B0 <2 mW; headphones only (no speaker at Oura size); the voice recording dominates per-shot energy
+   per shot: 82.67 µAh   standby: 0.72 mAh/day
     battery  usable  shots (no standby)    days @ 30/day  standby-only days
-       20mAh   16.0                 141              3.9               22.2
-       40mAh   32.0                 283              7.8               44.4
-      100mAh   80.0                 707             19.4              111.1
+       20mAh   16.0                 194              5.0               22.2
+       40mAh   32.0                 387             10.0               44.4
+      100mAh   80.0                 968             25.0              111.1
 
 Peak-current check: ESP32-S3 photo peaks 300-370 mA = 15-20C on a 1C-rated 16-22 mAh ring cell → not viable
 without a large buffer capacitor; nRF52840 peaks ~15 mA ≈ 1C. See docs/research/02-mcu-radio-power.md §3.4.

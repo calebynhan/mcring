@@ -2,7 +2,7 @@
 
 The stage-1 enclosure is a program: `hardware/cad/mcring_stage1.py` (1 000 lines of CadQuery) reads `hardware/pcb/board_params.json`, builds a shell, a lid and a switch key, drops placeholder solids for every part into them, runs a fit check that refuses to export if anything intersects or a wall is too thin, and writes three STLs, a STEP assembly, five sanity views and `fit_report.md`. A ring size change is `--inner-d 18.3`; a camera change is `--lens-d 3.5`; dropping the speaker is `--no-speaker`. This chapter teaches enough solid modelling to read and change that file, enough tolerance thinking to trust its clearances, and enough resin-printing practice to turn `out/mcring_stage1_shell.stl` into a ring that closes. Read it next to `hardware/cad/README.md`, `fit_report.md` and `out/view_section.png`.
 
-Rows in the "Learn it" tables whose resource carries no link could not be link-checked when this chapter was built — search the exact title given. Links marked *(root)* point at a documentation home page and the "Why this one" column says where to go from there. `docs/fundamentals/_links_making.json` records how every link was checked.
+Every external resource in the "Learn it" tables is linked, and `docs/fundamentals/_links_making.json` records how each link was checked (a search result, or the project's own README, GitHub profile or package-registry metadata). Links marked *(root)* point at a home page and the "Why this one" column says where to go from there; rows marked *(this repo)* point at files in this repository.
 
 ## 8.1 Parametric solid modelling: B-rep, booleans, fillets, and CAD as code
 
@@ -16,10 +16,8 @@ Rows in the "Learn it" tables whose resource carries no link could not be link-c
 |---|---|---|---|
 | [CadQuery documentation](https://cadquery.readthedocs.io/) *(root)* | docs | 2 h | *Quickstart* → *Concepts* (workplanes, stack, selectors, B-rep terms) → *Examples*; the mental model of this file |
 | [CadQuery on GitHub](https://github.com/CadQuery/cadquery) | code | 20 min | The project home: install notes for the exact `cadquery` version `hardware/cad/README.md` pins (2.8), issue tracker for kernel quirks like refused fillets |
-| Onshape Learning Center (free parametric CAD courses, browser-based) | course | 3–4 h | If you have never used a feature-tree CAD, do its fundamentals course first; sketches, extrudes, booleans and fillets in a GUI make the code version obvious |
-| Wikipedia: *Boundary representation* and *Constructive solid geometry* | article | 30 min | Precise definitions of B-rep, faces/edges/vertices and CSG booleans — the words the CadQuery docs assume |
-| FreeCAD documentation, *Part* and *Part Design* workbenches | docs | 1 h | Same OCCT kernel as CadQuery with a GUI; open `out/mcring_stage1_assembly.step` in FreeCAD to inspect faces and measure |
-| OpenSCAD cheat sheet (openscad.org) | reference | 15 min | The code-CAD dialect the project left; one page shows how `union/difference/intersection` map onto `fuse/cut/intersect` |
+| [FreeCAD wiki: Workbenches](https://wiki.freecad.org/Workbenches) (*Part* and *Part Design*) | docs | 1–2 h | Same OCCT kernel as CadQuery with a GUI: if you have never used a feature-tree CAD, do *Getting started* and the *Part Design* pages first — sketches, pads, pockets, booleans and fillets in a GUI make the code version obvious; then open `out/mcring_stage1_assembly.step` in FreeCAD to inspect faces and measure |
+| [OpenSCAD cheat sheet](https://openscad.org/cheatsheet/) | reference | 15 min | The code-CAD dialect the project left; one page shows how `union/difference/intersection` map onto `fuse/cut/intersect` |
 
 **Check yourself.**
 
@@ -51,8 +49,8 @@ Rows in the "Learn it" tables whose resource carries no link could not be link-c
 | [CQ-editor on GitHub](https://github.com/CadQuery/CQ-editor) | tool | 30 min | A GUI that runs a CadQuery script and shows the result with a 3D view and object inspector; load the model and click faces to read coordinates |
 | `hardware/cad/mcring_stage1.py` `Model.__init__` and `build_lid()` (this repo) | code | 1 h | Read these two with a calculator: the first is the z-stack, the second is a 40-line, fully commented example of fuse/cut on a real part |
 | `hardware/pcb/board_params.json` + `hardware/pcb/README.md` "Coordinate convention" (this repo) | reference | 20 min | The source of every board-frame number and the sentence that defines `X = L/2 − x, Y = y − W/2` |
-| build123d documentation (the newer CadQuery-family library) | docs | 1 h | Same kernel, more explicit algebra of solids (`+`, `−`, `&`); reading its concepts page makes CadQuery's stack model less magical |
-| Python `argparse` and `json` module documentation (docs.python.org) | docs | 30 min | The CLI (`--inner-d`, `--no-speaker`, `--report`) and the JSON reading are plain standard library; know them to add a parameter |
+| [build123d documentation](https://build123d.readthedocs.io/en/latest/index.html) (the newer CadQuery-family library) | docs | 1 h | Same kernel, more explicit algebra of solids (`+`, `−`, `&`); reading its concepts page makes CadQuery's stack model less magical |
+| Python 3 docs: [`argparse`](https://docs.python.org/3/library/argparse.html) and [`json`](https://docs.python.org/3/library/json.html) | docs | 30 min | The CLI (`--inner-d`, `--no-speaker`, `--report`) and the JSON reading are plain standard library; know them to add a parameter |
 
 **Check yourself.**
 
@@ -80,12 +78,9 @@ Rows in the "Learn it" tables whose resource carries no link could not be link-c
 
 | Resource | Type | Time | Why this one |
 |---|---|---|---|
-| Formlabs: "Engineering fit: optimizing design for mechanical parts" (formlabs.com blog) | article | 30 min | Clearance/transition/interference fits with the dimensional numbers that SLA actually holds; written for exactly this kind of resin assembly |
-| [Formlabs](https://formlabs.com/) *(root)* | docs | 1 h | Support → *Design specs for 3D models* (minimum clearances, hole and wall sizes per resin) and the tolerance white papers; the printer-side half of every number in `default_params()` |
-| Hubs (formerly 3D Hubs) Knowledge Base, "How to design parts for SLA 3D printing" | article | 30 min | A one-page table of recommended clearances, wall thicknesses, hole diameters and text sizes for SLA versus FDM |
-| Maker's Muse, tolerance test and "designing for 3D printing" videos (YouTube channel) | video | 45 min | Printable tolerance gauges and how to read them: measure *your* printer's offset once and put it into `lid_clear`/`bay_clear` |
-| Wikipedia: *Engineering fit* and *Engineering tolerance* | article | 20 min | The ISO vocabulary (clearance, transition, interference; hole/shaft basis) in one place |
+| [Formlabs](https://formlabs.com/) *(root)* | docs | 1.5 h | Support → *Design specs for 3D models* (minimum clearances, hole and wall sizes per resin), the blog's *Engineering fit* article (clearance / transition / interference with the numbers SLA actually holds) and the tolerance white papers; the printer-side half of every number in `default_params()` |
 | `hardware/cad/fit_report.md` (this repo) | report | 20 min | Read the "Clearances" table once: each row is a nominal minus a minimum, and the names tell you what would collide first |
+| `hardware/cad/README.md`, the clearance notes and open items (this repo) | reference | 20 min | Where each 0.15 / 0.2 / 0.3 / 0.5 came from, which were measured on a print and which are still guesses ("model the pocket from the cell drawing before the final print") — and the instruction to measure your own printer's offset on a test coupon before trusting 0.15 mm |
 
 **Check yourself.**
 
@@ -114,10 +109,7 @@ Rows in the "Learn it" tables whose resource carries no link could not be link-c
 | Resource | Type | Time | Why this one |
 |---|---|---|---|
 | [Formlabs](https://formlabs.com/) *(root)* | docs | 1.5 h | Support articles *Design specs for 3D models* (walls, holes, embossed detail, drain holes), *Orientation* and *Supports*; the clearest SLA design rules with numbers |
-| Hubs Knowledge Base, "How to design parts for SLA 3D printing" and "How to design parts for FDM 3D printing" | article | 45 min | Side-by-side minimum features for the two processes; the basis of the "FDM: shell only" verdict |
-| Prusa Knowledge Base, resin (SL1/SL1S) printing guides: orientation, supports, hollowing | docs | 45 min | Practical orientation and cupping guidance for MSLA printers, including why cavities must face up or be vented |
-| Maker's Muse, resin printing and design-for-printing videos (YouTube channel) | video | 1 h | Suction cups, supports, minimum features and failure modes shown on real prints |
-| Teaching Tech 3D printer calibration site (FDM) | interactive | 30 min | If you do print the shell on FDM: dimensional and flow calibration so a 1.2 mm wall is 1.2 mm |
+| [Teaching Tech: 3D printer calibration](https://teachingtechyt.github.io/calibration.html) (FDM) | interactive | 30 min | If you do print the shell on FDM: browser-based dimensional, flow and retraction calibration generators, so a 1.2 mm wall is 1.2 mm and a Ø1.0 hole is round |
 | `hardware/cad/mcring_stage1.py` `fit_check()` probes (this repo) | code | 30 min | The list of line probes *is* the wall-thickness design review; read the names and minimums to see which walls were judged critical |
 
 **Check yourself.**
@@ -146,10 +138,8 @@ Rows in the "Learn it" tables whose resource carries no link could not be link-c
 
 | Resource | Type | Time | Why this one |
 |---|---|---|---|
-| "Snap-Fit Joints for Plastics — A Design Guide" (BASF / Bayer, classic engineering PDF; copies are hosted by several universities) | reference | 1.5 h | The cantilever, torsion and annular snap formulas with strain limits — the equations behind "long and thin flexes, short and thick snaps" |
-| Hubs Knowledge Base, "How to design snap-fit joints for 3D printing" | article | 30 min | Printed-plastic-specific numbers for cantilever snaps (length, taper, deflection) and the orientation that keeps them from delaminating |
-| Formlabs: "How to design snap-fit joints" / "Design for assembly with 3D printing" articles (formlabs.com blog) | article | 30 min | Resin-specific snap and living-hinge guidance, with which resins survive repeated clicks |
-| Omron B3U series tactile switch datasheet (the B3U-3000P) | datasheet | 15 min | Actuation force and travel, plunger protrusion and the recommended actuator — the numbers `switch_slot`, `standoff` and the counterbore encode |
+| [Formlabs](https://formlabs.com/) *(root)* | docs | 45 min | Blog → *How to design snap-fit joints for 3D printing* and *Design for assembly*: cantilever length / thickness / deflection numbers for printed parts, the ε ≈ 1.5·y·t/L² rule in practice, and which resins survive repeated clicks |
+| Omron B3U-3000P datasheet, via the DigiKey product page linked in `hardware/bom/stage1-ring.csv` (this repo) | datasheet | 15 min | Actuation force and travel, plunger protrusion and the recommended actuator — the numbers `switch_slot`, `standoff` and the counterbore encode |
 | `hardware/cad/mcring_stage1.py` `build_key()` and the lid detent lines of `build_lid()` (this repo) | code | 30 min | Thirty lines each; change `bead_r` or `standoff`, regenerate, and watch the fit check's "key cap stand-off" and "rim at the lid groove" rows react |
 
 **Check yourself.**
@@ -181,8 +171,6 @@ Rows in the "Learn it" tables whose resource carries no link could not be link-c
 | [CadQuery documentation](https://cadquery.readthedocs.io/) *(root)* | docs | 45 min | *Assemblies* and the `Shape` API (`intersect`, `Volume`, `BoundingBox`) — the primitives the fit check is built from; assemblies also give constraint-based placement if the placeholders ever need it |
 | `hardware/cad/mcring_stage1.py` `fit_check()`, `probe()`, `contact_scan()` (this repo) | code | 45 min | 150 lines that implement everything above; add one probe for a wall you worry about and watch it appear in `fit_report.md` |
 | [DigiKey Maker: Oura Ring Teardown (Gen 3 and 2)](https://www.digikey.com/en/maker/projects/oura-ring-teardown-gen-3-and-2/2c005e01f82d429398e78f49591793cc) | article | 30 min | A production ring opened up: how little clearance a potted rigid-flex needs, and what stage 2 will have to fit-check instead of a bay and a lid |
-| Maker's Muse, printable tolerance tests (YouTube channel) | video | 20 min | Ready-made coupons for measuring your printer's clearance offset before you trust 0.15 mm |
-| Mitutoyo (or any maker) digital caliper and pin-gauge basics — a short "how to measure with calipers" video | video | 20 min | Inside/outside/depth jaws, zeroing, and why a caliper reads a 4.6 mm printed hole as 4.5 (it finds the inscribed polygon) |
 
 **Check yourself.**
 
@@ -210,11 +198,8 @@ Rows in the "Learn it" tables whose resource carries no link could not be link-c
 
 | Resource | Type | Time | Why this one |
 |---|---|---|---|
-| [Formlabs](https://formlabs.com/) *(root)* | docs | 1 h | Support → *Washing* and *Post-curing* guides (times and temperatures per resin), *Removing supports*, *Resin safety*; the procedure `docs/07` §2.5 condenses |
-| Formlabs materials pages for *Tough* and *Durable* resins (formlabs.com/materials) | datasheet | 20 min | Elongation, modulus and recommended post-cure for the resin class the README specifies; compare with a standard resin's numbers |
-| Prusa Knowledge Base, resin post-processing (washing, curing, support removal) | docs | 30 min | A second manufacturer's version of the same steps with MSLA-specific tips (IPA management, curing stations) |
-| Maker's Muse, "resin printing safety" and post-processing videos (YouTube channel) | video | 45 min | Handling, ventilation and disposal shown plainly; the part of the process no datasheet covers |
-| Uncle Jessy (YouTube channel) resin workflow videos | video | 30 min | Wash/cure station practice, support removal and finishing on small detailed parts |
+| [Formlabs](https://formlabs.com/) *(root)* | docs | 1.5 h | Support → *Washing*, *Post-curing* (times and temperatures per resin), *Removing supports* and *Resin safety*; Materials → the *Tough* and *Durable* resin pages (elongation, modulus, recommended post-cure — compare with a standard resin's numbers); the procedure `docs/07` §2.5 condenses |
+| `docs/07-build-guide.md` §2.5 "Enclosure print and post-processing" (this repo) | procedure | 20 min | The project's wash / dry / de-support / cure recipe with its times, and the reaming and drilling steps for every small feature, in build order |
 | `hardware/cad/README.md` "Print settings" and "After printing — check" (this repo) | procedure | 15 min | The project's own print and finishing checklist, feature by feature (0.7 mm rims, Ø0.8 port, 4.6 bore, grille holes) |
 
 **Check yourself.**
@@ -243,12 +228,9 @@ Rows in the "Learn it" tables whose resource carries no link could not be link-c
 
 | Resource | Type | Time | Why this one |
 |---|---|---|---|
-| Wikipedia: *Ring size* | article | 15 min | The US/UK/ISO/Japanese scales and their conversion formulas in one table; verify the README's `inner_d` column against it |
 | [DigiKey Maker: Oura Ring Teardown (Gen 3 and 2)](https://www.digikey.com/en/maker/projects/oura-ring-teardown-gen-3-and-2/2c005e01f82d429398e78f49591793cc) | article | 30 min | What a shipping ring's band width, thickness and mass are, and how the electronics curve to follow the finger — the stage-2 target in pictures |
 | [Grepow: smart ring batteries (curved cells)](https://www.grepow.com/wearables/smart-ring.html) | vendor | 15 min | The dimensions of the curved cells that set an 8 mm × ≤ 3 mm band at stage 2 |
 | [Memfault Interrupt: Smart Ring Development (Part 2) — Hardware Design](https://interrupt.memfault.com/blog/smart-ring-development-part-2) | article | 30 min | Sizing, flex-circuit wrap and potting of a ring from a team that built one |
-| Oura and Samsung Galaxy Ring official sizing guides (support pages: "find your size" / sizing kit instructions) | guide | 15 min | How the commercial rings tell users to size (sizing kit worn 24 h, dominant hand, knuckle rule) — copy the method for your fit tests |
-| DINED anthropometric database (TU Delft) or a published hand-anthropometry table | reference | 20 min | Finger circumference percentiles, to decide which two or three `inner_d` values cover the people who will wear this |
 
 **Check yourself.**
 

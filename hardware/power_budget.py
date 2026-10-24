@@ -1,5 +1,6 @@
 #!/usr/bin/env python3
-"""Shots-per-charge estimator for the ring. Edit the PROFILES or pass --battery.
+"""Shots-per-charge estimator for the ring (one "shot" = photo + transfer + ring-mic question + cues,
+plus an optional on-ring speaker answer). Edit the PROFILES or pass --battery.
 
     python hardware/power_budget.py            # table for 20/40/100 mAh
     python hardware/power_budget.py --battery 16 --shots-per-day 40
@@ -17,14 +18,19 @@ class Profile:
     capture_ma: float
     transfer_s: float         # BLE radio busy
     transfer_ma: float
-    feedback_s: float         # haptic/LED Morse playback
+    feedback_s: float         # haptic/LED confirmation cues (listening tick + answer-ready ticks)
     feedback_ma: float
     standby_ua: float         # everything else, 24/7
     notes: str = ""
+    record_s: float = 6.0     # ring-mic voice question (MCU awake + PDM mic + BLE link)
+    record_ma: float = 45.0
+    speaker_s: float = 0.0    # optional on-ring speaker answer (stage 1 only; 0 = answer plays on the phone)
+    speaker_ma: float = 120.0
 
     def mah_per_shot(self) -> float:
         return (self.capture_s * self.capture_ma + self.transfer_s * self.transfer_ma
-                + self.feedback_s * self.feedback_ma) / 3600.0
+                + self.feedback_s * self.feedback_ma + self.record_s * self.record_ma
+                + self.speaker_s * self.speaker_ma) / 3600.0
 
     def mah_per_day_standby(self) -> float:
         return self.standby_ua / 1000.0 * 24.0
@@ -32,17 +38,20 @@ class Profile:
 
 PROFILES = [
     Profile("ESP32-S3 + OV2640, camera power-gated, BLE off in sleep (stage 1 best case)",
-            capture_s=0.6, capture_ma=180, transfer_s=0.5, transfer_ma=90, feedback_s=10, feedback_ma=40,
-            standby_ua=25, notes="deep sleep 7-8 uA + IMU 1 uA + regulator/charger leakage; wake on tap/button"),
+            capture_s=0.6, capture_ma=180, transfer_s=0.5, transfer_ma=90, feedback_s=0.5, feedback_ma=40,
+            standby_ua=25, notes="deep sleep 7-8 uA + IMU 1 uA + regulator/charger leakage; wake on tap/button; answer spoken by the phone"),
+    Profile("ESP32-S3 + OV2640, camera power-gated, answer played on the RING SPEAKER (10 s)",
+            capture_s=0.6, capture_ma=180, transfer_s=0.5, transfer_ma=90, feedback_s=0.5, feedback_ma=40,
+            standby_ua=25, notes="as above plus a 10 s MAX98357A playback at ~120 mA: the speaker, not the photo, dominates", speaker_s=10),
     Profile("ESP32-S3 + OV2640, BLE connection kept alive (light sleep)",
-            capture_s=0.6, capture_ma=180, transfer_s=0.5, transfer_ma=90, feedback_s=10, feedback_ma=40,
+            capture_s=0.6, capture_ma=180, transfer_s=0.5, transfer_ma=90, feedback_s=0.5, feedback_ma=40,
             standby_ua=380, notes="XIAO-class light sleep with BLE ~380 uA (third-party measurement)"),
     Profile("ESP32-S3 dev kit as-is (camera board not power-gated)",
-            capture_s=0.6, capture_ma=180, transfer_s=0.5, transfer_ma=90, feedback_s=10, feedback_ma=40,
+            capture_s=0.6, capture_ma=180, transfer_s=0.5, transfer_ma=90, feedback_s=0.5, feedback_ma=40,
             standby_ua=3000, notes="measured ~3 mA deep sleep with the Sense camera board attached"),
     Profile("nRF52840 + HM01B0 160x120 mono, slow BLE connection maintained (stage 2 target)",
-            capture_s=0.3, capture_ma=12, transfer_s=0.5, transfer_ma=8, feedback_s=10, feedback_ma=40,
-            standby_ua=30, notes="radio 5 mA peaks; HM01B0 <2 mW; the 10 s haptic Morse reply (8 mm LRA ~75 mA at 50% duty) dominates per-shot energy"),
+            capture_s=0.3, capture_ma=12, transfer_s=0.5, transfer_ma=8, feedback_s=0.5, feedback_ma=40,
+            standby_ua=30, notes="radio 5 mA peaks; HM01B0 <2 mW; headphones only (no speaker at Oura size); the voice recording dominates per-shot energy"),
 ]
 
 

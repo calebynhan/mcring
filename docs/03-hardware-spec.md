@@ -54,7 +54,7 @@ for stage 2.** Everything else follows from this.
 | PCB | 2-layer 0.6 mm rigid, **26.5 × 18.0 mm** in the signet bay (`hardware/pcb/board_params.json`), FPC to the camera | rigid-flex in stage 2 |
 | Enclosure | `hardware/cad/` — CadQuery model generated from `board_params.json` (shell + lid + key STLs, fit report), SLA tough white/translucent resin | the OpenSCAD concept was removed |
 
-Expected: ~65 shots/week at 40 mAh with aggressive sleep (ESP32-S3) — see `hardware/power-budget.txt`.
+Expected (`hardware/power-budget.txt`): on a 40 mAh cell, ~7 days at 30 voice questions a day with the answer spoken by the phone; using the on-ring speaker for every answer roughly triples the per-question energy (10 s at ~120 mA) and cuts that to ~2–3 days.
 A day of ≥ 30 questions answered in headphones fits the 30 mAh cell; each 10 s answer played on the
 ring speaker costs about 2–3 photos' worth of energy on top
 (`python3 docs/build-helpers/tuning_calc.py speaker`), which is why the speaker is an option, gated,
@@ -76,8 +76,7 @@ and absent from stage 2.
 | Air puff / speaker | **not feasible** at this size | haptic cues + speech from the phone/headphones only (`AUDIO_OUT` is not ported to the nRF52840 firmware) |
 | PCB | rigid-flex 0.22/0.48 mm, printed microstrip antenna, WLCSP assembly house | per Memfault's smart-ring guide and Oura/Galaxy teardowns |
 
-Expected: ~2,600 shots/week at 20 mAh standby-dominated (`hardware/power-budget.txt`; its profile
-still budgets a 10 s haptic reply per shot — with cues only, a question costs capture + transfer).
+Expected (`hardware/power-budget.txt`): on a 20 mAh cell, ~5 days at 30 questions a day; the 6 s ring-mic recording, not the photo, is the largest per-question term, and standby (~0.7 mAh/day) sets the ceiling at ~3 weeks.
 
 ## 3.5 Output-channel verdicts
 
