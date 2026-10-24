@@ -54,6 +54,25 @@ starting points; verify against each datasheet.
 * Aux (air-puff experiment): `PIN_AUX` → enable of a boost (e.g. TPS61040 to 15 V) + a
   half-bridge driving the Murata MZB1001T02 at ~26 kHz (LEDC can generate the carrier on a
   second pin; gate the carrier with `PIN_AUX`).
+* **Audio out (optional, voice-first)**: MAX98357A I²S class-D mono amp (U10, **16-TQFN** 3 × 3 × 0.75 mm
+  for hand assembly; the 9-bump WLP is the alternative) fed from 3.3 V through a **third TPS22916** (U11,
+  `ON` = `PIN_SPEAKER_EN` **IO34**, net `AMP_PWR_EN`, 100 kΩ pull-down R20) so the whole group draws
+  nothing asleep; 10 µF + 100 nF (C25/C26) on the gated rail `VAMP`. I²S: `BCLK` **IO35**, `LRCLK`
+  **IO36**, `DIN` **IO37** (no MCLK; 512 kHz / 16 kHz), each through a **1 kΩ series resistor** (R22/R23/R24)
+  at the amp: while `VAMP` is off a high level on an I²S line forward-biases the amp's input ESD diode, and
+  the resistor bounds that to ≤ 2.6 mA per pin (a drain, not damage). `SD_MODE` is tied to `VAMP` →
+  left-channel mode (> 1.4 V; the firmware writes the mono sample into both slots so the channel does not
+  matter) and the amp comes up as the rail does — one GPIO is power gate and enable. `GAIN_SLOT` → R21
+  **100 kΩ** → `VAMP` = **3 dB** (0 dBFS → 1.4 Vrms = 0.25 W into 8 Ω: a full-scale tone at unity firmware
+  volume stays inside the speaker's 300 mW rating whatever the firmware does; R21 = 0 Ω → 6 dB = 0.5 W, the
+  speaker's maximum and the louder bench option, still clean from 3.3 V; DNP = 9 dB clips). `OUTP/OUTN` →
+  SPK1 two 1.5 mm wire pads (0.3 mm pair, filterless) → PUI **AS01008MR-2-R** Ø10 × 2.9 mm 8 Ω speaker
+  (LS1, off-board) in a pocket in the signet's **right (+y) wall** with the bay as back volume
+  (`hardware/pcb/board_params.json` → `speaker_mm`; left wall and band side rejected,
+  `hardware/pcb/floorplan.md` §9 item 14). Firmware must still park IO35–37 low while IO34 is low (R22–R24
+  make a pin left high a ≤ 2.6 mA drain, not zero). U10, U11, C25, C26, R20–R24 and LS1 are fitted or
+  omitted together; `SPK1` stays. TQFN pin table, SD/gain thresholds and the digital-input abs-max rating
+  are datasheet-verify items (`hardware/electrical/README.md` §6 items 17–20).
 
 ## Inputs
 

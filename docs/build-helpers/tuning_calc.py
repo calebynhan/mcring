@@ -10,14 +10,18 @@
   python3 docs/build-helpers/tuning_calc.py sleep                                   # stage-1 deep-sleep budget, firmware as-is
   python3 docs/build-helpers/tuning_calc.py sleep --imu lp-wakeup --shots-per-day 30 # ... with the IMU low-power wake follow-up
   python3 docs/build-helpers/tuning_calc.py pads --inner-d 20 --angle 25            # charging-pad / pogo-pin geometry from the CAD
-  python3 docs/build-helpers/tuning_calc.py morse --wpm 15 --overall 8              # unit lengths for Farnsworth timing
+  python3 docs/build-helpers/tuning_calc.py speaker                                 # on-ring speaker: energy per spoken answer, answers per charge
+  python3 docs/build-helpers/tuning_calc.py speaker --ma 150 --answers-per-day 10   # ... louder, fewer answers on the ring
+  python3 docs/build-helpers/tuning_calc.py morse --wpm 15 --overall 8              # legacy silent mode: unit lengths for Farnsworth timing
 
 Formulas: TI DRV2605L datasheet (SLOS854) 8.5.2.1 "Rated voltage programming" and 8.5.2.2
 "Overdrive voltage-clamp programming"; ST LIS2DW12 datasheet (DS12099) TAP_THS_* / INT_DUR and Table 3
 current consumption (the IMU figures below are datasheet-class numbers, not measurements); sleep floor
 items per hardware/electrical/README.md section 3; pad geometry per hardware/cad/mcring_stage1.py
-default_params() (pad_angle, rib_x, pad_window). Verify against the datasheet revision you have before
-trusting a register value on hardware, and against the PPK2 before trusting a current.
+default_params() (pad_angle, rib_x, pad_window); speaker figures: MAX98357A datasheet quiescent current
+(~2.4 mA with SD high) and the 100-150 mA speech-average draw of an 8 ohm 10 mm driver from 3.3 V at a usable
+volume (docs/04), to be replaced by the PPK2 number from docs/07 section 1.10. Verify against the datasheet
+revision you have before trusting a register value on hardware, and against the PPK2 before trusting a current.
 """
 from __future__ import annotations
 
@@ -146,6 +150,32 @@ def cmd_pads(a: argparse.Namespace) -> None:
           f" so the pin tip must reach R = {R:.1f} mm, i.e. {a.wall:.1f} mm inside the band's outer surface at that angle")
 
 
+AMP_IDLE_MA = 2.4          # MAX98357A quiescent with SD high (datasheet class); ~0 with SD low or the rail gated (U11 / IO34)
+STANDBY_UA_DEFAULT = 110.0 # stage-1 deep-sleep floor as the firmware stands (`sleep`); 22 with the IMU low-power wake follow-up
+
+
+def cmd_speaker(a: argparse.Namespace) -> None:
+    uah = a.seconds * a.ma / 3600.0 * 1000.0
+    print(f"one spoken answer on the ring speaker: {a.seconds:.0f} s x {a.ma:.0f} mA = {uah:.0f} uAh"
+          f"  ({uah / a.shot_uah:.1f} x a {a.shot_uah:.0f} uAh photo)")
+    idle_day = AMP_IDLE_MA * 24.0
+    print(f"amp left enabled (SD high, rail not gated): {AMP_IDLE_MA:.1f} mA = {idle_day:.1f} mAh/day"
+          f" = {idle_day / a.battery:.0%} of the {a.battery:.0f} mAh cell per day -> gate it (IO34 = PIN_SPEAKER_EN -> U11 ON; SD_MODE rides on the gated rail VAMP)")
+    usable = a.battery * a.usable
+    base = a.standby_ua * 24.0 / 1000.0 + a.shots_per_day * a.shot_uah / 1000.0
+    speak = a.answers_per_day * uah / 1000.0
+    per_day = base + speak
+    print(f"{a.battery:.0f} mAh cell, {a.usable:.0%} usable = {usable:.1f} mAh: standby {a.standby_ua:.0f} uA + {a.shots_per_day:.0f} questions/day"
+          f" (capture + transfer) = {base:.2f} mAh/day -> {usable / base:.1f} days with the answers in headphones")
+    print(f"  + {a.answers_per_day:.0f} answers/day x {a.seconds:.0f} s on the ring speaker = {speak:.2f} mAh/day"
+          f" -> {per_day:.2f} mAh/day -> {usable / per_day:.1f} days")
+    spare = usable - base
+    if spare > 0:
+        print(f"  one-day budget: {spare / (uah / 1000.0):.0f} speaker answers fit beside the {a.shots_per_day:.0f} questions on one charge")
+    print("acceptance: meter in series with the cell during `mcring say \"...\" --ring-speaker` (docs/07 section 1.10 / 2.4);"
+          " amp rail 0 V and no speaker current in deep sleep")
+
+
 def cmd_morse(a: argparse.Namespace) -> None:
     unit = 1200.0 / a.wpm
     print(f"char {a.wpm} WPM -> unit {unit:.0f} ms: dot {unit:.0f} ms, dash {3 * unit:.0f} ms, intra-char gap {unit:.0f} ms")
@@ -188,7 +218,14 @@ def main() -> None:
     s.add_argument("--rib-x", type=float, nargs=2, default=(-1.5, -3.5)); s.add_argument("--window", type=float, default=3.0)
     s.add_argument("--wall", type=float, default=1.2)
 
-    s = sub.add_parser("morse"); s.set_defaults(fn=cmd_morse)
+    s = sub.add_parser("speaker", help="on-ring speaker (stage-1 option): energy per spoken answer, answers per charge"); s.set_defaults(fn=cmd_speaker)
+    s.add_argument("--seconds", type=float, default=10.0, help="length of one spoken answer (default 10 s)")
+    s.add_argument("--ma", type=float, default=125.0, help="average 3V3 current while playing, mA (100-150 at a usable volume)")
+    s.add_argument("--answers-per-day", type=float, default=30.0); s.add_argument("--shots-per-day", type=float, default=30.0)
+    s.add_argument("--shot-uah", type=float, default=SHOT_UAH_DEFAULT); s.add_argument("--standby-ua", type=float, default=STANDBY_UA_DEFAULT)
+    s.add_argument("--battery", type=float, default=30.0); s.add_argument("--usable", type=float, default=0.8)
+
+    s = sub.add_parser("morse", help="legacy silent mode: Morse / Farnsworth unit lengths"); s.set_defaults(fn=cmd_morse)
     s.add_argument("--wpm", type=int, default=15); s.add_argument("--overall", type=int, default=8)
 
     a = p.parse_args()

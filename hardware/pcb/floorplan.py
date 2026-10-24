@@ -16,8 +16,11 @@ Coordinate system (board, mm):  origin = FRONT-LEFT corner of the board seen fro
 Part sizes are given as w (along x) × h (along y). Parts on the bottom use the same coordinates
 (no mirroring in the data); the bottom drawing mirrors y so it looks like the real bottom view.
 
-Reference designators follow hardware/electrical/out/mcring_v1_nets.md (U1..U9, C1..C24, R1..R19,
-D1, D2, L1, Q1, SW1, FPC1, J1, J2, M1, MK1, BZ1, TP1..TP8, TPAD1).
+Reference designators follow hardware/electrical/out/mcring_v1_nets.md (U1..U11, C1..C26, R1..R24,
+D1, D2, D3, L1, Q1, SW1, FPC1, J1, J2, M1, MK1, BZ1, SPK1, TP1..TP8, TPAD1). U10/U11/C25/C26/R20-R24/SPK1
+are the optional speaker amp (MAX98357A behind a third TPS22916, 1 k series resistors in the I2S lines);
+the speaker itself is off-board in a pocket in the signet's RIGHT wall, described for the CAD by
+board_params.json "speaker_mm".
 """
 from __future__ import annotations
 
@@ -60,7 +63,9 @@ ANT_CLEARANCE_MM = 5.0     # flex antenna + pigtail >= 5 mm from the cell, the L
 # Heights the CAD step has to clear
 UFL_MATED_HEIGHT = 2.9     # module substrate (~0.8) + mated U.FL-R-SMT / U.FL-LP-040 pair (2.0) + 0.1
 TOP_MAX_HEIGHT = max(MODULE["height"], UFL_MATED_HEIGHT)   # 2.9
-BOTTOM_MAX_HEIGHT = 1.15   # VSSOP-10 (U5) and SOT-23 (U3/U4/Q1) are 1.10–1.15 max
+BOTTOM_MAX_HEIGHT = 1.15   # VSSOP-10 (U5) and SOT-23 (U3/U4/Q1) are 1.10–1.15 max; TQFN (U10) 0.75–0.8
+BACK_LEDGE_X0 = 23.6       # hardware/cad: the back board ledge spans board x >= 23.6 at the sub-board level, so
+                           # bottom-side parts (and wire pads, whose solder blobs have height) must end before it
 LID_CLEARANCE = 0.30       # tallest top part -> lid underside
 LID_T = 1.2                # lid plate (CAD `lid_t`)
 CELL_POCKET_SLACK = 0.40   # the CAD cuts the cell pocket 3.4 deep for the 3.0 cell (hardware/cad `cell_pocket`)
@@ -197,19 +202,35 @@ PARTS: list[Part] = [
     c0603("C1", 11.6, 3.3, note="10 µF buck input"),
     Part("L1", "2.2 µH 2016 (DFE201610E)", "bottom", 13.7, 3.3, 2.0, 1.6, "inductor", 1.0, "L1", "buck inductor — tight loop with U8/C2"),
     c0603("C2", 15.8, 3.3, note="10 µF buck output"),
-    Part("D2", "PESD5V0S1BB SOD-523", "bottom", 18.4, 2.9, 1.2, 0.8, "diode", 0.6, "D2", "bidirectional TVS on CHG_PAD, < 2 mm from the pad"),
-    Part("D3", "PMEG2005EB SOD-523", "bottom", 18.4, 4.1, 1.2, 0.8, "diode", 0.6, "D3", "Schottky CHG_PAD → CHG_IN (reversed-cradle protection), right after D2"),
+    Part("D2", "PESD5V0S1BB SOD-523", "bottom", 18.1, 2.9, 1.2, 0.8, "diode", 0.6, "D2", "bidirectional TVS on CHG_PAD, < 2 mm from the pad (moved 0.3 toward the front for the R22–R24 column)"),
+    Part("D3", "PMEG2005EB SOD-523", "bottom", 18.1, 4.1, 1.2, 0.8, "diode", 0.6, "D3", "Schottky CHG_PAD → CHG_IN (reversed-cradle protection), right after D2 (moved 0.3 toward the front with D2)"),
     Part("U8", "TPS62840DLC SOT-583", "bottom", 12.6, 5.6, 2.1, 1.6, "ic", 0.6, "U8 buck", "3V3 buck"),
     r0402("R12", 14.4, 5.3, note="VSET (3.3 V code)"),
     Part("U7", "BQ25100 DSBGA-6", "bottom", 16.6, 5.3, 1.6, 0.9, "ic", 0.6, "U7", "charger 25 mA / 1 mA term"),
-    r0402("C7", 18.4, 5.3, note="1 µF charger IN"),
+    r0402("C7", 18.15, 5.3, note="1 µF charger IN (moved 0.25 toward U7 for the R22–R24 column)"),
     r0402("R8", 11.8, 6.9, note="1 M divider top (VBAT)"),
     r0402("R9", 13.0, 6.9, note="1 M divider bottom"),
     r0402("C23", 14.2, 6.9, note="100n BAT_SENSE"),
     r0402("C8", 15.6, 6.9, note="1 µF charger OUT / VBAT"),
     r0402("R10", 16.9, 6.9, note="9.1k ISET"),
     r0402("R11", 18.1, 6.9, note="11.5k PRE_TERM"),
-    r0402("R19", 19.3, 6.9, note="100k nCHG pull-up"),
+    r0402("R19", 17.6, 8.0, note="100k nCHG pull-up (moved from (19.3, 6.9) for the speaker amp block)"),
+    r0402("R2", 12.3, 7.9, note="10k IO0 pull-up (moved from (21.2, 1.6) for the speaker amp block)"),
+
+    # ---------------- BOTTOM: optional speaker amp block (back-left, under the module) ----------------
+    # 3V3 -> U11 -> VAMP -> U10 MAX98357A; I2S from the module (IO35-37) through R22-R24 (1 k series, a column
+    # at x 19.2 beside U10's pin-1/16 corner; D2/D3/C7 moved 0.3 toward the front to open the 0.2 mm gaps),
+    # AMP_PWR_EN IO34. Everything ends before the CAD's back ledge (x >= 23.6) and stays out of the u.FL strip.
+    Part("U10", "MAX98357A 16-TQFN 3×3", "bottom", 21.3, 4.3, 3.0, 3.0, "ic", 0.8, "U10 amp",
+         "I2S class-D amp, VDD = VAMP (gated), SD_MODE = VAMP; EP to the GND pour; OPTIONAL group"),
+    r0402("R22", 19.2, 3.1, along="y", note="1k I2S BCLK series → U10 pin 16 (bounds the ESD back-feed into the unpowered amp while VAMP is off)"),
+    r0402("R23", 19.2, 4.3, along="y", note="1k I2S LRCLK series → U10 pin 14"),
+    r0402("R24", 19.2, 5.5, along="y", note="1k I2S DIN series → U10 pin 1"),
+    r0402("R20", 21.0, 1.3, note="100k AMP_PWR_EN pull-down (IO34)"),
+    r0402("R21", 22.5, 1.3, note="100k gain select GAIN_SLOT→VAMP (3 dB; 0R = 6 dB bench option, DNP = 9 dB)"),
+    Part("U11", "TPS22916C DSBGA-4", "bottom", 19.9, 7.0, 1.2, 0.9, "ic", 0.6, "U11", "speaker amp rail gate 3V3→VAMP, ON = IO34 (AMP_PWR_EN)"),
+    c0603("C25", 21.6, 6.6, note="10 µF VAMP at U10"),
+    r0402("C26", 23.0, 6.6, along="y", note="100n VAMP at U10 VDD pins"),
 
     # ---------------- BOTTOM: aux + I2C sensors (right half) ----------------
     Part("Q1", "AO3400A SOT-23", "bottom", 14.6, 9.3, 2.9, 1.6, "ic", 1.15, "Q1 aux", "low-side N-FET, gate IO9"),
@@ -219,20 +240,23 @@ PARTS: list[Part] = [
     Part("U5", "DRV2605L VSSOP-10", "bottom", 16.2, 13.6, 3.0, 3.0, "ic", 1.1, "U5 DRV2605L", "haptic driver 0x5A"),
     r0402("C15", 13.6, 12.6, along="y", note="1 µF DRV VDD"),
     r0402("C16", 13.6, 14.0, along="y", note="1 µF DRV REG"),
-    pad("M1a", 15.4, 16.7, 1.5, label="LRA+", note="LRA wire OUT+"),
-    pad("M1b", 17.4, 16.7, 1.5, label="LRA-", note="LRA wire OUT-"),
+    pad("M1a", 15.0, 16.7, 1.5, label="LRA+", note="LRA wire OUT+ (moved 0.4 toward the front for the SPK1 pads)"),
+    pad("M1b", 17.0, 16.7, 1.5, label="LRA-", note="LRA wire OUT- (moved 0.4 toward the front for the SPK1 pads)"),
+    # speaker wire pads: on the RIGHT edge, in line with the speaker pocket in the signet's right wall
+    # (board_params.json speaker_mm: centre x 18.45, 2.0 mm outside the right edge) — leads <= 6 mm
+    pad("SPK1a", 18.8, 16.85, 1.5, label="SPK+", note="speaker wire OUTP (SPK_P) → LS1 in the right-wall pocket"),
+    pad("SPK1b", 20.8, 16.85, 1.5, label="SPK-", note="speaker wire OUTN (SPK_N) → LS1"),
     r0402("R3", 18.2, 11.0, note="4.7k SDA pull-up"),
     r0402("R4", 19.4, 11.0, note="4.7k SCL pull-up"),
     Part("U6", "LIS2DW12 LGA-12 2×2", "bottom", 20.3, 13.8, 2.0, 2.0, "ic", 0.7, "U6", "accelerometer 0x18 (SA0=GND)"),
-    r0402("C17", 20.3, 15.9, note="100n LIS VDD"),
-    r0402("C18", 18.9, 15.9, note="100n LIS VDD_IO"),
+    r0402("C17", 20.3, 15.5, note="100n LIS VDD (moved 0.4 toward U6 for the SPK1 pads)"),
+    r0402("C18", 22.1, 13.8, note="100n LIS VDD_IO (moved beside U6 for the SPK1 pads)"),
     c0603("C4", 20.4, 9.3, note="10 µF module 3V3"),
     r0402("C5", 21.0, 10.5, note="100n module 3V3"),
     r0402("R18", 21.4, 11.6, note="4.7k LED_PWR_EN pull-down"),
 
-    # ---------------- BOTTOM: module straps / test pads (back) ----------------
-    r0402("R2", 21.2, 1.6, note="10k IO0 pull-up"),
-    r0402("R1", 21.2, 16.6, note="10k EN pull-up"),
+    # ---------------- BOTTOM: module straps (back) ----------------
+    r0402("R1", 22.8, 15.4, note="10k EN pull-up (moved from (21.2, 16.6) for the SPK1 pads)"),
     r0402("C6", 22.6, 16.6, note="1 µF EN delay"),
 ]
 
@@ -276,12 +300,15 @@ NETS = [
     ("SCCB SIOD/SIOC + R5/R6 to CAM_3V3", "bottom", [(1.0, 4.8), (MODULE_X0 + 0.8, 4.8)], "#8e44ad"),
     ("3V3 → U2 → CAM_3V3 → U3/U4 → FPC1 power pins", "bottom", [(3.2, 7.4), (3.7, 5.6), (3.7, 3.6), (1.0, 4.8)], "#e67e22"),
     ("buck loop C1–U8–L1–C2 (tight, same layer)", "bottom", [(11.6, 3.3), (12.6, 5.6), (13.7, 3.3), (15.8, 3.3)], "#d35400"),
-    ("CHG pads → D2 TVS → U7 IN", "bottom", [(18.4, 1.3), (18.4, 2.9), (17.0, 5.3)], "#16a085"),
+    ("CHG pads → D2 TVS → U7 IN", "bottom", [(18.4, 1.3), (18.1, 2.9), (17.0, 5.3)], "#16a085"),
     ("VBAT: J1 → U8 VIN, U7 OUT, U9 VIN, R8", "bottom", [(12.4, 1.3), (12.0, 5.0), (11.8, 6.9)], "#1f618d"),
     ("I²C SDA/SCL (IO5/IO6) → U5, U6, R3/R4", "bottom", [(16.2, 13.6), (18.8, 11.0), (20.3, 13.8)], "#2e86c1"),
     ("LRA OUT+/OUT− (0.3 mm pair)", "bottom", [(16.2, 15.1), (16.4, 16.7)], "#7d6608"),
     ("VLED: U9 → D1 (via to top) / RGB_DATA IO43 → R7 → D1", "bottom", [(10.3, 15.5), (10.3, 12.0), (8.1, 10.0)], "#117a65"),
     ("PDM CLK/DATA (IO42/IO41) → MK1", "bottom", [(MODULE_X0 + 0.8, 15.85), (9.5, 15.85)], "#6c3483"),
+    ("I²S BCLK/LRCLK/DOUT (IO35/36/37) → R22–R24 1 kΩ → U10; AMP_PWR_EN (IO34) → U11", "bottom", [(MODULE_X0 + 0.8, 4.3), (19.8, 4.3)], "#b9770e"),
+    ("3V3 → U11 → VAMP (C25/C26) → U10; OUTP/OUTN 0.3 mm pair → SPK1 (back column, GND pour both sides)", "bottom",
+     [(19.9, 7.0), (21.6, 6.6), (22.6, 5.8), (22.95, 15.0), (20.8, 16.85)], "#5b2c6f"),
 ]
 
 COLORS = {
@@ -332,6 +359,9 @@ def run_checks() -> list[str]:
         # heights (TPAD1 carries the compliant touch contact, which is meant to reach the lid underside exactly)
         if p.side == "bottom" and p.height > BOTTOM_MAX_HEIGHT + 1e-6:
             problems.append(f"{p.ref} is {p.height} mm tall on the bottom (max {BOTTOM_MAX_HEIGHT})")
+        # the CAD's back ledge carries the board from x = 23.6: nothing on the bottom may reach it
+        if p.side == "bottom" and p.x1 > BACK_LEDGE_X0 + 1e-6:
+            problems.append(f"{p.ref} ({p.side}) reaches the back board ledge (x ≥ {BACK_LEDGE_X0}): {rect_of(p)}")
         if p.side == "top" and p.ref != "TPAD1" and p.height > TOP_MAX_HEIGHT + 1e-6:
             problems.append(f"{p.ref} is {p.height} mm tall on the top (max {TOP_MAX_HEIGHT})")
         if p.ref == "TPAD1":
@@ -599,7 +629,7 @@ STACK = [
     ("301012 LiPo cell", 3.00, "#f9e79f", "3 × 10 × 12, flat under the board, leads to J1"),
     ("cell-pocket slack", CELL_POCKET_SLACK, "#fdf6d8", "CAD pocket 3.4 deep for the 3.0 cell"),
     ("clearance cell → bottom parts", 0.35, "#ffffff", "foam/Kapton on the cell"),
-    ("bottom-side parts", BOTTOM_MAX_HEIGHT, "#d5f5e3", "VSSOP-10 / SOT-23 ≤ 1.15; mic 0.98"),
+    ("bottom-side parts", BOTTOM_MAX_HEIGHT, "#d5f5e3", "VSSOP-10 / SOT-23 ≤ 1.15; mic 0.98; MAX98357A TQFN 0.8"),
     ("PCB FR-4 2-layer", BOARD["thickness"], "#2ecc71", "0.6 mm, ENIG"),
     ("top-side parts", TOP_MAX_HEIGHT, "#dfe9f3", "module 2.4; mated u.FL ≈ 2.9; FPC1 2.0; C3 1.8"),
     ("clearance → lid", LID_CLEARANCE, "#ffffff", f"touch contact on TPAD1 bridges parts + gap ({TOUCH_CONTACT['compressed_height']}) to the lid foil"),
@@ -614,6 +644,75 @@ POD = dict(fpc_loop=2.5, head_thick=1.3, barrel_len=4.5, barrel_d=4.5, head_sq=8
            fpc_fold=1.0)        # room above the head for the 180° fold of the camera FPC
 ANT_CAVITY_DEPTH = 2.0    # bay interior extends this far behind the board's back edge (u.FL pigtail turn + flex antenna)
 N_STACK_UNDER_BOARD = 5   # rows of STACK below the PCB
+
+# ----------------------------------------------------------------------------------------------
+# 6b. Optional speaker — OFF-BOARD, for the CAD (hardware/cad/mcring_stage1.py must read this)
+# ----------------------------------------------------------------------------------------------
+# Where a Ø10 x 2.9 mm micro speaker can live, given the enclosure as built (hardware/cad/mcring_stage1.py):
+#   * inside the bay: no — the sub-board space is 1.5 mm tall, the lid gap 0.3.
+#   * "signet_back": no — the 2 mm antenna cavity and the flex antenna (>= 5 mm metal keep-out) are there.
+#   * "band_side": no — the band wall is 1.2 mm with the finger behind it; a disc on the band's side would sit
+#     between the fingers and its leads would have to run outside the band like the charging wires.
+#   * "signet_left_wall" (-y, switch side): the switch key (board x 6.3-9.7) and the two charging-pad wire
+#     channels (world X -1.5 / -3.5 = board x 14.75 / 16.75, climbing inside the -y shoulder) force the pocket
+#     behind board x ~17.7, and a 10.4 mm pocket then ends 0.7 mm from the flex antenna's plane — the amp's
+#     NdFeB magnet + steel yoke inside the antenna's 5 mm keep-out. Only a 4.3 mm bump (sealed wall) avoids it.
+#   * "signet_right_wall" (+y): nothing on that wall (the mic port, LED and touch dimple are in the lid, the
+#     LRA pocket in the floor, both pad-wire ribs on -y). CHOSEN. The pocket is cut into the +y wall with the
+#     signet's +y face pushed out 3.15 mm over the pocket's length; the speaker stands vertically (disc in the
+#     xz plane), diaphragm/grille facing +y, back toward the bay. Above the sub-board floor the wall behind it is
+#     removed over the pocket outline so the bay (~3 cm3) is the back volume and the two leads go straight to the
+#     SPK1 pads; below the floor the pocket is a recess in the solid slab.
+# Coordinates: board frame (x from the front edge, y from the left edge; z from the BOARD TOP, + toward the lid).
+# CAD: X = L/2 - x, Y = y - W/2, Z = z_board_top + z.  Speaker centre: board x 18.45 (world X -5.2), board y 20.0
+# (Y +11.0: back face at Y 9.55 = 0.25 outside the bay wall's inner plane 9.3, front face 12.45, pocket to 12.65,
+# 1.0 mm grille wall to Y 13.65), z -3.2 (world 13.5 = 3.5 above the skin; speaker spans 8.5..18.5, pocket
+# 8.3..18.7 — 1.2 mm under the lid-rebate floor at 19.9 and 1.3 mm above the slab bottom at 7.0).
+SPEAKER_D, SPEAKER_T = 10.0, 2.9
+SPEAKER_CX, SPEAKER_CY, SPEAKER_CZ = 18.45, 20.0, -3.2      # board frame; z from the board top
+SPEAKER_POCKET_CLEAR, SPEAKER_GRILLE_WALL = 0.2, 1.0
+SPEAKER = {
+    "part": "PUI Audio AS01008MR-2-R — Ø10 x 2.9 mm max, 8 Ω, 300 mW rated / 500 mW max, 86 dB, top port, NdFeB "
+            "magnet, solder-pad terminals (netlist LS1, off-board; alt. any 10 mm 8 Ω micro speaker)",
+    "diameter": SPEAKER_D,
+    "thickness": SPEAKER_T,
+    "location": "signet_right_wall",
+    "frame": "board: x from the front edge, y from the left (switch) edge, z from the board TOP (+ toward the lid); "
+             "CAD X = L/2 - x, Y = y - W/2, Z = z_board_top + z",
+    "centre_board_xyz_mm": [SPEAKER_CX, SPEAKER_CY, SPEAKER_CZ],
+    "centre_z_above_skin_mm": round(6.7 + SPEAKER_CZ, 2),
+    "axis": "y",
+    "grille_normal": "+y",
+    "grille_normal_board": [0, 1, 0],
+    "disc_plane": "xz (the speaker stands vertically in the right wall)",
+    "speaker_extent_board_mm": {
+        "x": [round(SPEAKER_CX - SPEAKER_D / 2, 2), round(SPEAKER_CX + SPEAKER_D / 2, 2)],
+        "y": [round(SPEAKER_CY - SPEAKER_T / 2, 2), round(SPEAKER_CY + SPEAKER_T / 2, 2)],
+        "z_from_board_top": [round(SPEAKER_CZ - SPEAKER_D / 2, 2), round(SPEAKER_CZ + SPEAKER_D / 2, 2)],
+    },
+    "pocket_clearance": SPEAKER_POCKET_CLEAR,
+    "grille_wall": SPEAKER_GRILLE_WALL,
+    "grille": "Ø0.8 holes on a 1.2 mm grid inside Ø8 on the +y face, or 3 slots 0.8 x 6; 1.0 mm wall",
+    # back clearance 0.25 (behind the bay wall's inner plane) + speaker + front clearance + grille wall, minus the 1.2 wall it replaces
+    "signet_right_face_bump_mm": round(0.25 + SPEAKER_T + SPEAKER_POCKET_CLEAR + SPEAKER_GRILLE_WALL - 1.2, 2),
+    "pocket_board_x_range": [round(SPEAKER_CX - SPEAKER_D / 2 - SPEAKER_POCKET_CLEAR, 2),
+                             round(SPEAKER_CX + SPEAKER_D / 2 + SPEAKER_POCKET_CLEAR, 2)],
+    "back_volume": "open into the bay: remove the +y bay wall over the pocket outline above the sub-board floor "
+                   "(z_floor 4.6 .. pocket top 8.7 above the skin) so the bay is the back volume and the leads pass "
+                   "straight through; below the floor the pocket is a recess in the solid slab. Sealed alternative: "
+                   "keep the 1.2 wall with a 3 x 1.5 wire slot + 3 x Ø1.0 vents into the sub-board cavity and move "
+                   "the speaker out so its back sits 0.2 outside the old face (bump 4.3 mm)",
+    "wire_pads": {"SPK1a": [18.8, 16.85], "SPK1b": [20.8, 16.85]},
+    "wire_exit": "two 30 AWG leads from the speaker's back terminals, +y 1.5 mm through the wall opening into the "
+                 "sub-board cavity, to SPK1a/SPK1b on the board bottom (<= 6 mm)",
+    "antenna_clearance_mm": 5.7,
+    "antenna_note": "speaker back-left corner (board x 23.45, y 18.55) to the flex antenna edge (board x 28.75, "
+                    "y 1.5..16.5): 5.3 along x, 5.7 diagonal — the NdFeB magnet stays outside the 5 mm keep-out",
+    "why_not_left_wall": "switch key at board x 6.3-9.7 and the pad-wire channels at board x 14.75/16.75 push a "
+                         "10.4 mm pocket behind x 17.7, whose back end is 0.7 mm from the flex antenna plane",
+    "why_not_band_side": "1.2 mm band wall with the finger behind it; no lead path except outside the band",
+    "mass_g": 1.0,
+}
 
 
 def draw_stackup(path: str) -> None:
@@ -775,8 +874,11 @@ def write_params(stack_info: dict) -> dict:
             "(test_pads_top_mm) are on the TOP side so the board can be flashed and probed while seated in the bay. "
             "FPC connector FPC1 on top at x 0.5-4.5 spanning y 1-17, FPC enters from the front edge; the "
             "camera head sits in a pod in front of the board (see stackup.svg / pod_mm). Wire pads for the cell "
-            "(J1), charging pads (PAD1/2), LRA (M1), piezo (BZ1) and aux (J2) are all on the BOTTOM side, so the "
-            "wire channel into the band should open under the board near x 12-20 (left) and x 15-18 (right). "
+            "(J1), charging pads (PAD1/2), LRA (M1), piezo (BZ1), aux (J2) and the optional speaker (SPK1) are all "
+            "on the BOTTOM side, so the wire channel into the band should open under the board near x 12-20 (left) "
+            "and x 15-21 (right). The optional 10 mm speaker (speaker_mm) is OFF-BOARD in a pocket in the signet's "
+            "RIGHT (+y) wall, grille facing +y, its two leads entering the sub-board cavity through that wall to the "
+            "SPK1a/SPK1b pads; the amp (U10) and its load switch (U11) are bottom-side parts in the back-left block. "
             "stack_mm and pod_mm carry the enclosure's as-built numbers (cell pocket 3.4 deep, lid top 11.1, pod "
             "roof flush with the lid, bore 4.6)."
         ),
@@ -831,6 +933,7 @@ def write_params(stack_info: dict) -> dict:
             "depth_behind_board_edge": ANT_CAVITY_DEPTH,
             "note": "bay interior extends behind the board's back edge for the u.FL pigtail turn and the flex antenna glued to the back wall",
         },
+        "speaker_mm": SPEAKER,
         "wire_pads_bottom_mm": {p.ref: [p.cx, p.cy] for p in PARTS if p.kind == "pad"},
         "test_pads_top_mm": {p.label: [p.cx, p.cy] for p in PARTS if p.kind == "tp"},
         "parts": [asdict(p) for p in PARTS],
@@ -878,7 +981,7 @@ Reference designators and nets follow `hardware/electrical/out/mcring_v1_nets.md
 | Orientation | x along the finger: **front edge = camera / FPC** (x = 0), **back edge = antenna / u.FL** (x = {L}); y across the finger: **left edge = switch** (y = 0) |
 | Module | ESP32-S3-MINI-1U 15.4 × 15.4 × 2.4, centre ({params['module_xy_mm'][0]}, {params['module_xy_mm'][1]}), u.FL end **flush with the back edge** (pin positions along the three rows: **verify against the Espressif footprint** — nothing below depends on them except the stub lengths in §6) |
 | Top side | U1 module, FPC1 (24-pin 0.5 mm bottom-contact), SW1 side switch, D1 WS2812B-2020 + R7, C3 100 µF 1206, TPAD1 3 × 4 touch landing with hatched GND ring (the touch **electrode** is a copper foil on the lid underside — §2), **{n_tp} test pads** ({tp_list}) |
-| Bottom side (≤ {BOTTOM_MAX_HEIGHT} mm) | everything else: U2–U9, L1, D2, D3, Q1, MK1 mic (bottom-port, port through the board), {n0402} × 0402, {n0603} × 0603, wire pads (cell, charge pads, LRA, piezo, aux) |
+| Bottom side (≤ {BOTTOM_MAX_HEIGHT} mm) | everything else: U2–U11 (U10 MAX98357A + U11 its TPS22916 gate = the optional speaker amp), L1, D2, D3, Q1, MK1 mic (bottom-port, port through the board), {n0402} × 0402, {n0603} × 0603, wire pads (cell, charge pads, LRA, piezo, aux, speaker) |
 | Tallest top part | mated u.FL plug on the module ≈ {UFL_MATED_HEIGHT} mm (module shield 2.4; front strip x < {MODULE_X0:.1f}: FPC1 2.0) |
 | Why {L} long | {MODULE_X0:.1f} mm front strip (FPC1 4.0 + 1.0 actuator clearance + 5.6 for SW1/TPAD1/D1/C3/mic port) + 15.4 module |
 | Why {W} wide | FPC1 body 16 mm + 2 × 1.0 edge; module 15.4 + 2 × 1.3 |
@@ -918,6 +1021,8 @@ unsoldered. Wire pads stay on the bottom (the wires go down into the band).
 | FPC actuator swing | top | (4.5, 1.0 – 5.5, 17.0) | parts ≤ 0.6 mm only (R7 is fine) |
 | DVP corridor | bottom | (1.0, 8.3 – {MODULE_X0 + 1.5:.1f}, 13.8) | Y2–Y9, PCLK, HREF, VSYNC, XCLK only; vias up to U1 in the last 1.5 mm |
 | Under the module | top | module footprint | bare FR-4 under the shield (no silkscreen), ≥ 9 GND vias on the thermal pads |
+| Back ledge (enclosure) | bottom | (x ≥ {BACK_LEDGE_X0}) | the CAD's back board ledge carries the board here at the sub-board level: no bottom-side part or wire pad may reach it (checked by the script) |
+| Speaker pocket (enclosure) | — | right (+y) signet wall, board x {SPEAKER['pocket_board_x_range'][0]}–{SPEAKER['pocket_board_x_range'][1]}, centre {SPEAKER_CY - W:.1f} mm outside the right edge | the Ø{SPEAKER_D} × {SPEAKER_T} speaker LS1 stands vertically in a pocket cut into the +y wall (face pushed out {SPEAKER['signet_right_face_bump_mm']} mm), grille facing +y, back open to the bay; leads through the wall to SPK1a/SPK1b; its magnet stays ≥ 5 mm from the flex antenna — `board_params.json` → `speaker_mm` |
 
 ## 5. Layer usage
 
@@ -945,6 +1050,8 @@ unsoldered. Wire pads stay on the bottom (the wires go down into the band).
 | PDM CLK/DATA | IO42/IO41 → MK1 on the right-front, ≤ 10 mm |
 | USB D−/D+ | IO19/IO20 (module pins 23/24, in the **front row**) → TP3/TP4 directly in front of that row at x = {TP_COL_X}; the stub is the pin-to-pad run, routed as a pair on the top layer, ≤ 10 mm (expect 1–8 mm depending on where pins 23/24 sit along the row — verify on the footprint), nothing else on the nets |
 | Touch | IO8 → R13 (1 kΩ) → TPAD1 landing → foam/spring contact → lid foil electrode; keep the trace short and away from the DVP corridor |
+| I²S (optional speaker) | IO35/36/37 → R22/R23/R24 (1 kΩ series, the column at x 19.2 beside U10's pin-1/16 corner) → U10 BCLK/LRCLK/DIN (pins 16/14/1), 0.1 mm, 512 kHz / 16 kHz, no matching, no MCLK; the resistors bound the ESD-diode back-feed into the unpowered amp to ≤ 2.6 mA per pin while VAMP is off; AMP_PWR_EN IO34 → U11 ON + R20 |
+| VAMP / SPK_P–SPK_N | 3V3 → U11 → C25 (10 µF) + C26 (100 nF, ≤ 1 mm from U10 VDD pins 7/8); OUTP/OUTN as a **0.3 mm pair** down the back column x 22–23.4 to SPK1a/b (≈ 12 mm), GND pour both sides, ≥ 1 mm from SDA/SCL, IMU_INT1 and the PDM lines (filterless class D); U10 EP → GND pour with 2–4 vias |
 
 ## 7. Camera FPC pin order (assumed ESP32-CAM / Arducam M0031 — verify on the purchased head)
 
@@ -997,11 +1104,27 @@ board's back edge for the u.FL pigtail and the flex antenna. Side-switch slot th
     bore Ø{pod['bore_d']} not 4.7; switch slot {params['switch_slot_mm'][0]} × {params['switch_slot_mm'][1]} not 3.2 × 1.5. The CAD still hard-codes `cell_pocket`,
     `lens_d`, `lid_t` and `switch_slot` — it should read `stack_mm.cell_pocket_depth`, `pod_mm.bore_d`, `stack_mm.lid` and
     `switch_slot_mm` from this JSON so the two cannot drift again. `hardware/cad/fit_report.md` is the as-built check.
-12. **D3** (PMEG2005EB Schottky, CHG_PAD → CHG_IN) added at (18.4, 4.1) — it is in the electrical netlist but was missing here.
+12. **D3** (PMEG2005EB Schottky, CHG_PAD → CHG_IN) added at (18.1, 4.1) — it is in the electrical netlist but was missing here.
+13. **Optional speaker amp block** (voice-first, `hardware/electrical/README.md` §1 item 20): U10 MAX98357A 16-TQFN (3 × 3 × 0.8),
+    U11 TPS22916, C25 10 µF, C26 100 nF, R20 100 kΩ, R21 100 kΩ (3 dB gain), R22–R24 1 kΩ I²S series (a column at x 19.2 beside
+    U10's pin-1/16 corner) in the back-left block under the module (x 18.95–23.4, y 0.4–8.8);
+    SPK1a/SPK1b 1.5 mm wire pads on the **right** edge at (18.8 / 20.8, 16.85), in line with the speaker pocket. To make room:
+    R2 → (12.3, 7.9), R19 → (17.6, 8.0), R1 → (22.8, 15.4), C17 → (20.3, 15.5), C18 → (22.1, 13.8), M1a/M1b 0.4 mm toward the
+    front, D2/D3 → x 18.1 and C7 → x 18.15 (0.25–0.3 toward the front; D2 stays 1.75 mm from the PAD1w centre). The OUTP/OUTN pair runs ≈ 12 mm down the back column — acceptable for a filterless class-D output, see §6. New
+    check: nothing on the bottom reaches the CAD's back ledge (x ≥ {BACK_LEDGE_X0}).
+14. **Speaker in the signet's RIGHT wall, not the left** (task text offered `signet_left_wall` / `band_side`): on the −y side the
+    switch key (x 6.3–9.7) and the two charging-pad wire channels (x 14.75 / 16.75, climbing inside the −y shoulder) push a
+    10.4 mm pocket behind x ≈ 17.7, whose back end lands 0.7 mm from the flex antenna's plane — an NdFeB magnet inside the 5 mm
+    keep-out. The +y wall has nothing on it (mic port, LED and touch dimple are in the lid, the LRA pocket in the floor, both
+    pad-wire ribs on −y). `speaker_mm`: centre board x {SPEAKER_CX}, y {SPEAKER_CY} (2.0 outside the right edge), z {SPEAKER_CZ}
+    from the board top ({SPEAKER['centre_z_above_skin_mm']} above the skin); Ø{SPEAKER_D} × {SPEAKER_T}; disc in the xz plane, grille normal +y; pocket
+    x {SPEAKER['pocket_board_x_range'][0]}–{SPEAKER['pocket_board_x_range'][1]}, 0.2 clearance, 1.0 grille wall → the signet's +y face grows {SPEAKER['signet_right_face_bump_mm']} mm over that length; back open
+    to the bay above the sub-board floor (bay = back volume), recess in the slab below it; 5.7 mm from the antenna. "band_side"
+    was rejected: 1.2 mm band wall with the finger behind it and no lead path except outside the band.
 
 ## 10. Checks performed by the script
 
-{chr(10).join('* ' + m for m in check_msgs) if check_msgs else '* no overlaps, no edge/keep-out/height violations'}
+{chr(10).join('* ' + m for m in check_msgs) if check_msgs else '* no overlaps, no edge/keep-out/height violations, no bottom part on the back ledge'}
 """
     with open(os.path.join(HERE, "floorplan.md"), "w", encoding="utf-8") as f:
         f.write(md)

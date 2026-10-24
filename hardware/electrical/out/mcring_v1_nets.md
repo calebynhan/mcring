@@ -1,20 +1,26 @@
 # mcring v1 (stage 1) — net listing
 
-81 parts (79 populated, 5 off-board / wired — marked with \*), 274 pins, 54 nets, 260 nodes, 9 power nets.
+92 parts (90 populated, 6 off-board / wired — marked with \*), 313 pins, 65 nets, 299 nodes, 10 power nets.
 
 ## Nets
 
 | Net | Power | Nodes | Connections |
 |---|---|---|---|
-| `3V3` | yes | 26 | U1.3 (3V3), C4.1 (1), C5.1 (1), R1.1 (1), R2.1 (1), R3.1 (1), R4.1 (1), TP6.1 (1), R19.1 (1), L1.2 (2), U8.8 (VOS), C2.1 (1), C3.1 (1), U2.A1 (VIN), C9.1 (1), U5.6 (VDD), U5.5 (EN), C15.1 (1), U6.9 (VDD), U6.10 (VDD_IO), U6.2 (CS), C17.1 (1), C18.1 (1), MK1.1 (VDD), C19.1 (1), U9.A1 (VIN) |
+| `3V3` | yes | 27 | U1.3 (3V3), C4.1 (1), C5.1 (1), R1.1 (1), R2.1 (1), R3.1 (1), R4.1 (1), TP6.1 (1), R19.1 (1), L1.2 (2), U8.8 (VOS), C2.1 (1), C3.1 (1), U2.A1 (VIN), C9.1 (1), U5.6 (VDD), U5.5 (EN), C15.1 (1), U6.9 (VDD), U6.10 (VDD_IO), U6.2 (CS), C17.1 (1), C18.1 (1), MK1.1 (VDD), C19.1 (1), U9.A1 (VIN), U11.A1 (VIN) |
 | `CAM_1V2` | yes | 3 | U4.2 (VOUT), C12.1 (1), FPC1.10 (DVDD) |
 | `CAM_2V8` | yes | 4 | U3.2 (VOUT), C11.1 (1), C13.1 (1), FPC1.4 (AVDD) |
 | `CAM_3V3` | yes | 9 | U2.A2 (VOUT), C10.1 (1), C24.1 (1), U3.3 (VIN), U4.3 (VIN), FPC1.11 (DOVDD), R5.1 (1), R6.1 (1), R16.1 (1) |
 | `CHG_IN` | yes | 3 | D3.1 (K), U7.A1 (IN), C7.1 (1) |
 | `CHG_PAD` | yes | 4 | PAD1.1 (PAD), CP1\*.1 (PAD), D2.1 (1), D3.2 (A) |
-| `GND` | yes | 88 | U1.1 (GND), U1.2 (GND), U1.43 (GND), U1.44 (GND), U1.46 (GND), U1.47 (GND), U1.48 (GND), U1.49 (GND), U1.50 (GND), U1.51 (GND), U1.52 (GND), U1.53 (GND), U1.54 (GND), U1.55 (GND), U1.56 (GND), U1.57 (GND), U1.58 (GND), U1.59 (GND), U1.60 (GND), U1.61 (GND), U1.62 (GND), U1.63 (GND), U1.64 (GND), U1.65 (GND), C4.2 (2), C5.2 (2), C6.2 (2), TP5.1 (1), R17.2 (2), R18.2 (2), SW2.2 (2), J1.2 (BAT-), BT1\*.2 (-), PAD2.1 (PAD), CP2\*.1 (PAD), D2.2 (2), U7.C2 (VSS), C7.2 (2), C8.2 (2), R10.2 (2), R11.2 (2), U8.2 (GND), U8.5 (STOP), U8.6 (MODE), C1.2 (2), C2.2 (2), C3.2 (2), R12.2 (2), R9.2 (2), C23.2 (2), U2.B2 (GND), C9.2 (2), C10.2 (2), C24.2 (2), C11.2 (2), C13.2 (2), C12.2 (2), C14.2 (2), U3.1 (VSS), U4.1 (VSS), FPC1.2 (AGND), FPC1.15 (DGND), FPC1.8 (PWDN), U5.7 (GND), U5.4 (IN/TRIG), C15.2 (2), C16.2 (2), U6.5 (RES), U6.6 (GND), U6.7 (GND), U6.8 (GND), U6.3 (SA0/SDO), C17.2 (2), C18.2 (2), MK1.2 (GND), MK1.6 (GND), MK1.5 (SELECT), C19.2 (2), SW1.2 (2), C22.2 (2), U9.B2 (GND), C21.2 (2), C20.2 (2), D1.3 (GND), BZ1.2 (GND), PZ1\*.2 (-), Q1.2 (S), R14.2 (2) |
+| `GND` | yes | 96 | U1.1 (GND), U1.2 (GND), U1.43 (GND), U1.44 (GND), U1.46 (GND), U1.47 (GND), U1.48 (GND), U1.49 (GND), U1.50 (GND), U1.51 (GND), U1.52 (GND), U1.53 (GND), U1.54 (GND), U1.55 (GND), U1.56 (GND), U1.57 (GND), U1.58 (GND), U1.59 (GND), U1.60 (GND), U1.61 (GND), U1.62 (GND), U1.63 (GND), U1.64 (GND), U1.65 (GND), C4.2 (2), C5.2 (2), C6.2 (2), TP5.1 (1), R17.2 (2), R18.2 (2), SW2.2 (2), J1.2 (BAT-), BT1\*.2 (-), PAD2.1 (PAD), CP2\*.1 (PAD), D2.2 (2), U7.C2 (VSS), C7.2 (2), C8.2 (2), R10.2 (2), R11.2 (2), U8.2 (GND), U8.5 (STOP), U8.6 (MODE), C1.2 (2), C2.2 (2), C3.2 (2), R12.2 (2), R9.2 (2), C23.2 (2), U2.B2 (GND), C9.2 (2), C10.2 (2), C24.2 (2), C11.2 (2), C13.2 (2), C12.2 (2), C14.2 (2), U3.1 (VSS), U4.1 (VSS), FPC1.2 (AGND), FPC1.15 (DGND), FPC1.8 (PWDN), U5.7 (GND), U5.4 (IN/TRIG), C15.2 (2), C16.2 (2), U6.5 (RES), U6.6 (GND), U6.7 (GND), U6.8 (GND), U6.3 (SA0/SDO), C17.2 (2), C18.2 (2), MK1.2 (GND), MK1.6 (GND), MK1.5 (SELECT), C19.2 (2), SW1.2 (2), C22.2 (2), U9.B2 (GND), C21.2 (2), C20.2 (2), D1.3 (GND), BZ1.2 (GND), PZ1\*.2 (-), Q1.2 (S), R14.2 (2), U11.B2 (GND), U10.3 (GND), U10.11 (GND), U10.15 (GND), U10.17 (EP), C25.2 (2), C26.2 (2), R20.2 (2) |
+| `VAMP` | yes | 7 | U11.A2 (VOUT), U10.7 (VDD), U10.8 (VDD), U10.4 (SD_MODE), C25.1 (1), C26.1 (1), R21.2 (2) |
 | `VBAT` | yes | 10 | J1.1 (BAT+), BT1\*.1 (+), U7.A2 (OUT), C8.1 (1), U8.3 (VIN), U8.4 (EN), C1.1 (1), TP8.1 (1), R8.1 (1), J2.1 (VBAT) |
 | `VLED` | yes | 4 | U9.A2 (VOUT), C21.1 (1), C20.1 (1), D1.1 (VDD) |
+| `AMP_BCLK` |  | 2 | R22.2 (2), U10.16 (BCLK) |
+| `AMP_DIN` |  | 2 | R24.2 (2), U10.1 (DIN) |
+| `AMP_GAIN` |  | 2 | U10.2 (GAIN_SLOT), R21.1 (1) |
+| `AMP_LRCLK` |  | 2 | R23.2 (2), U10.14 (LRCLK) |
+| `AMP_PWR_EN` |  | 3 | U1.28 (IO34), U11.B1 (ON), R20.1 (1) |
 | `ANT_RF` |  | 1 | ANT1\*.1 (RF) |
 | `AUX_DRAIN` |  | 2 | Q1.3 (D), J2.2 (DRAIN) |
 | `AUX_EN` |  | 3 | U1.13 (IO9), Q1.1 (G), R14.1 (1) |
@@ -39,6 +45,9 @@
 | `CAM_Y8` |  | 2 | FPC1.14 (Y8), U1.15 (IO11) |
 | `CAM_Y9` |  | 2 | FPC1.12 (Y9), U1.42 (IO48) |
 | `DRV_REG` |  | 2 | U5.1 (REG), C16.1 (1) |
+| `I2S_BCLK` |  | 2 | U1.29 (IO35), R22.1 (1) |
+| `I2S_DOUT` |  | 2 | U1.31 (IO37), R24.1 (1) |
+| `I2S_LRCLK` |  | 2 | U1.30 (IO36), R23.1 (1) |
 | `IMU_INT1` |  | 2 | U6.12 (INT1), U1.11 (IO7) |
 | `IO0` |  | 4 | U1.4 (IO0), R2.2 (2), TP1.1 (1), SW2.1 (1) |
 | `ISET` |  | 2 | U7.C1 (ISET), R10.1 (1) |
@@ -53,6 +62,8 @@
 | `RGB_DIN` |  | 2 | R7.2 (2), D1.4 (DIN) |
 | `SCL` |  | 4 | U1.10 (IO6), R4.2 (2), U5.2 (SCL), U6.1 (SCL/SPC) |
 | `SDA` |  | 4 | U1.9 (IO5), R3.2 (2), U5.3 (SDA), U6.4 (SDA/SDI/SDO) |
+| `SPK_N` |  | 3 | U10.10 (OUTN), SPK1.2 (OUTN), LS1\*.2 (-) |
+| `SPK_P` |  | 3 | U10.9 (OUTP), SPK1.1 (OUTP), LS1\*.1 (+) |
 | `SW_NODE` |  | 2 | U8.1 (SW), L1.1 (1) |
 | `TOUCH` |  | 2 | R13.1 (1), U1.12 (IO8) |
 | `TOUCH_PAD` |  | 2 | R13.2 (2), TPAD1.1 (PAD) |
@@ -92,6 +103,8 @@
 | C22 | 100n | GRM155R71C104KA88 | `Capacitor_SMD:C_0402_1005Metric` | 2 | Sensors |
 | C23 | 100n | GRM155R71C104KA88 | `Capacitor_SMD:C_0402_1005Metric` | 2 | Power |
 | C24 | 100n | GRM155R71C104KA88 | `Capacitor_SMD:C_0402_1005Metric` | 2 | Camera |
+| C25 | 10u | GRM188R60J106ME47 | `Capacitor_SMD:C_0603_1608Metric` | 2 | Outputs |
+| C26 | 100n | GRM155R71C104KA88 | `Capacitor_SMD:C_0402_1005Metric` | 2 | Outputs |
 | CP1 \*off-board | charging contact 3x2 mm ENIG |  | `offboard:Pad_ENIG_3x2mm` | 1 | Power |
 | CP2 \*off-board | charging contact 3x2 mm ENIG |  | `offboard:Pad_ENIG_3x2mm` | 1 | Power |
 | D1 | WS2812B-2020 | WS2812B-2020 | `LED_SMD:LED_WS2812B-2020_PLCC4_2.0x2.0mm` | 4 | Outputs |
@@ -101,6 +114,7 @@
 | J1 | BAT pads |  | `mcring:PAD_Wire_2x1.5mm_P2.0mm` | 2 | Power |
 | J2 | AUX |  | `mcring:PAD_Aux_1x2` | 2 | Outputs |
 | L1 | 2.2uH | DFE201610E-2R2M=P2 | `Inductor_SMD:L_0806_2016Metric` | 2 | Power |
+| LS1 \*off-board | AS01008MR-2-R | AS01008MR-2-R | `offboard:Speaker_10mm_x2.9mm` | 2 | Outputs |
 | M1 | LRA0825BC-0167F | LRA0825BC-0167F | `mcring:LRA_8mm_2pad` | 2 | Sensors |
 | MK1 | T3902 | T3902 | `mcring:MIC_TDK_T3902_3.5x2.65mm` | 6 | Sensors |
 | PAD1 | CHG+ pad |  | `mcring:PAD_Wire_1x1.5mm` | 1 | Power |
@@ -126,6 +140,12 @@
 | R17 | 100k | RC0402FR-07100KL | `Resistor_SMD:R_0402_1005Metric` | 2 | MCU |
 | R18 | 4.7k | RC0402FR-074K7L | `Resistor_SMD:R_0402_1005Metric` | 2 | MCU |
 | R19 | 100k | RC0402FR-07100KL | `Resistor_SMD:R_0402_1005Metric` | 2 | Power |
+| R20 | 100k | RC0402FR-07100KL | `Resistor_SMD:R_0402_1005Metric` | 2 | Outputs |
+| R21 | 100k | RC0402FR-07100KL | `Resistor_SMD:R_0402_1005Metric` | 2 | Outputs |
+| R22 | 1k | RC0402FR-071KL | `Resistor_SMD:R_0402_1005Metric` | 2 | Outputs |
+| R23 | 1k | RC0402FR-071KL | `Resistor_SMD:R_0402_1005Metric` | 2 | Outputs |
+| R24 | 1k | RC0402FR-071KL | `Resistor_SMD:R_0402_1005Metric` | 2 | Outputs |
+| SPK1 | SPEAKER pads |  | `mcring:PAD_Wire_2x1.5mm_P2.0mm` | 2 | Outputs |
 | SW1 | B3U-3000P | B3U-3000P | `mcring:SW_Omron_B3U-3000P` | 2 | Sensors |
 | SW2 (DNP) | B3U-1000P | B3U-1000P | `mcring:SW_Omron_B3U-1000P` | 2 | MCU |
 | TP1 | TP_IO0 |  | `TestPoint:TestPoint_Pad_D1.0mm` | 1 | MCU |
@@ -146,6 +166,8 @@
 | U7 | BQ25100AYFPR | BQ25100AYFPR | `mcring:BQ25100_DSBGA-6_YFP` | 6 | Power |
 | U8 | TPS62840DLCR | TPS62840DLCR | `Package_TO_SOT_SMD:SOT-583-8` | 8 | Power |
 | U9 | TPS22916CYFPR | TPS22916CYFPR | `mcring:TPS22916_DSBGA-4_YFP` | 4 | Outputs |
+| U10 | MAX98357AETE+T | MAX98357AETE+T | `Package_DFN_QFN:QFN-16-1EP_3x3mm_P0.5mm_EP1.7x1.7mm` | 17 | Outputs |
+| U11 | TPS22916CYFPR | TPS22916CYFPR | `mcring:TPS22916_DSBGA-4_YFP` | 4 | Outputs |
 
 ## Pin-by-pin
 
@@ -237,10 +259,10 @@
 | 25 | IO21 | CAM_PWR_EN |
 | 26 | IO26 | NC |
 | 27 | IO33 | LED_PWR_EN |
-| 28 | IO34 | spare |
-| 29 | IO35 | spare |
-| 30 | IO36 | spare |
-| 31 | IO37 | spare |
+| 28 | IO34 | AMP_PWR_EN |
+| 29 | IO35 | I2S_BCLK |
+| 30 | IO36 | I2S_LRCLK |
+| 31 | IO37 | I2S_DOUT |
 | 32 | IO38 | CAM_VSYNC |
 | 33 | IO39 | CAM_SIOC |
 | 34 | IO40 | CAM_SIOD |
@@ -364,5 +386,36 @@
 | A1 | VIN | 3V3 |
 | A2 | VOUT | VLED |
 | B1 | ON | LED_PWR_EN |
+| B2 | GND | GND |
+
+### U10 — MAX98357AETE+T
+
+| Pin | Name | Net |
+|---|---|---|
+| 1 | DIN | AMP_DIN |
+| 2 | GAIN_SLOT | AMP_GAIN |
+| 3 | GND | GND |
+| 4 | SD_MODE | VAMP |
+| 5 | NC | NC |
+| 6 | NC | NC |
+| 7 | VDD | VAMP |
+| 8 | VDD | VAMP |
+| 9 | OUTP | SPK_P |
+| 10 | OUTN | SPK_N |
+| 11 | GND | GND |
+| 12 | NC | NC |
+| 13 | NC | NC |
+| 14 | LRCLK | AMP_LRCLK |
+| 15 | GND | GND |
+| 16 | BCLK | AMP_BCLK |
+| 17 | EP | GND |
+
+### U11 — TPS22916CYFPR
+
+| Pin | Name | Net |
+|---|---|---|
+| A1 | VIN | 3V3 |
+| A2 | VOUT | VAMP |
+| B1 | ON | AMP_PWR_EN |
 | B2 | GND | GND |
 

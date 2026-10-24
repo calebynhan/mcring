@@ -16,7 +16,7 @@ import sys
 from typing import Dict, List, Optional, Tuple
 
 sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
-from mcring_v1 import GPIO, R_ISET, R_PRETERM, R_VSET, build  # noqa: E402
+from mcring_v1 import GPIO, R_GAIN, R_I2S_SERIES, R_ISET, R_PRETERM, R_VSET, build  # noqa: E402
 from netlist_model import Netlist, Part  # noqa: E402
 
 HERE = os.path.dirname(os.path.abspath(__file__))
@@ -41,7 +41,7 @@ SHEETS = [("Power", "Power: cell, charger, pads, buck, battery sense"),
           ("MCU", "MCU: ESP32-S3-MINI-1U, straps, USB test pads, I2C pull-ups"),
           ("Camera", "Camera: OV2640 24-pin FPC, load switch, 2.8 V / 1.2 V LDOs, SCCB"),
           ("Sensors", "Sensors + Haptics: DRV2605L + LRA, LIS2DW12, T3902 mic, button, touch"),
-          ("Outputs", "Outputs + Connectors: WS2812 (gated), piezo, aux MOSFET")]
+          ("Outputs", "Outputs + Connectors: WS2812 (gated), piezo, aux MOSFET, MAX98357A speaker amp (gated, optional)")]
 
 SHEET_NOTES = {
     "Power": [f"BQ25100: R_ISET {R_ISET} -> ~25 mA (K_ISET 230 A*ohm, VERIFY); R_PRETERM {R_PRETERM} -> 1 mA (K 11.5, VERIFY).",
@@ -54,7 +54,9 @@ SHEET_NOTES = {
     "MCU": [f"IO{GPIO['CAM_PWR_EN']} CAM_PWR_EN (was IO19), IO{GPIO['RGB_DATA']} RGB data (was IO20); IO19/IO20 = native USB test pads.",
             f"IO{GPIO['LED_PWR_EN']} LED_PWR_EN (PIN_RGB_PWR) with 4.7k pull-down: WS2812 rail off at reset and in deep sleep (was IO44/RXD0).",
             "IO26 = SPICS1 of the in-package quad PSRAM -> NC. IO33-IO37 are free on the N4R2 (octal PSRAM parts only use them):",
-            "IO34-IO37 and IO44 (RXD0) are spare (grey 'spare'). IO45/IO46 straps left floating. Pin table VERIFY.",
+            f"IO{GPIO['AMP_PWR_EN']} AMP_PWR_EN (PIN_SPEAKER_EN, 100k pull-down), IO{GPIO['I2S_BCLK']}/IO{GPIO['I2S_LRCLK']}/IO{GPIO['I2S_DOUT']} "
+            "I2S BCLK/LRCLK/DOUT to the optional MAX98357A (Outputs sheet).",
+            "IO44 (RXD0) is the only spare GPIO (grey 'spare'; ROM pull-up at reset). IO45/IO46 straps left floating. Pin table VERIFY.",
             "I2C 4.7k pull-ups on SDA/SCL (DRV2605L 0x5A, LIS2DW12 0x18). EN: 10k + 1 uF. IO0: 10k + pad + DNP button.",
             "ANT1 (off-board): 2.4 GHz flex antenna on the module's u.FL receptacle (not a pad) — see README §5."],
     "Camera": ["FPC pin order = ESP32-CAM / Arducam M0031 OV2640 (pin 1 NC ... 24 Y0) — VERIFY on the purchased head.",
@@ -69,7 +71,16 @@ SHEET_NOTES = {
     "Outputs": [f"WS2812B-2020 powered from 3V3 through U9 (TPS22916, ON = IO{GPIO['LED_PWR_EN']}): ~0.6-1 mA idle otherwise.",
                 "Data from IO43 through 1 kOhm (limits the boot-chatter back-feed while VLED is off); 100 nF + 1 uF at the LED.",
                 "Piezo: IO4 -> 100 Ohm -> BZ1 wire pads; the 9x9 element PZ1 is off-board and optional (DNP until the enclosure has a pocket).",
-                "Q1 AO3400 low-side switch from IO9 (100k pull-down): aux pads = VBAT + open drain."],
+                "Q1 AO3400 low-side switch from IO9 (100k pull-down): aux pads = VBAT + open drain.",
+                f"OPTIONAL speaker (fit U10/U11/C25/C26/R20-R24/LS1 together): 3V3 -> U11 TPS22916 (ON = IO{GPIO['AMP_PWR_EN']} AMP_PWR_EN, 100k "
+                "pull-down) -> VAMP -> U10 MAX98357A VDD (10 uF + 100 nF); the amp draws nothing while U11 is open.",
+                f"I2S: BCLK IO{GPIO['I2S_BCLK']}, LRCLK IO{GPIO['I2S_LRCLK']}, DIN IO{GPIO['I2S_DOUT']} (512 kHz / 16 kHz, no MCLK), each through "
+                f"R22/R23/R24 {R_I2S_SERIES}: bounds the ESD-diode back-feed into the unpowered amp to <= 2.6 mA per pin while VAMP is off.",
+                "SD_MODE tied to VAMP = left-channel mode (> 1.4 V; the firmware duplicates mono into both slots). Firmware must still park",
+                f"IO35-37 low while AMP_PWR_EN is low (a pin left high is a mA-class drain, not damage). GAIN_SLOT -> R21 {R_GAIN} -> VAMP = 3 dB "
+                "(0 dBFS = 1.4 Vrms = 0.25 W into 8 Ohm, inside the speaker's 300 mW rating); R21 0R = 6 dB (0.5 W = speaker max, bench option),",
+                "DNP = 9 dB (clips at 3.3 V). TQFN pin table, SD/gain thresholds and the digital-input abs-max rating VERIFY (README §6 17-19).",
+                "OUTP/OUTN -> SPK1 wire pads (0.3 mm pair) -> LS1 PUI AS01008MR-2-R 10 mm 8 Ohm (off-board, enclosure speaker pocket)."],
 }
 
 POWER_COLORS = {"GND": "#1b7f3a"}
@@ -114,6 +125,8 @@ def sides(part: Part, nl: Netlist) -> Tuple[List[str], List[str]]:
         "U8": (("VIN", "EN", "STOP", "MODE", "VSET"), ("SW", "VOS", "GND")),
         "U2": (("VIN", "ON"), ("VOUT", "GND")),
         "U9": (("VIN", "ON"), ("VOUT", "GND")),
+        "U11": (("VIN", "ON"), ("VOUT", "GND")),
+        "U10": (("DIN", "BCLK", "LRCLK", "SD_MODE", "GAIN_SLOT", "VDD"), ("OUTP", "OUTN", "GND", "EP", "NC")),
         "U3": (("VIN",), ("VOUT", "VSS")),
         "U4": (("VIN",), ("VOUT", "VSS")),
         "MK1": (("VDD", "GND"), ("CLK", "DATA", "SELECT")),

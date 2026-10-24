@@ -3,8 +3,12 @@
 How to go from a box of parts to a working ring, one stage at a time, with a check at every
 step. It assumes the repo as it is: `firmware/ring-esp32s3` (ESP32-S3, PlatformIO),
 `backend/` (FastAPI), `tools/ring-cli` (the `mcring` desktop companion), `app/` (Expo phone
-app) and the hardware files under `hardware/`. Requirements F1–F9 are in
-`docs/01-vision-and-requirements.md`.
+app) and the hardware files under `hardware/`. Requirements F1–F13 (voice loop, camera as
+context, ring cues and the optional speaker, platform) are in `docs/01-vision-and-requirements.md`.
+The loop you are building: **hold the ring → ask → the answer is spoken in your Bluetooth
+headphones** (paired to the laptop/phone, never to the ring); the ring ticks once when it listens
+and twice when the answer is ready, and on the oversized stage-1 ring can optionally play the
+answer through its own small speaker.
 
 Conventions: every step says what you should **observe** and what to do **if not**. Serial
 log lines are quoted as the firmware prints them (`[   millis] I tag: text`, see `src/log.h`).
@@ -19,29 +23,46 @@ exist yet, that step has not been run and the guide tells you what to fall back 
 | `hardware/pcb/floorplan.md`, `hardware/pcb/board_params.json` | PCB floorplan step | §2.1, §2.6 |
 | `hardware/electrical/out/mcring_v1.net`, `out/sch_*.png`, `out/erc.md` | electrical step (present) | §2.1, §2.3 |
 | `hardware/cad/out/mcring_stage1_{shell,lid,key}.stl`, `hardware/cad/fit_report.md`, `hardware/cad/README.md` | enclosure CAD step (CadQuery, generated from `board_params.json`; the old OpenSCAD file is gone) | §2.5–2.8 |
-| `docs/build-helpers/tuning_calc.py` | this guide (`sleep`, `pads`, `divider`, `drv2605`, `tap`, `morse` calculators) | §1.8, §1.9, §2.4, §2.8 |
+| `docs/build-helpers/tuning_calc.py` | this guide (`sleep`, `pads`, `divider`, `drv2605`, `tap`, `speaker` calculators; `morse` for the optional silent mode) | §1.8, §1.9, §1.10, §1.11, §2.4, §2.8, §5 |
 
 ---
 
-## 0. Before any hardware: prove the AI loop on a photo (30 min)
+## 0. Before any hardware: prove the voice loop from the terminal (30 min)
+
+All commands run from the **repo root** (`requirements.txt` installs `python/mcring_core` with a
+relative `-e ../python/mcring_core`, so the backend install is run from `backend/`, exactly as
+`backend/README.md` does):
 
 ```bash
 git clone <repo> && cd mcring
 python -m venv .venv && . .venv/bin/activate
-pip install -r backend/requirements.txt -e tools/ring-cli     # requirements.txt pulls in python/mcring_core
-cp backend/.env.example backend/.env                           # put your ANTHROPIC_API_KEY in it
+(cd backend && pip install -r requirements.txt)   # backend deps + python/mcring_core (editable)
+pip install -e 'tools/ring-cli[mic]'              # the mcring CLI; [mic] = sounddevice for the laptop microphone
+cp backend/.env.example backend/.env              # ANTHROPIC_API_KEY (answers) + OPENAI_API_KEY (speech-to-text)
 (cd backend && uvicorn app.main:app --port 8000 &)
 curl -s localhost:8000/v1/health
-mcring ask ~/Pictures/any-photo.jpg -q "what is this and is it dangerous?" --speak --beep
+mcring ask ~/Pictures/any-photo.jpg -q "what is this and is it dangerous?" --speak   # typed question about a photo
+mcring talk --no-ring                                                                 # spoken question, laptop mic
 ```
 
-**Observe:** `{"status":"ok","provider":"anthropic","model":"claude-opus-5-5","tts":"none"}` from
-the health check; `mcring ask` prints `<subject>  [NN%]  via claude-opus-5-5 in NNNN ms`, the
-`answer:` and `short:` lines, then plays the Morse pattern in the terminal (beeps with `--beep`),
-and ends with `session: <id>`.
+(`pip install -r backend/requirements.txt` from the root fails with `../python/mcring_core is not a
+valid editable requirement` — the path in the file is relative to `backend/`. Both lines above were
+checked with `pip install --dry-run`.)
+
+**Observe:** `{"status":"ok","version":…,"provider":"anthropic","model":"claude-opus-5-5","tts":"none","stt":"openai","speech_default":false,"speech_formats":[…]}`
+from the health check. `mcring ask` prints `<subject>  [NN%]  via claude-opus-5-5 in NNNN ms  (photo)`,
+a `claude:` line with the 1–3 sentence answer (and the follow-up offer under it), speaks it with the
+OS voice, and ends with `session: <id>`. `mcring talk --no-ring` prints `no ring — laptop mic + local
+speech only` and `talk — Enter: start recording · Enter: stop & ask · …`; press Enter →
+`● recording… (Enter to stop)`, ask something, Enter → `■ 2.3 s — asking…`, then the same answer
+block with a `you   :` line (the transcript) and the spoken answer. Pair Bluetooth headphones to
+the laptop and the answer plays there — this is the routing the ring relies on (F4).
 
 **If not:** `backend not reachable` → uvicorn is not up or the port differs (`--backend`).
 HTTP 401 → `MCRING_API_TOKEN` is set in `.env` but you did not pass `--token`. 5xx → see §4.
+`laptop mic unavailable (pip install 'mcring-cli[mic]')` → the `[mic]` extra is missing or no
+input device; `mcring ask … -q` needs no mic. HTTP 501 on a spoken question → no `OPENAI_API_KEY`
+for speech-to-text: add it, or `pip install faster-whisper` + `MCRING_STT_PROVIDER=local` in `.env`.
 No sound from `--speak` → the CLI tries `afplay`, `mpg123`, `ffplay`, then `say`/`espeak-ng`;
 install one, or ignore (the text is printed anyway). Tests to run once: `docs/06-getting-started.md` §C.
 
@@ -57,17 +78,20 @@ From `hardware/bom/stage0-devkit.csv` (≈ $40–55):
 |---|---|---|
 | 1 | Seeed XIAO ESP32S3 **Sense** (with the camera expansion board) | some ship with OV3660 instead of OV2640; both work |
 | 1 | Adafruit DRV2605L breakout (#2305) | EN is tied high on the breakout; I²C 0x5A |
-| 1 | 8 mm coin LRA, ~235 Hz (PMD C08-005, Jameco 8 mm, or INEED LRA0825BC-0167F) | the INEED part is the stage-1 motor; buy it now and tune on it |
-| 1 | LIS2DW12 breakout | 0x18 or 0x19, both auto-detected |
-| 1 | 6 × 6 mm tactile switch | the only mandatory peripheral |
-| 1 | 9–12 mm passive piezo | optional beeps |
+| 1 | 8 mm coin LRA, ~235 Hz (PMD C08-005, Jameco 8 mm, or INEED LRA0825BC-0167F) | the INEED part is the stage-1 motor; buy it now and tune the cues on it |
+| 1 | LIS2DW12 breakout | 0x18 or 0x19, both auto-detected; double tap = hands-free ask |
+| 1 | 6 × 6 mm tactile switch | the only mandatory peripheral (hold = ask, short press = photo) |
+| 1 | 9–12 mm passive piezo | optional beep cues |
+| 1 | **MAX98357A I2S class-D breakout** (Adafruit 3006 or clone) | **optional** — the on-ring speaker path (`AUDIO_OUT`, F12) on the bench; not in the CSV, see `docs/05` stage-0 list |
+| 1 | **8 Ω 10 mm micro speaker** (PUI AS01008MR-2-R class, or any 8 Ω ≥ 0.3 W driver) | optional, with the amp above; the 10 mm part is what the stage-1 shell is designed around |
 | 1 | 100 mAh LiPo (Adafruit 1570) | plugs into the XIAO BAT+/BAT- pads |
 | 2 | resistors for the battery divider | **use 100 kΩ/100 kΩ**, not 10 k: 10 k/10 k drains 210 µA, ten times the sleep budget (`python3 docs/build-helpers/tuning_calc.py divider --r1k 10 --r2k 10`) |
 | — | breadboard, jumpers, USB-C data cable | |
+| — | Bluetooth headphones | paired to the **laptop or phone**, never to the ring — that is where the answers come out |
 
 Tools: multimeter, a **USB inline current meter** (any $10 one) or, much better, a Nordic PPK2
 (source-meter mode, 1 µA resolution, needed for the sleep numbers). A phone is optional for
-stage 0; the CLI does everything the app does.
+stage 0; the CLI does everything the app does (push-to-talk, headphones, ring speaker).
 
 ### 1.2 Wiring
 
@@ -82,12 +106,17 @@ Reference diagram: `hardware/pcb/out/wiring_stage0.png`. The table is authoritat
 | I²C SDA / SCL | D4 / D5 | 5 / 6 | DRV2605L + LIS2DW12 (breakouts carry pull-ups) |
 | IMU INT1 | D8 | 7 | LIS2DW12 INT1; EXT1 wake |
 | Touch pad | D9 | 8 | a 3 × 4 mm copper scrap or bare wire (optional) |
-| Aux | D10 | 9 | air-puff driver enable (optional) |
+| **Speaker I2S BCLK** | D7 | 44 | MAX98357A `BCLK` (optional; UART0 RX, free because logging is USB-CDC) |
+| **Speaker I2S LRC** | D6 | 43 | MAX98357A `LRC` (optional; UART0 TX — the ROM banner at reset is a few inaudible frames) |
+| **Speaker I2S DIN** | D10 | 9 | MAX98357A `DIN` (optional). D10 **was** the aux / air-puff enable: `PIN_AUX` is `-1` on the XIAO now, the experiment is parked on the dev kit |
+| MAX98357A `SD` / `GAIN` / `VIN` | — | — | `SD` → 3V3 (amp always on; `PIN_SPEAKER_EN` is `-1` on the XIAO), `GAIN` open (9 dB) or GND (12 dB), `VIN` → 3V3 |
 | Battery sense | A0 | 1 | centre of the 100 k/100 k divider from BAT+ |
 | 3V3 / GND | 3V3 / GND | — | breakouts' VIN and GND |
 
 Everything except the button is optional: missing I²C devices are detected at boot and the
-matching status flags stay clear. Start with **the button only**; add parts in §1.8–1.10.
+matching status flags stay clear. Start with **the button only**; add parts in §1.8–1.10. The
+speaker is the last thing to wire (§1.10) — the headphone path needs nothing on the ring. (If the
+wiring drawing predates the speaker, the table wins: `src/config_audio.h`.)
 
 ### 1.3 Flash
 
@@ -106,16 +135,19 @@ the port disappears for a second and comes back).
 **Observe** (first lines after reset; `W` lines are expected until the breakouts are wired):
 
 ```
-[     150] I main: mcring fw 0.1.0 (xiao-esp32s3-sense)
-[     152] I cfg: trig=03 q=12 fs=2 sleep=120s led=96 hap=100 wpm=15 ch=03
+[     150] I main: mcring fw 0.1.0 (xiao-esp32s3-sense) voice-first
+[     152] I cfg: trig=03 q=12 fs=2 sleep=120s led=96 hap=100 wpm=15 ch=03 spk=255 cues=03 mic=ring
 [     160] W imu: LIS2DW12 not found (who=...)
 [     165] W drv: DRV2605L not found (status=...)
 [     420] I cam: sensor PID=0x2640 detected          (0x3660 on OV3660 units)
+[     425] I spk: speaker configured (I2S1)           (the XIAO build always has the three I2S pins → SPEAKER_OK)
 [     430] I trig: touch baseline 23xxx
 [     900] I ble: advertising as mcring-7a3f
 ```
 
-then the on-board LED (GPIO21) blinks the `<SN>` pattern (`...-.`).
+then the on-board LED (GPIO21) gives one 60 ms blink — the *ok* cue (`cues_ok()`; a haptic tick
+too once the DRV2605L is wired). `spk=255 cues=03 mic=ring` are the voice settings (`SET_CONFIG`
+keys 9–11): full speaker volume, haptic + LED cues, ring mic on a long press.
 
 **If not:** no port at all → data cable / driver; on Linux add yourself to `dialout`.
 Garbage at 115200 → the monitor opened before CDC re-enumerated; restart the monitor.
@@ -130,19 +162,25 @@ detected: confirm `board_build.arduino.memory_type = qio_opi` is still in `platf
 
 ```bash
 mcring scan                                   # 10 s scan
-mcring send "SOS" --channels 1                # backend-free connection test: connect, blink, disconnect
-mcring listen --backend http://localhost:8000 --speak --echo   # the real loop (backend from §0 must be up;
-                                                              # listen checks /v1/health first and exits otherwise)
+mcring events                                 # backend-free connection test: connect, print status + button events, Ctrl-C
+mcring talk --backend http://localhost:8000   # the real loop (backend from §0 must be up; talk checks /v1/health
+                                              # first and exits otherwise). Laptop mic by default, ring mic with --ring-mic
 ```
 
 **Observe:** `scan` prints `AA:BB:CC:DD:EE:FF  mcring-7a3f  rssi=-55` (macOS shows a UUID instead
-of the MAC). Both `send` and `listen` print `I mcring.ring: scanning for mcring* (10s)…`,
-`connected; MTU 517` (Linux/BlueZ; macOS reports 185 or more) and a `status: idle
-batt=0mV(255%) flags=0x02 ...` line (255 % = no divider fitted; `0x02` = camera_ok); `listen`
-then says `listening — press the ring button (or Ctrl-C). 'c' + Enter captures from here.`
-On the ring: `I ble: connected ...`, `I ble: MTU 517 -> chunk 510`, three `subscribe ... -> 1`
-lines, and a short LED blink. Note that `listen` writes `morse_wpm` and `feedback_channels`
-(its `--wpm`/`--channels` values) to the ring's NVS on every connect.
+of the MAC). Both `events` and `talk` print `I mcring.ring: scanning for mcring* (10s)…`,
+`connected; MTU 517 (3 audio block(s)/write)` (Linux/BlueZ; macOS reports 185 → 1 block/write) and
+a `status: idle batt=0mV(255%) flags=0x42 ...` line (255 % = no divider fitted; `0x42` =
+camera_ok + **speaker_ok**, the XIAO build always claims a speaker). Press the button in `events`:
+`event BUTTON_DOWN  t=12.3s`, `event BUTTON_UP held 0.2 s (photo)`, `event CAPTURE_STARTED`,
+`event CAPTURE_DONE queued=1`, `transfer type=1 11234 B in 0.35 s`. `talk` prints
+`talk — Enter: start recording · Enter: stop & ask · c: photo · t <text>: ask by text · q: quit` and
+`ring: hold the button to ask (short press = photo); mic = this computer; answers on this computer`.
+On the ring: `I ble: connected ...`, `I ble: MTU 517 -> chunk 510`, four `subscribe ... -> 1`
+lines (status, meta, data, events), a short LED blink, and three `I main: set_config key=9/10/11 -> ok`
+lines: `talk` and `listen` write `speaker_volume` (`--volume`, default 200), `cues_mask` (`--cues`,
+default 3 = haptic + LED) and `mic_source_hint` (1 unless `--ring-mic`) to the ring's NVS on every
+connect. (`morse_wpm` / `feedback_channels` are only written with `--morse`.)
 
 **If not:** `no ring found` → the ring deep-sleeps after **120 s** disconnected and idle
 (`DEFAULT_IDLE_SLEEP_S`); press the button to wake it (that press also takes a photo, which is
@@ -152,7 +190,8 @@ running; on macOS grant the terminal Bluetooth permission the first time.
 
 ### 1.5 First photo
 
-Press the button once (short press). **Observe** on the ring:
+With `mcring talk --no-auto-photo` running (so a lone photo is saved, not asked about yet), press the
+button once (short press, < 0.7 s). **Observe** on the ring:
 
 ```
 I cam: captured 320x240 JPEG, 11234 bytes (q=12)
@@ -160,9 +199,11 @@ I xfer: START id=1 type=1 len=11234 chunks=23 x 510
 I xfer: ACK complete id=1 (1 rounds)
 ```
 
-and in the CLI: `transfer 1 start: type=1 11234 bytes in 23 chunks of 510 (320x240)`,
-`transfer 1 complete: 11234 bytes in 0.35s (31.3 kB/s)`, `saved captures/capture-....jpg`.
-Open the JPEG. Capture latency (trigger → `captured`) should be 150–300 ms.
+and in the CLI: `event BUTTON_UP held 0.3 s (photo)`, `transfer 1 start: type=1 11234 bytes in 23
+chunks of 510 (320x240)`, `transfer 1 complete: 11234 bytes in 0.35s (31.3 kB/s)`,
+`saved captures/capture-....jpg`. Open the JPEG. Capture latency (trigger → `captured`) should be
+150–300 ms. Without `--no-auto-photo`, `talk` asks the backend about a photo that arrives alone
+(`identify`) — that is the "short press = what is this?" behaviour of the app.
 
 **If not:** `E main: capture failed (2)` → `MC_ERR_CAPTURE_FAILED`, usually a loose Sense
 board or a frame < 100 bytes (sensor not streaming); re-seat and retry. `START` but no
@@ -171,33 +212,65 @@ more than 3 captures while disconnected; connect and let them drain. A photo tha
 or green → the 3 AEC warm-up frames were not enough in low light; add light or raise the
 discard count in `camera_capture()`.
 
-### 1.6 First LLM answer
+### 1.6 First voice turn (hold the button, ask, hear the answer)
 
-With `mcring listen --backend http://localhost:8000 --speak --echo` running, press the button.
-**Observe:** after the transfer the ring flashes once (the CLI sends a 300 ms `RGB` blue
-flash before asking; on the mono LED that is a plain 300 ms blink), the CLI prints the
-answer block from §0, speaks it, and then writes the Morse pattern to the ring:
-`I fb: play 57 units @ 80 ms, ch=03 (11040 ms total)` on the ring, the pattern mirrored in
-the terminal (`--echo`). Trigger → Morse start should be under 6 s (N2).
+Pair your Bluetooth headphones to the laptop (or just use its speakers). With `mcring talk
+--backend http://localhost:8000` running — laptop mic, i.e. `mic_source_hint 1` was written to the
+ring — **hold the button ≥ 0.7 s, ask a question, release**.
 
-**If not:** `backend error: ...` in the CLI and `HH` (`........`) on the LED → the backend
-returned an error; read its log (§4, "backend 401/413/503"). No Morse but a spoken answer →
-`morse.units` empty because `short` reduced to nothing (unusual) or `--channels 0`.
+**Observe:** on `BUTTON_DOWN` the CLI starts recording (`● recording (release the button to ask)`);
+at 0.7 s the ring plays the *listening* cue — `I fb: play 1 units @ 60 ms, ch=02 (60 ms total)` on
+the LED only until the LRA is wired (§1.8), then `ch=03`. On release: `event BUTTON_UP held 2.3 s (ask)`,
+`■ 2.3 s — asking…`; the CLI asks the ring for a photo if none arrived in the last 20 s (the default
+`identify` mode is visual — `--mode chat` or `--no-photo` skips it), posts clip + photo to `/v1/ask`,
+prints the answer block from §0 with the `you   :` transcript, sends `CUE 2` → `I fb: play 3 units @
+60 ms, ch=03 (180 ms total)` = the *answer ready* double tick, and speaks the answer in your
+headphones. **Button release → first spoken word should be under 6 s (N2)** — the CLI's
+`in NNNN ms` is the backend's share.
 
-### 1.7 First Morse on the LED
+Now the ring's own microphone: quit and run `mcring talk --ring-mic` (writes `mic_source_hint 0`).
+Hold the button: the ring takes the photo first (blocking ~150–400 ms), **then** ticks and prints
+`I mic: recording up to 8 s` — speak after the tick. Release: `event REC_STOPPED 2.3 s`, then two
+transfers, `type=1` (JPEG) and `type=2` (ADPCM, `height` field = 160 = 16 kHz/100, ≈ 8 KB/s); the
+CLI saves `captures/voice-….wav` next to the JPEG and asks as above. The ring's `BUTTON_UP.arg` is
+forced to `≥ 7` for an ask and `≤ 6` for a photo, so the CLI never disagrees with the ring.
+
+Transcription uses OpenAI `gpt-4o-mini-transcribe`, so **`OPENAI_API_KEY` must be in
+`backend/.env`** (or `MCRING_STT_PROVIDER=local` with faster-whisper installed).
+
+**If not:** `backend error: …` in the CLI and a long buzz / 420 ms LED flash on the ring (`CUE 3`,
+`play 1 units @ 60 ms … (420 ms total)`) → the backend returned an error; read its log (§4).
+`(recording discarded)` → the press was shorter than 0.7 s or the clip under 300 ms. No `type=2`
+transfer in `--ring-mic` → `audio_init` failed (the Sense board carries the PDM mic; `HAS_PDM_MIC`
+must be 1) or the press was short. Silence in the WAV → PDM CLK/DATA are 42/41 on the Sense; check
+the Sense board is seated. `(transcription failed: …)` with a typed `-q` question → the turn went
+ahead on the text; without one the backend answers 501/422 (§4). A 64 KB 8 s clip takes ~1.3 s on
+Android-class MTU and ~6 s at iOS chunk sizes — keep questions short, or use the phone/laptop mic.
+
+### 1.7 Cues on the LED and LRA (and the optional silent mode)
+
+The ring's outputs are three **cues** — *listening* (1 tick), *answer ready* (2 ticks), *error*
+(long buzz) — on the channels in `CUES_MASK` (bit 0 haptic, bit 1 LED, bit 2 beep; default 3).
 
 ```bash
-mcring send "SOS" --wpm 12 --channels 1          # LED only, 100 ms unit
-mcring send "R TOXIC" --wpm 15 --overall-wpm 8   # default Farnsworth profile
+mcring config cues_mask 2                        # LED only (persisted; talk/listen rewrite it from --cues on connect)
+mcring talk --cues 2                             # same, for this session
+mcring talk --cues 7                             # haptic + LED + piezo beep
 ```
 
-Inside `listen`, `say HELLO` + Enter does the same through the running connection.
-**Observe:** `I fb: play N units @ 100 ms, ch=01 (... ms total)`; dots 100 ms, dashes 300 ms,
-inter-character gaps visibly longer than dashes (Farnsworth). Count the elements against
-`protocol/morse.md`.
+**Observe:** every cue logs `I fb: play N units @ 60 ms, ch=XX (… ms total)` with `ch` = the mask
+(1 unit / 60 ms = listening, 3 units / 180 ms = answer ready, 1 unit / 420 ms = error); the
+listening tick must be felt/seen within ~100 ms of the press crossing 0.7 s, the double tick must
+not be mistakable for it.
 
 **If not:** nothing on the LED but the log line is there → `led_brightness` is 0 (`mcring
-config led_brightness 96`). Pattern plays but far too fast → see §4 "Morse too fast".
+config led_brightness 96`). `ch=00` → the mask has no channel the firmware can drive.
+
+*Optional silent mode (Morse, off everywhere by default):* `mcring send "SOS" --wpm 12 --channels 1`
+still blinks ITU Morse on the LED (`I fb: play 17 units @ 100 ms, ch=01 (… ms total)`) and is a handy
+long-pattern LED/LRA check; `mcring talk --morse --echo` requests the pattern from the backend and
+plays it on the ring after the spoken answer. Timing: `protocol/morse.md`,
+`tuning_calc.py morse`. Nothing else in this guide needs it.
 
 ### 1.8 Add the LRA + DRV2605L
 
@@ -205,9 +278,10 @@ Wire the breakout (VIN 3V3, GND, SDA D4, SCL D5; motor on the two screw/solder t
 Stick the LRA to something with mass (the breadboard, a coin) — a free-floating LRA cannot
 auto-calibrate. Reset.
 
-**Observe:** `I drv: DRV2605L ready (LRA)` then `I drv: autocal ok (status 0xe0)`; the
-`<SN>` boot blink now comes with a haptic tick; `mcring send "SOS" --channels 2` buzzes.
-Status `flags` gains bit 4 (`0x12`).
+**Observe:** `I drv: DRV2605L ready (LRA)` then `I drv: autocal ok (status 0xe0)`; the boot *ok*
+blink now comes with a haptic tick; in `mcring talk` the *listening* tick and the *answer ready*
+double tick are felt (`mcring config cues_mask 1` for haptic only). Status `flags` gains bit 4
+(`0x52` with camera + speaker).
 
 **If not:** `DRV2605L not found` → SDA/SCL swapped or no 3V3. `autocal FAILED (status 0xe8)`
 (bit 3 = DIAG_RESULT) → motor not connected, an ERM instead of an LRA, or the rated-voltage
@@ -222,7 +296,10 @@ felt through a fingertip pressed on the motor without rattling.
 
 Wire VIN 3V3, GND, SDA, SCL, **INT1 → D8**. Reset. **Observe:** `I imu: LIS2DW12 ready at 0x18`
 (or `0x19`); status `flags` bit 2 set. Tap the breadboard twice, ~150 ms apart: `I trig: double
-tap` then a capture.
+tap`, `event DOUBLE_TAP` — a **hands-free ask**: with `--ring-mic` the ring captures and records up
+to 8 s (a second double tap stops it); with the laptop mic `talk` starts recording and stops at the
+next double tap or after 8 s. Because a false double tap now starts a recording, the tuning below
+matters more than it did for a photo.
 
 Tuning (there is no BLE key for the threshold yet; it is a reflash):
 
@@ -230,7 +307,7 @@ Tuning (there is no BLE key for the threshold yet; it is a reflash):
    second tap must land inside a 560 ms window, after 20 ms of quiet, with 40 ms shock
    (`INT_DUR = 0x7A`). The firmware additionally ignores a second double-tap within 800 ms.
 2. Mount the breakout on the ring position (tape it to the top of your index finger), wear it
-   for an hour of normal hand use with `mcring listen` running and count unwanted `double tap`
+   for an hour of normal hand use with `mcring events` running and count unwanted `event DOUBLE_TAP`
    lines (target < 1/h, `docs/benchmarks.md`).
 3. Too many false triggers → raise the threshold (`imu_set_tap_threshold(12)` ≈ 0.75 g, call it
    after `imu_init()` in `setup()`, or change the `s_ths` default) and/or shorten `LATENCY` to 5
@@ -239,22 +316,47 @@ Tuning (there is no BLE key for the threshold yet; it is a reflash):
    `imu_read_tap_src()` in `trigger_tick()`: `0x10` = double, `0x20` = single, bits 2:0 = axis.
 4. Compare with the button only (`mcring config trigger_mask 1`) and tap only (`trigger_mask 2`).
 
-### 1.10 Voice question (long press)
+### 1.10 Speaker bring-up (optional: MAX98357A breakout + 10 mm speaker)
 
-Hold the button ≥ 700 ms: the ring takes the photo, then records while held, up to 5 s
-(16 kHz, IMA-ADPCM ≈ 8 KB/s). Release. Run the CLI with `--wait-voice` so it waits 1.5 s for the
-clip before asking.
+This proves the `AUDIO_OUT` path (F12) that the stage-1 ring carries on its board. Nothing in the
+headphone loop needs it. Power the ring down and wire the breakout:
 
-**Observe:** `I mic: recording up to 5 s`, then two transfers: `type=1` (JPEG) and `type=2`
-(ADPCM, `height` field = 160 = 16 kHz/100); the CLI saves `capture-....wav` next to the JPEG and
-the answer block shows the transcript folded into the question. Transcription uses OpenAI
-(`gpt-4o-mini-transcribe`), so **`OPENAI_API_KEY` must be in `backend/.env`**; without it the
-backend logs nothing and simply asks the default `identify` question (transcript `null`).
+| MAX98357A pin | XIAO | Note |
+|---|---|---|
+| `VIN` | 3V3 | 2.5–5.5 V; ~2.4 mA idle while `SD` is high |
+| `GND` | GND | |
+| `BCLK` | **D7** (GPIO44) | 512 kHz = 32 × 16 kHz |
+| `LRC` | **D6** (GPIO43) | 16 kHz word clock |
+| `DIN` | **D10** (GPIO9) | |
+| `SD` | **3V3** | shutdown/channel select; any mode plays mono (the ring duplicates each sample into both slots) |
+| `GAIN` | open (9 dB) or GND (12 dB) | the loudness ceiling; `SPEAKER_VOLUME` × stream volume scales below it |
+| `+` / `−` | the 10 mm speaker | |
 
-**If not:** no `type=2` transfer → the press was shorter than 700 ms, or `audio_init` failed
-(the Sense board carries the PDM mic; `HAS_PDM_MIC` must be 1). Silence in the WAV → PDM CLK/DATA
-are 42/41 on the Sense; check the Sense board is seated. A 40 KB clip takes ~1 s on Android-class
-MTU and ~4 s at iOS chunk sizes; keep questions short.
+The ring speaker needs **server-side TTS**: `MCRING_TTS_PROVIDER=openai` (and `OPENAI_API_KEY`) in
+`backend/.env`, restart uvicorn, `curl -s localhost:8000/v1/health` shows `"tts":"openai"`.
+
+```bash
+mcring say "hello from the ring" --ring-speaker --volume 160    # text → ADPCM on the server → ring speaker
+mcring talk --ring-speaker                                      # answers on the laptop AND the ring speaker
+mcring talk --ring-mic --ring-speaker --quiet                   # everything on the ring: its mic, its speaker
+```
+
+**Observe:** `say` prints `N blocks (x.x s)`, `speaker: N blocks (x.x s), 3 block(s)/write`
+(1 block/write at MTU 185) and ends with `ring speaker: done`. On the ring: `I spk: stream start
+16000 Hz, volume 255 x 160`, speech from the speaker after the ~400 ms prebuffer, `I spk: done after
+N blocks (dropped 0, seq gaps 0)`, `event AUDIO_DONE (drained)`. Count `event AUDIO_UNDERRUN` lines
+over a 10 s answer: ≤ 1 at MTU 185, 0 at 517 (F12). Holding the button while it plays interrupts the
+answer (barge-in) and starts the next question; `s` + Enter in `talk` stops it (`AUDIO_DONE (stopped)`).
+Measure loudness with a phone SPL app at 30 cm and 1 m (expect roughly 75 / 66 dB in free air).
+
+**If not:** `AUDIO_START but no speaker on this board` → a build with `-1` I2S pins (not the XIAO).
+`(ring speaker: no audio from the server: …)` → `MCRING_TTS_PROVIDER` is `none`. `stream start` and
+`done after N blocks` but silence → `SD` low/floating, `GAIN` shorted wrong, `DIN`/`BCLK` swapped, or
+`--volume 0`; distortion → lower `--volume` / `GAIN` open. `underrun after N blocks` → the link is
+slower than real time (MTU 185 + long connection interval), or a capture ran during playback (a
+`CAPTURE` blocks `loop()` for 150–400 ms — expected, see `firmware/ring-esp32s3/README.md`).
+A click at reset → the ROM banner on GPIO43, harmless. Hum with the USB meter in line → measure
+from the battery (§1.11).
 
 ### 1.11 Battery test (100 mAh cell)
 
@@ -275,19 +377,24 @@ Numbers to record in `docs/benchmarks.md` (setup/date column included):
 | BLE transfer, 15 KB, laptop (BlueZ/CoreBluetooth) | CLI `complete: ... kB/s` | 20–60 KB/s |
 | BLE transfer, 15 KB, Android / iPhone (app) | app log | < 0.3 s / < 1 s |
 | Retransmit rounds per transfer | ring `ACK complete id=N (R rounds)` | 1 (= no resend) |
-| Backend latency | CLI `in NNNN ms` | 2–5 s |
-| Trigger → Morse starts | stopwatch | < 6 s |
+| Backend latency (STT + Claude + TTS) | CLI `in NNNN ms` | 2–4 s |
+| Button release → first spoken word (N2) | stopwatch, 5 turns, laptop mic and ring mic | < 6 s |
+| Ring-mic clip transfer, 3 s clip (24 KB) | CLI `transfer N complete` | < 0.5 s laptop / Android, ~2 s iPhone |
 | Advertising idle current | meter, disconnected, awake | 20–40 mA (ESP32-S3 awake) |
-| Connected idle current | meter, `listen` running, no transfer | 15–30 mA (slow conn params) |
+| Connected idle current | meter, `talk` running, no transfer | 15–30 mA (slow conn params) |
 | Capture peak / average over 1.5 s | PPK2 or shunt + scope | 300–370 mA / ~150 mA |
-| Morse reply, 10 s, haptic+LED | meter during `mcring send` | 40–80 mA average |
+| Ring-mic recording (PDM + encode + BLE) | PPK2 during `recording up to 8 s` | 40–60 mA |
+| Cue (double tick, haptic + LED) | PPK2 | ~0.2 s at 40–80 mA — negligible per question |
+| Speaker answer, 10 s, usable volume (§1.10) | meter during `mcring say … --ring-speaker` | **100–150 mA average** (+ ~2.4 mA amp idle while `SD` is tied high) → `tuning_calc.py speaker --ma <measured>` |
 | Deep sleep, Sense board attached | meter after `idle_sleep_s` elapses or `SLEEP` | ~3 mA |
 | Deep sleep, Sense board removed | same | 150–250 µA as the firmware stands: XIAO ~64 µA bare + 21 µA divider + **LIS2DW12 ~90 µA** in the 400 Hz high-performance tap-wake mode that `power_deep_sleep_now()` leaves it in (+ breakout regulators/LEDs); 80–100 µA with INT1 lifted and the IMU unplugged |
-| Shots on one 100 mAh charge, 30 shots/day pattern | count until `batt` < 3300 mV | model says ~500 (`hardware/power-budget.txt`) |
+| Questions on one 100 mAh charge, 30/day pattern, answers in headphones | count until `batt` < 3300 mV | model says ~500 (`hardware/power-budget.txt`) |
+| Speaker answers on one charge (10 s each) | same, `--ring-speaker` | ~2–3 photos' worth each (`tuning_calc.py speaker`) |
 | Double-tap false positives per hour | §1.9 | < 1 |
 
-**If not:** deep sleep > 300 µA with the Sense board removed → the divider is 10 k (210 µA) or a
-breakout has an LED/regulator. The IMU's ~90 µA is expected: `power_deep_sleep_now()` calls `imu_wake()`
+**If not:** deep sleep > 300 µA with the Sense board removed → the divider is 10 k (210 µA), a
+breakout has an LED/regulator, or the MAX98357A is still wired with `SD` high (2.4 mA — pull `SD`
+to GND or unplug `VIN` for sleep measurements on the dev kit; the stage-1 board gates it). The IMU's ~90 µA is expected: `power_deep_sleep_now()` calls `imu_wake()`
 (CTRL1 `0x74` = 400 Hz, high-performance — the mode the double-tap engine is specified for), not the
 ~1 µA low-power ODR the firmware comment and `hardware/power-budget.txt` assume; measure with INT1
 disconnected and the IMU unplugged to split it out. The fix is a firmware follow-up (§2.1 item 4), the
@@ -314,11 +421,18 @@ connectivity in `hardware/electrical/out/mcring_v1.net` (ERC clean: `out/erc.md`
 3. Confirm your fab offers 0.1/0.1 mm track/space and 0.2 mm drills on 2-layer 0.6 mm. If not,
    swap both TPS22916 (0.4 mm DSBGA) for TPS22917DBV (SOT-23-5) in `hardware/electrical/mcring_v1.py`,
    regenerate, and use standard rules.
-4. Known firmware gaps on `BOARD_MCRING_V1` (stage 0 is unaffected; `hardware/electrical/README.md` §7):
-   * **LED rail**: `PIN_RGB_PWR` (IO33, net `LED_PWR_EN`, U9 TPS22916) is defined in `config.h` but
-     `feedback.cpp` never drives it, so the WS2812 is unpowered. Patch `feedback_init()` to set it as an
-     output and HIGH ≥ 1 ms before the first `neopixelWrite()`, and `power_deep_sleep_now()` to drive it
-     LOW — or bridge U9's VIN–VOUT on the first board (costs 0.6–1 mA in sleep).
+4. Firmware state on `BOARD_MCRING_V1` (stage 0 is unaffected; `hardware/electrical/README.md` §7):
+   * **LED rail — done**: `feedback.cpp` drives `PIN_RGB_PWR` (IO33, net `LED_PWR_EN`, U9 TPS22916)
+     high around every LED write (`rgb_rail()`) and `power_deep_sleep_now()` drives it low, so the
+     WS2812 is powered only while a cue or flash plays. Verify on the board: `VLED` (C21) is 3.3 V
+     during a cue and 0 V otherwise — never bridge U9 (0.6–1 mA in sleep).
+   * **Speaker pins**: `config_audio.h` `BOARD_MCRING_V1` must carry the hardware pass's assignment —
+     **IO35 `PIN_I2S_BCLK`, IO36 `PIN_I2S_LRCLK`, IO37 `PIN_I2S_DOUT`, IO34 `PIN_SPEAKER_EN`** (U11
+     TPS22916 `ON`; U10's `SD_MODE` is tied to the gated rail `VAMP`, so the amp enables as the rail
+     rises), IO44 spare. With `-1` placeholders the build prints
+     `I spk: speaker not fitted`, `SPEAKER_OK` stays clear and `AUDIO_START` answers `AUDIO_DONE(1)`.
+     `audio_out.cpp` already drives `PIN_SPEAKER_EN` high only while a stream plays and low at init,
+     so the amp rail is off asleep.
    * **Charging flag**: `PIN_CHG` (IO3, net `nCHG`, also TP7) is defined but `battery_charging()` returns
      `false`; `MC_FLAG_CHARGING` stays 0 until it reads the pin (active low).
    * **Deep-sleep current**: `power_deep_sleep_now()` calls `imu_wake()` = CTRL1 `0x74` (400 Hz,
@@ -335,6 +449,10 @@ connectivity in `hardware/electrical/out/mcring_v1.net` (ERC clean: `out/erc.md`
    for the 4 × 5 mm lid electrode and a 3 × 4 × 3.6 mm conductive-foam block (or SMT spring finger) for
    TPAD1; two 3 × 2 mm ENIG contacts for the band (a scrap of ENIG board); 30 AWG PTFE / wire-wrap wire
    (≤ 0.7 mm OD for the Ø0.9 channels); UV-cure glue; a 0.3 mm foam or adhesive ring for the mic tube.
+   **Speaker option**: the MAX98357A in the **16-TQFN 3 × 3 mm** package (hand-solderable; the 9-WLP is
+   the noted alternative) and a third TPS22916 for U10/U11 on the board, plus the off-board **PUI
+   AS01008MR-2-R-class 8 Ω 10 mm speaker** (Ø10 × 2.5–3 mm) with two short 30 AWG leads to its wire pads.
+   Decide now whether this board gets the speaker: it is an option, and the headphone path needs none of it.
 
 ### 2.2 PCB order settings
 
@@ -346,7 +464,7 @@ connectivity in `hardware/electrical/out/mcring_v1.net` (ERC clean: `out/erc.md`
 | Surface finish | **ENIG** (DSBGA/LGA co-planarity, charging pads) |
 | Solder mask | green or black; expansion 0.05 mm (0.03 on DSBGA pads, NSMD) |
 | Silkscreen | none under the module |
-| Stencil | **two**, 0.10 mm (4 mil) stainless, frameless — one per side: the **bottom** carries every IC except the module, both DSBGAs, the BQ25100, the mic and all passives (64 of the 79 placed parts in `board_params.json`); the **top** only U1, FPC1, SW1, D1, R7, C3. Ask for 1:1 apertures on the DSBGA pads (the fab may want to shrink them — say no) |
+| Stencil | **two**, 0.10 mm (4 mil) stainless, frameless — one per side: the **bottom** carries every IC except the module, both DSBGAs, the BQ25100, the mic and all passives (72 of the 87 placed parts in `board_params.json`, U10/U11 and the SPK1 speaker pads among them — left unfitted when the speaker option is not built; see the current `hardware/pcb/floorplan.md`); the **top** only U1, FPC1, SW1, D1, R7, C3. Ask for 1:1 apertures on the DSBGA pads (the fab may want to shrink them — say no) |
 | Quantity | 5–10; order 2 spare boards' worth of parts |
 | Fiducials | 2 per side if there is room (the bottom is the dense side) |
 
@@ -358,9 +476,10 @@ Kapton tape, a USB microscope.
 
 The board is double-sided and bottom-heavy (`hardware/pcb/floorplan.md` §2–3): the **bottom** carries
 every IC except the module (U7 BQ25100, U8 TPS62840 + L1, U2/U9 TPS22916, U3/U4 XC6206, U5 DRV2605L,
-U6 LIS2DW12, Q1, D2/D3, MK1 mic), all passives and all wire pads (J1 cell, PAD1w/PAD2w charging,
-M1 LRA, BZ1 piezo, J2 aux); the **top** carries U1 (the module), FPC1, SW1, D1 + R7, C3, the TPAD1
-copper landing and the eight test pads TP1–TP8. So: bottom first on the hot plate, prove the power
+U6 LIS2DW12, Q1, D2/D3, MK1 mic, and — speaker option — U10 MAX98357A 16-TQFN + U11 TPS22916), all
+passives and all wire pads (J1 cell, PAD1w/PAD2w charging, M1 LRA, BZ1 piezo, J2 aux, the two speaker
+pads); the **top** carries U1 (the module), FPC1, SW1, D1 + R7, C3, the TPAD1 copper landing and the
+eight test pads TP1–TP8. So: bottom first on the hot plate, prove the power
 tree, then the top. Two ways to keep the bottom joints solid during the top reflow:
 
 * **(A) one alloy** — top side by hot air with the board on the preheater at ≤ 120 °C (SnBi) / ≤ 150 °C
@@ -377,9 +496,11 @@ tree, then the top. Two ways to keep the bottom joints solid during the top refl
    + L1 (2016 inductor), U3 (2.8 V) and U4 (1.2 V — DNP if the purchased head regulates DVDD itself)
    XC6206, D2 PESD5V0S1BB (bidirectional, no polarity) and D3 PMEG2005EB (cathode toward U7 / `CHG_IN`),
    Q1 AO3400A, U5 DRV2605L (VSSOP-10), U6 LIS2DW12 (LGA-12), MK1 T3902 with its port over the board hole,
-   and all 0402/0603 passives. Check the reel labels for the values that set the power tree: R8/R9 1 M
+   and all 0402/0603 passives. Speaker option: U10 MAX98357A (16-TQFN, pin-1 mark toward its decoupling
+   caps; the exposed pad is GND — paste it) and U11 TPS22916 (DSBGA-4, the amp rail switch, ON = IO34).
+   Check the reel labels for the values that set the power tree: R8/R9 1 M
    (divider), R10 9.1 k (25 mA charge), R11 11.5 k (1 mA termination), R12 267 k (3.3 V), R17/R19 100 k,
-   R18 4.7 k. Nothing goes on the ten wire pads.
+   R18 4.7 k. Nothing goes on the wire pads.
 2. Reflow on the hot plate: SnBi peak 165–175 °C for 30 s; SAC305 peak 235–245 °C. The 0.6 mm board
    heats fast — do not exceed 60 s above liquidus.
 3. Inspect: every DSBGA sits flat with no bridging visible at the perimeter balls; continuity between
@@ -389,7 +510,9 @@ tree, then the top. Two ways to keep the bottom joints solid during the top refl
    (at C21) 0 V — R17/R18 hold the two load-switch enables low with no module fitted — idle current
    < 20 µA (buck IQ + divider; DRV2605L and LIS2DW12 power up in standby / power-down). Jumper R17's
    upper pad (`CAM_PWR_EN`, U2.B1) to TP6: `CAM_3V3` 3.3 V, `CAM_2V8` 2.8 V at C11, `CAM_1V2` 1.2 V at
-   C12 (if U4 fitted); jumper R18's upper pad (`LED_PWR_EN`) to TP6: `VLED` 3.3 V. Charger: replace the
+   C12 (if U4 fitted); jumper R18's upper pad (`LED_PWR_EN`) to TP6: `VLED` 3.3 V. Speaker option: the
+   amp rail at U11's output (and U10 `VDD`) reads 0 V with its enable pull-down alone and 3.3 V with the
+   IO34 net jumpered to TP6; idle current then rises by the MAX98357A's ~2.4 mA. Charger: replace the
    bench supply by a 3.7 V cell on J1a (BAT+) / J1b (GND), put 5 V on the PAD1w pad (`CHG_PAD`) and GND
    on PAD2w: TP7 `nCHG` goes low, ≈ 25 mA flows into the cell, U7.A1 sits ~0.25 V below the pad (D3).
    Swap the 5 V: nothing conducts (D2 bidirectional + D3) — that is the reversed-cradle case.
@@ -409,8 +532,9 @@ tree, then the top. Two ways to keep the bottom joints solid during the top refl
 
 **Wires (before the board goes into the bay — every wire pad is on the bottom and the wires go down
 into the band):** LRA leads to M1a/M1b (≈ 15 mm, strain relief with a dab of UV glue), the two 30 AWG
-charging-pad wires to PAD1w (CHG+) / PAD2w (CHG−) (≈ 25 mm, trimmed later in the rib grooves), piezo
-to BZ1a/BZ1b if fitted, J2 only for the air-puff experiment. The cell leads go on **last**, in §2.6
+charging-pad wires to PAD1w (CHG+) / PAD2w (CHG−) (≈ 25 mm, trimmed later in the rib grooves), the
+10 mm speaker's leads to its two pads if the speaker option is built (≈ 15 mm; polarity irrelevant
+for one driver), piezo to BZ1a/BZ1b if fitted, J2 only for the air-puff experiment. The cell leads go on **last**, in §2.6
 step 4, with the cell already in its pocket. Snap the antenna's u.FL plug onto the module for the §2.4
 BLE checks (press straight down until it clicks; the mated plug is the 2.9 mm tallest part).
 
@@ -429,12 +553,13 @@ pio run -e mcring_v1 -t upload            # esp32-s3-devkitc-1 profile, qio_qspi
 pio device monitor -b 115200
 ```
 
-**Observe:** `I main: mcring fw 0.1.0 (mcring-v1)`, `I imu: LIS2DW12 ready at 0x18`, `I drv:
-DRV2605L ready (LRA)` + `autocal ok`, `I cam: sensor PID=0x2640 detected`, `advertising as
-mcring-XXXX`. `PIN_CAM_PWR` (IO21) behaviour: high for ~0.3 s during `camera_probe()` at boot,
-then low; high again for 0.2–0.5 s per capture, low between shots — scope `CAM_3V3` while
-pressing the button. There is no LED until the §2.1 item 4 patch (`PIN_RGB_PWR` is defined but not
-driven); the haptic tick confirms boot instead.
+**Observe:** `I main: mcring fw 0.1.0 (mcring-v1) voice-first`, `I imu: LIS2DW12 ready at 0x18`,
+`I drv: DRV2605L ready (LRA)` + `autocal ok`, `I cam: sensor PID=0x2640 detected`, `I spk: speaker
+configured (I2S1)` (or `not fitted` on a build without the IO34–37 assignment, §2.1 item 4),
+`advertising as mcring-XXXX`, then the boot *ok* cue: one haptic tick and one blink of D1 through the
+lid (its rail `VLED` goes 3.3 V for the 60 ms of the blink and back to 0 V). `PIN_CAM_PWR` (IO21)
+behaviour: high for ~0.3 s during `camera_probe()` at boot, then low; high again for 0.2–0.5 s per
+capture, low between shots — scope `CAM_3V3` while pressing the button.
 
 **Serial checks before closing the enclosure:**
 
@@ -443,9 +568,12 @@ driven); the haptic tick confirms boot instead.
 | `camera_probe` | `PID=0x2640`; if `esp_camera_init failed: 0x105`, re-check FPC pin order and `CAM_3V3`/`CAM_2V8` during the probe |
 | capture | `captured 320x240 JPEG` 8–15 KB; `CAM_3V3` returns to 0 V after |
 | battery | `batt=` within 50 mV of the meter (R8/R9 **1 M/1 M**, `BATTERY_DIVIDER 2.0`; C23 100 nF holds the node for the 8-sample burst) |
-| button | short press → capture; long press → `recording up to 5 s` |
-| double tap | tap the board twice → `double tap` |
-| sleep | `mcring config idle_sleep_s 20`, disconnect, wait → `I pwr: deep sleep`; battery current (PPK2 in series with the cell): **≤ 130 µA as the firmware stands** — ESP32-S3 7–8 µA + LIS2DW12 ~90 µA (400 Hz high-performance tap-wake, see §2.1 item 4) + divider 2 µA + DRV2605L standby ≤ 4 µA + mic/charger/buck/switch leakage ~6 µA ≈ 110 µA (`python3 docs/build-helpers/tuning_calc.py sleep`); **≤ 30 µA** only after the IMU low-power wake follow-up (`tuning_calc.py sleep --imu lp-wakeup` → ~22 µA). `CAM_3V3` and `VLED` read 0 V in sleep; ~3 mA means the camera rail is on (IO21 high / R17 missing). Press the button → `woke from deep sleep, cause 2`, `wake trigger -> capture`; tap → `cause 3` |
+| button | short press → capture; long press (≥ 0.7 s) → photo, *listening* tick, `recording up to 8 s` (ring mic), or events only with `mic_source_hint 1`; `BUTTON_UP` arg ≥ 7 |
+| double tap | tap the board twice → `double tap`, `event DOUBLE_TAP`, then the hands-free ask (recording up to 8 s) |
+| cues | `mcring talk`: *listening* tick at 0.7 s, double tick with the answer, both on the LRA and on D1 through the lid (`VLED` pulses) |
+| speaker (option) | `mcring say "test" --ring-speaker`: `stream start 16000 Hz`, sound from the port, `done after N blocks`, `event AUDIO_DONE (drained)`; the amp rail (U11 out) is 3.3 V only during playback, IO34 high only then; `flags` bit 6 set |
+| headphones | pair Bluetooth headphones to the laptop/phone, `mcring talk` with nothing configured on the ring → the answer plays in the headphones (F4) |
+| sleep | `mcring config idle_sleep_s 20`, disconnect, wait → `I pwr: deep sleep`; battery current (PPK2 in series with the cell): **≤ 130 µA as the firmware stands** — ESP32-S3 7–8 µA + LIS2DW12 ~90 µA (400 Hz high-performance tap-wake, see §2.1 item 4) + divider 2 µA + DRV2605L standby ≤ 4 µA + mic/charger/buck/switch leakage ~6 µA ≈ 110 µA (`python3 docs/build-helpers/tuning_calc.py sleep`); **≤ 30 µA** only after the IMU low-power wake follow-up (`tuning_calc.py sleep --imu lp-wakeup` → ~22 µA). `CAM_3V3`, `VLED` and the speaker rail read 0 V in sleep; ~3 mA means the camera rail is on (IO21 high / R17 missing), +2.4 mA means the amp rail is on (IO34 high). Press the button → `woke from deep sleep, cause 2`, then the trigger logic decides short press (photo) or long press (ask); tap → `cause 3`, `wake by tap -> ask` |
 | charging | 5 V on the pads: TP7 `nCHG` low (IO3 low); `battery_charging()` still returns `false` until the §2.1 item 4 follow-up, so `MC_FLAG_CHARGING` does not change yet |
 
 ### 2.5 Enclosure print and post-processing
@@ -459,6 +587,9 @@ files: `out/mcring_stage1_shell.stl` (band + signet bay + camera pod, one part),
 placeholder for a viewer and `out/view_*.png` are the sanity views. `hardware/cad/fit_report.md` is the
 as-built check (all intersections 0, clearances and wall probes listed). There is **no cradle model**, and
 the old OpenSCAD concept with the 26 × 12 bay no longer exists — if `out/` is empty, run the script.
+The speaker option (Ø10 × 2.5–3 mm driver and its sound port) is part of the stage-1 CAD pass — take
+the pocket position, port size and post-processing step from the current `hardware/cad/README.md`
+and `fit_report.md`; a shell printed from an older `out/` has no speaker pocket.
 
 Numbers you will touch (`default_params()` in the script): band Ø20.0 ID × 22.4 OD × 12 wide, wall 1.2;
 signet 31.5 × 21.0 mm, lid top 11.1 mm above the skin, pod roof 12.7; lens bore Ø4.6 (OV2640 barrel 4.5),
@@ -514,6 +645,10 @@ floor and cannot go in afterwards (`hardware/cad/README.md`, "After printing —
    or epoxy. Both contacts flush, ≈ 8.5 mm apart (§2.8).
 3. **LRA** into its pocket, face toward the finger, bonded to the pocket floor with 3M VHB or
    cyanoacrylate — rigidly coupled to the shell, never floating in foam. Its leads already run to M1a/M1b.
+   **Speaker** (option): the 10 mm driver into its pocket with the diaphragm toward the sound port and a
+   ring of thin adhesive foam between its rim and the pocket floor (an unsealed front chamber loses most
+   of the little output there is); leads already on the speaker pads. Clear the port with a drill of the
+   size `hardware/cad/README.md` gives before the driver goes in.
 4. **Cell** into the floor pocket, tabs toward the −Y side in the 3 × 0.8 mm channel toward the J1 pads;
    tape it down. Now solder the leads, with the board held above the bay: J1a BAT+, J1b GND (polarity!).
 5. **Camera head** from the bay into the pod until the barrel sits 0.4 mm into the bore, lens along the
@@ -567,8 +702,10 @@ rising; the pads never see more than 5.5 V (D2). `MC_FLAG_CHARGING` stays 0 unti
 Index finger, signet on top, lens toward the fingertip, switch on the thumb side. Aim by
 pointing the finger: the OV2640 head gives ~65° horizontal FOV, so 25–40 cm from the object
 fills the frame; hold still for one beat after the trigger (power-up + 3 AEC frames ≈ 200 ms).
-Daylight or room light; dim restaurants are marginal at QVGA. The `<SN>` tick tells you the shot
-was taken; the Morse reply lands 2–6 s later.
+Daylight or room light; dim restaurants are marginal at QVGA. Hold the switch, wait for the
+*listening* tick (the shot is taken just before it in ring-mic mode), ask, release; the double tick
+and the answer in your headphones — or from the ring speaker — land 2–6 s later. A short press is a
+photo only; a double tap asks hands-free.
 
 ### 2.10 On-finger calibration
 
@@ -591,8 +728,10 @@ positives per hour in `docs/benchmarks.md`.
 Nothing below needs the stage-1 ring; start it in parallel on a Seeed XIAO nRF52840 Sense.
 
 1. **Protocol peer on nRF52840.** `west build -b xiao_ble -p auto firmware/ring-nrf52840 &&
-   west flash` (nRF Connect SDK ≥ 2.7). `mcring listen` must connect and receive the synthetic
-   160 × 120 frame; this proves the phone/backend side needs no change for stage 2.
+   west flash` (nRF Connect SDK ≥ 2.7). `mcring talk` must connect and receive the synthetic
+   160 × 120 frame; this proves the phone/backend side needs no change for stage 2. The skeleton
+   predates the voice pivot: `EVENTS`, `RECORD_START/STOP` and the cues still have to be ported
+   (`docs/05`); `AUDIO_OUT` never will be — stage 2 has no speaker, answers are phone/headphones only.
 2. **Bit-bang 8-bit DVP capture.** OV7670/OV7675 FPC head on 11 GPIOs of one port; capture
    QQVGA grayscale (19.2 KB) with PCLK polled, then with GPIOTE+PPI; record capture time, CPU
    load and current (PPK2). Pass: a recognisable frame in < 300 ms at < 15 mA average.
@@ -625,7 +764,9 @@ Nothing below needs the stage-1 ring; start it in parallel on a Seeed XIAO nRF52
    area; bend radius ≥ 10× flex thickness at the two band folds; impedance note for the printed
    microstrip antenna; assembly quote including X-ray for the WLCSP; panel of 5–10.
 8. **Haptic on-finger comparison**: VG0640001D 6 mm LRA + DRV2624 vs PowerHap 0904H014V060 +
-   BOS1901, same Morse corpus, blind test of character recognition at 15/8 WPM.
+   BOS1901, same three cues (60 ms tick, double tick, 420 ms buzz), blind identification of the cue
+   on the finger while walking; the Morse corpus at 15/8 WPM only if the optional silent mode is
+   wanted at stage 2.
 
 ---
 
@@ -640,58 +781,71 @@ Nothing below needs the stage-1 ring; start it in parallel on a Seeed XIAO nRF52
 | iOS 178-byte chunks (`MTU 185 -> chunk 178`) | normal: iOS caps ATT MTU at 185 and the connection interval at 15 ms | not a fault; expect 10–12 KB/s; keep QVGA (≤ 15 KB); never hard-code chunk size |
 | `no ACK, resending END` → `giving up` (`last_error=3`) | phone not subscribed to meta/data; app blocked; ACK lost | ring log must show three `subscribe ... -> 1`; `notify dropped after retries` means controller buffers overflowed — lower `set_tx_credits_max()` or the interval is too long (`request_fast_params`) |
 | Many `resend N chunks (round R)` | notifications dropped at high MTU; RF marginal | move closer; check the antenna end is clear of the cell/LRA; 2M PHY not granted by the phone is fine, resends should still converge in ≤ 2 rounds |
-| Morse too fast / dots and dashes blur on the LRA | 20–40 ms LRA rise/fall vs 80 ms dots; strength too high; no Farnsworth | `--wpm 12 --overall-wpm 6` (`tuning_calc.py morse --wpm 12 --overall 6`); `haptic_strength 60–90`; confirm autocal passed (closed-loop braking is what gives crisp edges) |
+| Listening tick and answer-ready double tick feel alike | 60 ms ticks at the LRA's 20–40 ms rise/fall; strength too high (rattle) | `haptic_strength 60–90`; confirm autocal passed (closed-loop braking is what gives crisp edges); the double tick's 60 ms gap must be felt — raise `CUE_TICK_MS` in `config_audio.h` if not |
+| No cue at all although `I fb: play …` is logged | `CUES_MASK` has no drivable channel; `led_brightness 0`; DRV2605L not found | `mcring config cues_mask 3`, `led_brightness 96`; `I drv: DRV2605L ready` must be in the boot log |
+| `AUDIO_START but no speaker on this board` | build with `-1` I2S pins (`BOARD_MCRING_V1` before the IO34–37 assignment) | §2.1 item 4; `flags` bit 6 clear tells the companion not to offer the ring speaker |
+| `(ring speaker: no audio from the server…)` | `MCRING_TTS_PROVIDER=none` — the phone's own voice cannot reach the ring | `MCRING_TTS_PROVIDER=openai` + `OPENAI_API_KEY` in `backend/.env` (§1.10) |
+| `stream start` … `done after N blocks` but silence | MAX98357A `SD` low/floating, `GAIN` miswired, `DIN`/`BCLK` swapped, volume 0 | §1.10 table; `mcring say … --volume 200`; on stage 1 scope IO34 high and the amp rail 3.3 V during playback |
+| `event AUDIO_UNDERRUN` / `underrun after N blocks` | link slower than real time (MTU 185 → 1 block/write + long interval), or a capture during playback | expected ≤ 1 at MTU 185; avoid `CAPTURE` while streaming; the companion bursts 24 blocks then paces at 1 block / 16 ms |
+| Morse too fast / dots and dashes blur on the LRA (optional silent mode only) | 20–40 ms LRA rise/fall vs 80 ms dots; strength too high; no Farnsworth | `--wpm 12 --overall-wpm 6` (`tuning_calc.py morse --wpm 12 --overall 6`); `haptic_strength 60–90` |
 | `autocal FAILED (status 0xe8)` | DIAG_RESULT set: motor missing/ERM/wrong rated voltage; motor not coupled to mass | wiring; `drv2605_init(true)`; recompute `REG_RATED_V`/`REG_OD_CLAMP` for the motor (§1.8); stick the LRA down before calibrating |
 | Double-tap false triggers | threshold 0.56 g too low for hand impacts; 560 ms window too wide | §1.9: `imu_set_tap_threshold(12)`, `LATENCY 5`; compare `trigger_mask 1` vs `2`; log `TAP_SRC` |
 | Double-tap never fires | INT1 not on IO7; `trigger_mask` bit 1 clear; wrong I²C address not auto-detected | `imu ready at 0x18/0x19` line; `mcring config trigger_mask 3`; `TAP_SRC` shows `0x20` singles only → taps too slow |
-| ~3 mA deep-sleep current | camera board not gated (stage 0), IO21 high/floating without R17, WS2812 un-gated (0.6–1 mA, or U9 bridged), 10 k divider (stage 0) | stage 0: pull the Sense board, 100 k divider; stage 1: scope `CAM_3V3`/`VLED` in sleep, add `PIN_RGB_PWR` handling |
+| ~3 mA deep-sleep current | camera board not gated (stage 0), IO21 high/floating without R17, WS2812 un-gated (U9 bridged, 0.6–1 mA), MAX98357A `SD` tied high (2.4 mA, stage 0 or IO34 stuck high), 10 k divider (stage 0) | stage 0: pull the Sense board, 100 k divider, `SD` to GND for sleep tests; stage 1: scope `CAM_3V3`/`VLED`/the amp rail in sleep (all 0 V) |
 | ~100–130 µA deep-sleep current on stage 1 | expected as the firmware stands: `power_deep_sleep_now()` leaves the LIS2DW12 at 400 Hz high-performance (~90 µA) for tap-wake | `tuning_calc.py sleep`; confirm with INT1 lifted and the IMU powered down; the ≤ 30 µA figure needs the low-power wake mode (§2.1 item 4) |
 | Ring reboots during capture on battery | 300–370 mA peak sags a small cell / thin wires | 100 µF bulk at the module (stage 1), shorter battery leads; on the 100 mAh dev cell this should not happen — check solder joints |
 | Backend **401** | `MCRING_API_TOKEN` set | `mcring ... --token <t>`; app Settings → token |
-| Backend **400** `an image is required` | follow-up without a session id, or session expired (30 min) | pass `--session`, or send a new photo |
-| Backend **413** `image too large` | > 8 MB upload (`MCRING_MAX_UPLOAD_BYTES`) | ring images are ≤ 60 KB — this is a CLI misuse with a huge file |
+| Backend **400** `say or type a question, or attach a photo` | the turn carried neither audio nor text nor image (e.g. `--mode chat` with a discarded recording) | ask again; a follow-up needs `--session <id>` only to reference the earlier photo |
+| Backend **422** `I didn't catch that — the recording came back empty` | the clip transcribed to nothing and there was no photo: too quiet, too short, spoke before the tick (ring mic) | speak after the *listening* tick, closer to the ring; check the WAV in `captures/` |
+| Backend **413** `… too large` | > 8 MB upload (`MCRING_MAX_UPLOAD_BYTES`) | ring images are ≤ 60 KB and clips ≤ 64 KB — this is a CLI misuse with a huge file |
 | Backend **429 / 502 / 503** | provider rate-limit / API error / connection error (`retryable` in the JSON) | wait and retry; check `ANTHROPIC_API_KEY`; `MCRING_PROVIDER`; 503 with `connection error` → outbound network/proxy |
-| Backend **501** | `provider=openai` without the `openai` package | `pip install openai` |
-| Answer is `? NO ANSWER` | model refused (422 internally, mapped to a stock answer) | expected for people/faces/unsafe content; re-aim |
-| Voice clip ignored (transcript `null`) | no `OPENAI_API_KEY` for transcription | add it to `backend/.env` (§1.10) |
-| LED dark on stage 1 | `PIN_RGB_PWR` (IO33, `LED_PWR_EN`) is defined but `feedback.cpp` never drives it; R18 keeps U9 off | §2.1 item 4 (patch, or bridge U9) |
+| Backend **501** | a speech feature is not configured: no `OPENAI_API_KEY` for speech-to-text, `MCRING_STT_PROVIDER=local` without `faster-whisper`, `MCRING_TTS_PROVIDER=none` with `--server-tts` / `--ring-speaker`, or `provider=openai` without `OPENAI_API_KEY` | the 501 message says which; `backend/README.md` "Speech providers" |
+| Answer is `I can't help with that one.` | model refused (stock `REFUSAL_ANSWER`) | expected for people/faces/unsafe content; re-aim or rephrase |
+| `(transcription failed: …)` in the CLI, answer based on the typed text only | speech-to-text failed but a `-q` question was present | fix the STT provider (501 row); without a typed question the same failure is returned as the error |
+| LED dark on stage 1 | `VLED` never rises: R18 missing / U9 dead, D1 reversed, `led_brightness 0`, or a firmware build that predates `rgb_rail()` | scope `VLED` (C21) during a cue — it must pulse to 3.3 V; `mcring config led_brightness 96` |
 | `queue full, dropped an older capture` | > 3 captures offline | connect; raise `MAX_QUEUED_CAPTURES` only if PSRAM allows |
 
 ---
 
-## 5. Acceptance checklist per stage (docs/01 F1–F9)
+## 5. Acceptance checklist per stage (docs/01 F1–F13)
 
-Tick each line with the evidence named; record numbers in `docs/benchmarks.md`.
+Tick each line with the evidence named; record numbers in `docs/benchmarks.md`. IDs are
+`docs/01`'s: F5 means *cues* (Morse is optional and off), F10–F13 are the phone-mic, voice-only,
+ring-speaker and audio-routing requirements of the voice-first pivot.
 
 ### Stage 0 — bench rig
 
 | Req | Pass criterion | Evidence |
 |---|---|---|
-| F1 | button, double-tap **and** touch each produce `captured ... JPEG` | serial log, §1.5/1.9/2.10 |
-| F2 | 15 KB JPEG reaches the CLI in < 1 s on a laptop; < 0.3 s Android / < 1 s iPhone in the app | `complete: ... kB/s`, app log |
-| F3 | `mcring listen` returns an answer with `subject`, `confidence`, `short` for a daylight photo | CLI output |
-| F4 | answer spoken by the CLI (`--speak`) and by the phone app (expo-speech) | ears |
-| F5 | `short` played on LED and LRA with Farnsworth spacing; a second person reads "SOS" and "R" by touch alone | §1.7/1.8 |
-| F6 | long press → ADPCM clip → transcript folded into the question | §1.10, `transcript` in the response |
-| F7 | `mcring ask --session <id> -q "is it edible?"` (no image argument) answers about the previous photo | CLI: same `session:` id returned, answer refers to the earlier subject |
-| F8 | 3 shots taken while disconnected are delivered on reconnect, in order | `flags` bit 5 / `queued`, three transfers |
-| F9 | `mcring config morse_wpm 12`, `feedback_channels 1`, `trigger_mask 2` each persist across a reset | `I cfg:` boot line |
-| N2 | trigger → Morse start < 6 s on 5 consecutive shots | stopwatch |
+| F1 | short press, double-tap (as the start of an ask), touch and the companion's `c` / *Take photo* each produce `CAPTURE_STARTED`, `CAPTURE_DONE queued=1` and a `captured ... JPEG` | serial log + `event` lines, §1.5/1.9/2.10 |
+| F2 | 15 KB JPEG reaches the CLI in < 1 s on a laptop; < 0.3 s Android / < 1 s iPhone in the app; a 3 s ring-mic clip (24 KB) in < 0.5 s / ~2 s | `complete: ... kB/s`, app log |
+| F3 / F11 | a spoken question **with** a photo returns `(photo)`, a `subject` and a 1–3 sentence `claude:` answer without lists or markup; the **same question with no photo** (`--mode chat`, or no ring in reach) is answered as plain chat and the CLI shows no `(photo)` (`mode = chat`, `had_image = false`) | CLI output, §1.6 |
+| F4 | with Bluetooth headphones paired to the laptop/phone and **nothing configured on the ring**, the answer is heard in the headphones; with none paired, on the laptop/phone speaker; the phone app does the same with *Phone voice* and *Server voice* | ears, §0/§1.6 |
+| F5 | the *listening* tick lands within ~100 ms of the press crossing 0.7 s, the double tick arrives with the answer, a backend error gives the long buzz; `cues_mask 2` moves all three to the LED only; with default settings **no Morse is ever played** | §1.7/1.8, `I fb: play` lines |
+| F6 | hold ≥ 0.7 s with `--ring-mic` → `REC_STARTED`, on release `BUTTON_UP (ask)` + `REC_STOPPED` with a length matching the hold ± 0.3 s, an ADPCM transfer, and the `you   :` transcript contains the spoken words | §1.6, `transcript` in the response |
+| F10 | laptop/phone mic (`mic_source_hint 1`): `BUTTON_DOWN` arrives before the first word is finished, `BUTTON_UP held N s` matches the stopwatch ± 0.1 s, the recording transcribes correctly 4 times out of 5 | `event` lines, §1.6 |
+| F7 | a follow-up in the same session with no new photo (`mcring ask --session <id> -q "is it edible?"`, or just the next question in `talk`) answers about the earlier photo | CLI: same `session:` id, answer refers to the earlier subject |
+| F8 | 3 asks (photo + clip) made while disconnected are delivered on reconnect, in order | `flags` bit 5 / `queued`, transfers |
+| F9 | `mcring config speaker_volume 200`, `cues_mask 1`, `mic_source_hint 1`, `trigger_mask 2` each persist across a reset | `I cfg:` boot line (`spk=200 cues=01 mic=phone`) |
+| F12 | with the §1.10 breakout: a 10 s answer streamed as `adpcm16k` plays end to end with ≤ 1 `AUDIO_UNDERRUN` at MTU 185 and 0 at 517, ends with `AUDIO_DONE (drained)`; `s` / `AUDIO_STOP` silences it within 100 ms → `AUDIO_DONE (stopped)`; `flags` bit 6 (`SPEAKER_OK`) is set | §1.10, `event` lines |
+| F13 | CLI: `--ring-mic` / laptop mic, `--server-tts` / OS voice, `--ring-speaker` each switch the path; app: *Voice in*, *Speak answers* and *Ring speaker* do the same, and *Ring speaker* is offered **only** when the status shows `SPEAKER_OK` | §1.6/1.10, app Settings |
+| N2 | button release → first spoken word < 6 s on 5 consecutive turns (laptop mic and ring mic) | stopwatch; CLI `in NNNN ms` for the backend share |
 | — | benchmarks table §1.11 filled in | `docs/benchmarks.md` |
 
 ### Stage 1 — oversized ring
 
 | Req | Pass criterion | Evidence |
 |---|---|---|
-| F1 | side switch and on-finger double-tap trigger; < 1 false tap/h over a 4 h wear | §2.10 log |
+| F1 | side switch (short = photo, hold = ask) and on-finger double-tap (hands-free ask) trigger; < 1 false tap/h over a 4 h wear | §2.10 log |
 | F2 | transfer numbers within 20 % of stage 0 with the ring on the finger, phone in a pocket | app log |
-| F3/F4/F7 | unchanged from stage 0 (same firmware, same backend) | one full loop |
-| F5 | Morse readable on the finger through the shell at 15/8 WPM with `haptic_strength` ≤ 100; LED visible through the 1.2 mm lid in daylight (after the §2.1 item 4 patch) | blind read of 5 short answers |
+| F3/F4/F7/F10/F11/F13 | unchanged from stage 0 (same firmware, same backend, same companions) | one full loop each way (ring mic, phone mic, headphones) |
+| F5 | all three cues felt through the shell on the finger at `haptic_strength` ≤ 100 and seen on D1 through the 1.2 mm lid in daylight; a second person tells *listening* from *answer ready* blind 5 times out of 5 | blind cue test |
 | F6 | voice question through the Ø0.8 lid port is transcribed correctly 4 times out of 5 at arm's length | transcripts |
-| F8 | as stage 0, plus wake-from-deep-sleep by tap and by button both produce a queued capture | `woke from deep sleep, cause 2/3` |
+| F8 | as stage 0, plus wake-from-deep-sleep by button (→ short/long press decided after wake) and by tap (→ `wake by tap -> ask`, delivered on reconnect) | `woke from deep sleep, cause 2/3` |
 | F9 | as stage 0 | |
-| N3 | ≥ 30 shots/day for 1 day on the 30 mAh cell with `idle_sleep_s 120`; deep sleep **≤ 130 µA as the firmware stands** (≈ 110 µA modelled → 3.3 days at 30 shots/day), **≤ 30 µA** once the IMU low-power wake follow-up is in (≈ 22 µA → 4.7 days; `tuning_calc.py sleep [--imu lp-wakeup] --shots-per-day 30`; `hardware/power-budget.txt`'s 25 µA standby assumes the latter) | PPK2 log, `batt` at end of day ≥ 3600 mV |
-| Mech | lid clicks under the pod lip and stays on, key actuates the switch with 0.3 mm travel, lens clear and centred in the bore, pads charge at 25 mA, 24 h worn without loose parts and without the pod binding at the PIP joint | inspection |
+| F12 (if the speaker option is built) | `SPEAKER_OK` set; a 10 s answer plays through the sound port end to end (same underrun limits as stage 0); loudness ≥ 60 dB at 30 cm (phone SPL app); the amp rail is 3.3 V only during playback and 0 V in sleep (IO34); `mcring config speaker_volume` scales it | §2.4 speaker row, PPK2 |
+| N3 | ≥ 30 questions/day for 1 day on the 30 mAh cell with the answers in headphones and `idle_sleep_s 120`; deep sleep **≤ 130 µA as the firmware stands** (≈ 110 µA modelled → 3.3 days at 30 questions/day), **≤ 30 µA** once the IMU low-power wake follow-up is in (≈ 22 µA → 4.7 days; `tuning_calc.py sleep [--imu lp-wakeup] --shots-per-day 30`; `hardware/power-budget.txt`'s 25 µA standby assumes the latter). With the speaker option, separately count how many 10 s speaker answers the cell affords (`tuning_calc.py speaker --ma <measured>`; the speaker is allowed to cost battery) | PPK2 log, `batt` at end of day ≥ 3600 mV |
+| Mech | lid clicks under the pod lip and stays on, key actuates the switch with 0.3 mm travel, lens clear and centred in the bore, pads charge at 25 mA, 24 h worn without loose parts and without the pod binding at the PIP joint; speaker port clear and the driver sealed to it (option) | inspection |
 | Safety | cell never above 45 °C while charging; charger stops (`TP_nCHG` high) within 2 h | thermometer |
 
 ### Stage 2 — Oura-size (planning gate, not a build)
@@ -704,5 +858,6 @@ Tick each line with the evidence named; record numbers in `docs/benchmarks.md`.
 | G4 | a curved 16–24 mAh cell is in hand (§3.6) or the stage-1.5 flat-cell fallback is chosen explicitly |
 | G5 | rigid-flex quote and stack-up accepted (§3.7); WLCSP assembly house identified |
 | G6 | haptic choice made from the §3.8 comparison |
+| G7 | `EVENTS` / `RECORD_START/STOP` / cues ported to the nRF52840 firmware and the phone-mic loop (F10 + F4) runs against it — stage 2 has **no speaker**, answers are phone/headphones only |
 
 Only when G1–G5 pass does a stage-2 board get laid out; until then stage 1 is the wearable.

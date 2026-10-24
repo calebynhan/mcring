@@ -6,29 +6,33 @@ PCB floorplan numbers in `hardware/pcb/board_params.json`. It replaces the old O
 
 | File | What |
 |---|---|
-| `mcring_stage1.py` | parametric model (band, bay + antenna cavity, ledges, snap lid with a pod lip, camera pod, cell + LRA pockets, LED window, mic port + tube, switch slot + key, charging-pad windows + wire grooves/channels) with placeholder solids, fit check, mass/envelope, exports |
-| `fit_report.md` | generated: stack, intersection volumes, clearances, wall probes, finger-contact scan, envelope, mass |
-| `out/mcring_stage1_shell.stl` | **print file 1** — band + signet bay + camera pod (one part) |
-| `out/mcring_stage1_lid.stl` | **print file 2** — rebated lid with detent beads and the mic tube |
+| `mcring_stage1.py` | parametric model (band, bay + antenna cavity, ledges, snap lid with a pod lip, camera pod, cell + LRA pockets, LED window, mic port + tube, switch slot + key, charging-pad windows + wire grooves/channels, **optional speaker pocket** in the +Y wall with its grille, lead groove and lid tab) with placeholder solids, fit check, mass/envelope, exports |
+| `fit_report.md` | generated: stack, speaker section, intersection volumes, clearances, wall probes, finger-contact scan, envelope, mass |
+| `out/mcring_stage1_shell.stl` | **print file 1** — band + signet bay + camera pod + speaker bump (one part) |
+| `out/mcring_stage1_lid.stl` | **print file 2** — rebated lid with detent beads, the mic tube and the speaker tab + boss |
 | `out/mcring_stage1_key.stl` | **print file 3** — side-switch button (flange + pin + cap) |
-| `out/mcring_stage1_assembly.step` | shell + lid + placeholders (PCB, module, camera head + folded FPC, cell, LRA, switch + key, LED, mic, FPC1, top/bottom parts, antenna, pigtail) as one compound |
+| `out/mcring_stage1_assembly.step` | shell + lid + placeholders (PCB, module, camera head + folded FPC, cell, LRA, switch + key, LED, mic, FPC1, top/bottom parts, antenna, pigtail, speaker LS1) as one compound |
 | `out/view_top.png/.svg`, `out/view_front.png/.svg`, `out/view_section.png/.svg` | sanity views: top, front along the camera axis, section through the camera axis (Y = 0) |
+| `out/view_right.png/.svg`, `out/view_section_speaker.png/.svg` | speaker views (only with the speaker): the +Y side with the grille, section through the speaker axis (X = −5.2) |
 
 ## Regenerate
 
 ```bash
-python3 hardware/cad/mcring_stage1.py                 # default inner_d 20.0, lens 4.6
+python3 hardware/cad/mcring_stage1.py                 # default inner_d 20.0, lens 4.6, speaker pocket (speaker_mm in the JSON)
 python3 hardware/cad/mcring_stage1.py --inner-d 18.3  # US 8
 python3 hardware/cad/mcring_stage1.py --lens-d 3.5    # HM01B0 lensed module instead of the OV2640 head
-python3 hardware/cad/mcring_stage1.py --no-step --no-views   # quick fit check only (~12 s)
+python3 hardware/cad/mcring_stage1.py --no-speaker    # ring without the speaker pocket / bump / lid tab (the pre-speaker shell)
+python3 hardware/cad/mcring_stage1.py --no-step --no-views   # quick fit check only (~13 s)
+python3 hardware/cad/mcring_stage1.py --out /tmp/x --report /tmp/x/fit.md   # a scratch build that leaves out/ and fit_report.md alone
 ```
 
 Needs Python ≥ 3.10, `cadquery` (2.8 tested) and `cairosvg`. The script exits 1 if any placeholder intersects the
-shell, the lid or another placeholder, if a clearance (head, FPC fold, antenna cavity, key travel) is below its minimum,
-or if a wall probe is below its minimum. Everything in `default_params()` is a plain dict you can edit (band width,
-wall, clearances, pocket positions, lid rebate, pad angle ...); the pod and antenna allowances are read from
-`board_params.json` (`pod_mm.floor_relief_above_skin / head_clearance / fpc_fold_above_head`,
-`antenna_cavity_mm.depth_behind_board_edge`) with the same defaults in the script.
+shell, the lid or another placeholder, if a clearance (head, FPC fold, antenna cavity, key travel, speaker ↔ antenna /
+cell / lid boss) is below its minimum, or if a wall probe is below its minimum. Everything in `default_params()` is a
+plain dict you can edit (band width, wall, clearances, pocket positions, lid rebate, pad angle, speaker grille ...);
+the pod, antenna and speaker numbers are read from `board_params.json` (`pod_mm.floor_relief_above_skin /
+head_clearance / fpc_fold_above_head`, `antenna_cavity_mm.depth_behind_board_edge`, `speaker_mm.diameter / thickness
+/ centre_board_xyz_mm / pocket_clearance / grille_wall`) with the same defaults in the script.
 
 ## Coordinates
 
@@ -55,7 +59,9 @@ cell pocket 10.4 × 12.4 × 3.4 (cell 10 along X, 12 across) centred 2.8 mm towa
 (X 7.8, Y 3.5) under the mic side of the board; pad windows 3 × 3 at ±25° from the bottom; one 4 mm wide rib on the
 −Y side carrying two 0.9 mm grooves (X −1.5 and −3.5) that turn into Ø0.9 channels through the slab; switch slot
 3.4 × 1.6 with a 4.6 × 2.8 × 0.5 counterbore inside for the key's flange; mic port Ø0.8 in a Ø1.8 tube; touch dimple
-4 × 5 × 0.4 (0.8 mm resin over the lid electrode).
+4 × 5 × 0.4 (0.8 mm resin over the lid electrode); speaker pocket Ø10.4 × 3.2 deep (speaker Ø10 × 2.9 + 0.2 radial /
+0.1 + 0.2 axial) in a 3.15 mm bump on the +Y wall, 5 × Ø1.0 grille holes through a 1.0 mm plate, 6 × 1.0 lead groove,
+lid tab 1.2 thick + boss 0.2 above the speaker (see "Speaker" below).
 
 ## Stack (Z above the finger skin, mm)
 
@@ -72,6 +78,9 @@ cell pocket 10.4 × 12.4 × 3.4 (cell 10 along X, 12 across) centred 2.8 mm towa
 | lens axis | 6.25 |
 | pod ceiling (head top + 1.0 for the FPC fold) | 11.50 |
 | pod roof top | **12.70** |
+| speaker pocket bottom (1.3 above the slab bottom at −3.0) | −1.70 |
+| speaker axis (`speaker_mm`: 3.2 below the board top) / rim top | 3.50 / 8.50 |
+| lid boss underside over the speaker / slot top = bump shelf | 8.70 / 9.90 |
 
 0.4 mm taller than the floorplan's original 10.7: the 3.4 mm pocket (cell 3.0 + 0.4) sits on the 1.2 mm wall and the
 0.35 mm cell-to-parts clearance of the floorplan stack is kept on top of it. The camera pod is 1.6 mm taller than the
@@ -79,9 +88,10 @@ lid: the head alone needs 8.5 + 2 × 0.3 between the pod floor (1.2 mm wall over
 ceiling, and the 24-pin flex needs ~1 mm above the head to fold back down behind it (see "Camera FPC" below).
 `board_params.json` `stack_mm` / `pod_mm` carry these as-built numbers.
 
-Envelope: band OD 22.4 (23.8 across the pad-wire rib), signet 31.5 × 21.0, 39.8 mm long along the finger including
-the pod and the antenna cavity, lid 11.1 / pod roof 12.7 mm above the skin. Mass ≈ 6.8 g resin + 5.4 g parts ≈
-**12.2 g** (`fit_report.md`).
+Envelope: band OD 22.4 (23.8 across the pad-wire rib), signet 31.5 × 21.0 — **24.15 wide across the speaker bump**
+(X −11.6..1.2 on the +Y side only), 39.8 mm long along the finger including the pod and the antenna cavity, lid 11.1 /
+pod roof 12.7 mm above the skin. Mass ≈ 7.1 g resin + 6.4 g parts ≈ **13.5 g** with the speaker (`fit_report.md`);
+6.8 g + 5.4 g ≈ 12.2 g with `--no-speaker`.
 
 ## Finger contact
 
@@ -123,22 +133,68 @@ there), a 3.2 × 1.4 pin goes through the slot, and a 4.4 × 2.6 × 0.6 cap stan
 travel) and protrudes 0.9 mm. The flange keeps the key from falling out, the cap from falling in; the plunger touches
 the flange's inner face. Fit the key from the inside before the board goes in.
 
+## Speaker (optional, `speaker_mm`)
+
+The optional on-ring speaker — a Ø10 × 2.9 mm 8 Ω micro speaker (PUI AS01008MR-2-R class, netlist LS1, driven by the
+MAX98357A U10 through the SPK1a/SPK1b wire pads on the board's bottom) — stands **vertically in the signet's right
+(+Y) wall**, the side away from the switch, grille facing +Y. `board_params.json` → `speaker_mm` is the source of the
+numbers (the floorplan pass chose the place: the left wall is taken by the switch key and the pad-wire channels and
+would put the magnet 0.7 mm from the antenna plane, the band wall has the finger behind it): centre board
+(18.45, 20.0, −3.2 from the board top) = world X −5.2, Y +11.0, 3.5 mm above the skin; disc in the XZ plane.
+
+* **Pocket**: a U-slot Ø10.4 (0.2 mm radial clearance) about the speaker axis, straight walls above the axis up to the
+  lid underside, 3.2 mm deep along Y (0.1 behind the speaker's back face, 0.2 in front of it) — the speaker **drops in
+  from the top** before the lid goes on. X −10.4..0, Y 9.45..12.65, bottom 1.3 mm above the slab bottom.
+* **Bump**: the +Y wall grows 3.15 mm (12.8 mm long: pocket + two 1.2 mm end walls, X −11.6..1.2, full slab height,
+  vertical corners r 1.0, bottom edge r 0.6). Its top is cut down to the lid underside (a shelf at 9.9 above the skin)
+  and the 0.7 mm rebate rim is interrupted over that length. The signet is 24.15 wide there, asymmetric toward the
+  adjacent finger on the +Y side — try it on; if it rubs, `--no-speaker` or move the pocket (`speaker_mm`).
+* **Grille**: 5 × Ø1.0 holes (centre + 4 on a Ø5 ring at 45°) through the 1.0 mm +Y plate, 3.9 mm² open. The
+  pattern is `spk_grille` in `default_params()` (hole Ø, ring radius, count); the plate thickness is
+  `speaker_mm.grille_wall`. If the printed ring sounds muffled, open it up (more holes or three 0.8 × 6 slots) — the
+  fit check only asks for ≥ 1.0 mm of plate between the holes.
+* **Back volume**: above the sub-board floor (4.6) the slot's back is open to the bay over its full width, so the
+  lidded bay (~1.4 cm³ minus parts, closed by the lid, the key and the epoxy-filled wire grooves) is the back volume —
+  far larger than any sealed pocket this size could be. Below the floor the pocket is a recess in the solid slab with a
+  **lead groove** 6 wide × 1.0 deep in its back wall (Y 8.45..9.45, from 1 mm above the pocket bottom up to the floor),
+  so terminals in the lower half of the disc have room for the solder blobs and the leads. The sealed alternative in
+  `speaker_mm.back_volume` (a 1.2 mm back wall with a wire slot + vents, bump 4.3) is not modelled.
+* **Leads**: two 30 AWG wires soldered to the speaker's back terminals **before** it goes in; rotate the speaker so the
+  terminals face the sub-board cavity (just above floor level, i.e. between 3 and 1 o'clock when seen from +Y) and the
+  leads run straight −Y under the board's +Y edge (board edge at Y 9.0, wall at 9.3, cavity 4.6..6.1 above the skin)
+  to SPK1a/SPK1b at board (18.8 / 20.8, 16.85) = 1.45 mm inside the board edge: ≈ 2–3 mm of wire, allow 6. Terminals
+  lower down use the lead groove. Thread the leads before the board goes onto the ledges.
+* **Lid**: a tab X −11.3..0.9 × Y 9.65..13.5 (1.2 thick, 0.15 inside the bump face, 0.3 from its end walls) rests on
+  the shelf and closes the slot; a boss X −10.1..−0.3 × Y 9.75..12.35 under it fills the slot down to 0.2 mm above the
+  speaker rim — the lid holds the speaker, a 0.5 mm foam pad on the boss or a drop of silicone takes up the play. The
+  +Y detent groove only works over X 1.2..9.5 (8.3 mm) with the speaker; the −Y side is unchanged.
+* **Fit check**: placeholder `speaker` (Ø10 × 2.9 disc) must not intersect the shell, the lid or any part; 3-D gap to
+  the flex antenna ≥ 5.0 (5.45 as placed — the NdFeB magnet is "other metal" for the antenna rule), to the cell ≥ 2
+  (3.55), to the LRA (4.49); probes: grille plate 1.0, slab under the pocket 1.3, end walls 1.2, bump bottom corner
+  diagonal 1.35, slab between the pocket's back wall and the cell pocket 2.25 (through the lead groove) / 3.75 beside
+  it, lid tab 1.2 / tab + boss 2.4; openness: grille centre hole, lead path to SPK1a/b, slot up to the lid, lead groove.
+
 ## Print settings
 
 * SLA, white or translucent resin (the LED shines through the 1.2 mm lid; translucent lets the whole bay glow).
   0.05 mm layers. Print the shell in a tough resin, not a brittle standard one, if you want the detent and the switch
   counterbore wall to survive.
 * **Shell**: bay opening up, finger axis horizontal. Supports under the camera pod, under the signet's overhangs
-  (the flat shoulders beside the finger bore) and inside the bore if your printer needs them; keep the lid rebate, the
-  pod-roof lip and the bay interior support-free. The thinnest features: the 0.7 mm rebate rim, the 0.4 mm rim under the
-  detent groove, the 0.7 mm wall around the switch counterbore, and the first ~1.3 mm of each wire channel where it
-  leaves the open groove at the slab's bottom corner. Everything else is ≥ 1.2 mm where the fit check probes it (it is
-  a list of line probes, not a global thickness analysis).
-* **Lid**: beads up, mic tube up, light supports under the plate or print directly on the build plate and sand the
-  elephant foot off the rebate faces (0.15 mm clearance is all you have).
+  (the flat shoulders beside the finger bore), under the speaker bump's underside and inside the bore if your printer
+  needs them; keep the lid rebate, the pod-roof lip, the bay interior and the speaker slot support-free. In this
+  orientation the speaker grille is a **vertical** 1.0 mm plate on the +Y side (the right wall, opposite the switch)
+  with five horizontal Ø1.0 holes — they print clean in SLA, ream them with a 1.0 mm drill if resin closes them; the
+  U-slot opens upward (no trapped resin) and the lead groove is a vertical slot that drains into the bay. The thinnest
+  features: the 0.7 mm rebate rim, the 0.4 mm rim under the detent groove, the 0.7 mm wall around the switch
+  counterbore, the first ~1.3 mm of each wire channel where it leaves the open groove at the slab's bottom corner, and
+  the 1.0 mm grille plate. Everything else is ≥ 1.2 mm where the fit check probes it (it is a list of line probes, not
+  a global thickness analysis).
+* **Lid**: beads up, mic tube up, speaker tab flat and its boss up (the boss stands 1.2 mm below the plate like a
+  short mic tube); light supports under the plate or print directly on the build plate and sand the elephant foot off
+  the rebate faces and the boss (0.15 mm clearance in the rebate, 0.3 in the slot).
 * **Key**: cap down on the build plate, no supports.
-* FDM is possible (0.4 nozzle, 0.12 layers) but the Ø0.8 mic port, the 0.5 detent, the 0.7 rims and the key will not come
-  out; drill the port and glue the lid.
+* FDM is possible (0.4 nozzle, 0.12 layers) but the Ø0.8 mic port, the 0.5 detent, the 0.7 rims, the Ø1.0 grille holes
+  and the key will not come out; drill the ports and the grille and glue the lid.
 
 ## After printing — check
 
@@ -162,6 +218,15 @@ the flange's inner face. Fit the key from the inside before the board goes in.
    this size would not print clean or thread).
 6. Antenna: glue the flex antenna to the inside of the back wall in the 2 mm cavity, route the pigtail down behind the
    board edge; keep both away from the cell and the LRA.
+7. **Speaker** (if fitted): the Ø10 × 2.9 disc drops into the U-slot in the +Y wall from the top with 0.2 mm all round
+   and seats in the semicircle (its back face 0.1 mm off the pocket's back wall below the floor, its front 0.2 mm off
+   the grille plate); the five grille holes are clear; the slot's back is open to the bay above the floor and the
+   6 × 1.0 lead groove is open below it. Solder the two leads first, drop the speaker in with the terminals toward the
+   bay (just above floor level), lead the wires under the board edge to SPK1a/b, then the board, then the lid — its
+   boss should end 0.2 mm above the speaker rim (add a foam pad or a drop of silicone). The speaker's magnet is 5.45 mm
+   from the antenna placeholder; keep the antenna glued where the model puts it. **Open item**: the PUI drawing
+   (terminal position, max thickness 2.9 from a distributor listing, venting) sets the final pocket depth and whether
+   the lead groove is needed.
 
 ## What the placeholders assume
 
@@ -169,6 +234,7 @@ OV2640 head 8.5 × 8.5 × 1.3 + Ø4.5 × 4.5 barrel with a 0.2 mm thick flex (8.
 MINI-1U 15.4 × 15.4 × 2.4 with a 2.5 × 2.5 × 2.9 mated u.FL at the back-left; 301012 cell 3 × 10 × 12 (no PCM); INEED
 LRA0825BC Ø8 × 2.5; Omron B3U-3000P 3.0 × 2.5 × 1.2 with a plunger reaching 0.1 mm past the wall's inner face; WS2812B-
 2020 2 × 2 × 0.9; TDK T3902 3.5 × 2.65 × 0.98 on the bottom; FPC1 4 × 16 × 2.0; every other top- and bottom-side part
-from `board_params.json` as a box; flex antenna 15 × 5 × 0.25; pigtail Ø0.9. All are axis-aligned boxes/cylinders —
-good enough for clearance, not for the exact part outlines. The 8.5 mm head size is still marked unverified in
+from `board_params.json` as a box; flex antenna 15 × 5 × 0.25; pigtail Ø0.9; speaker LS1 a plain Ø10 × 2.9 disc (no
+terminal tabs, no port bump — PUI AS01008MR-2-R max outline). All are axis-aligned boxes/cylinders — good enough for
+clearance, not for the exact part outlines. The 8.5 mm head size is still marked unverified in
 `docs/research/01-camera-modules.md`.

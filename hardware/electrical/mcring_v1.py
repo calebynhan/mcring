@@ -11,13 +11,24 @@ u.FL end pointing away from the camera.  Nets follow firmware/ring-esp32s3/src/c
     PIN_CHG      3          BQ25100 /CHG (open drain, 100k pull-up) -> battery_charging()
     PIN_HAPTIC   -1         DRV2605L EN is tied to 3V3; haptics are I2C-only (standby via register)
     IO19/IO20    -> native USB D-/D+ test pads
-    spare        IO34, IO35, IO36, IO37, IO44 (RXD0) — free on the N4R2 (quad PSRAM uses only IO26)
+    PIN_I2S_BCLK 35, PIN_I2S_LRCLK 36, PIN_I2S_DOUT 37   optional MAX98357A speaker amp U10 (config_audio.h)
+    PIN_SPEAKER_EN 34       AMP_PWR_EN: third TPS22916 (U11) gating the amp rail VAMP; SD_MODE rides on VAMP
+    spare        IO44 (RXD0) — IO33..IO37 are free GPIOs on the N4R2 (quad PSRAM uses only IO26)
 
 Review fixes folded in (see README §1): DRV2605L EN tied high, /CHG on IO3, LED_PWR_EN moved
 off RXD0 to IO33, WS2812 fed from 3V3 through U9 with a 1 k data resistor, battery divider
 1 M/1 M, R12 = 267 k (TPS62840 3.3 V code), wire-pad footprints for the cell / piezo / charging
 pads with the cell, piezo element, band contacts and the u.FL flex antenna as off-board BOM
 lines, series Schottky + bidirectional TVS on the charging input.
+
+Voice-first addition (README §1 item 20): the OPTIONAL on-ring speaker — U10 MAX98357A I2S
+class-D amp (16-TQFN), U11 TPS22916 gating its 3V3 rail (VAMP) from IO34, 10 uF + 100 nF on VAMP,
+SD_MODE tied to VAMP (left-channel mode; the firmware duplicates the mono sample into both slots),
+R21 gain select (100k to VAMP = 3 dB: 0 dBFS = 1.4 Vrms = 0.25 W, inside the speaker's 300 mW
+rating at any firmware volume; 0R = 6 dB is the louder bench option), R22-R24 1k in series with
+BCLK/LRCLK/DIN (bound the ESD-diode back-feed into the unpowered amp while VAMP is off), SPK1 two
+1.5 mm wire pads for the off-board 10 mm 8 ohm speaker LS1 (PUI AS01008MR-2-R). Fit
+U10/U11/C25/C26/R20-R24/LS1 together or not at all.
 
 Run:  python3 mcring_v1.py   -> out/mcring_v1.net, mcring_v1_bom.csv, mcring_v1_nets.md, erc.md
 
@@ -50,13 +61,20 @@ GPIO = {  # BOARD_MCRING_V1 after the USB fix
     "RGB_DATA": 43,       # was 20 (USB D+)
     "LED_PWR_EN": 33,     # WS2812 supply gate (firmware PIN_RGB_PWR); was 44/RXD0 — the ROM enables the
                           # U0RXD pull-up at reset, which fought the pull-down; IO33 has no boot-time role
+    # Optional speaker (config_audio.h BOARD_MCRING_V1): the four pins are FIXED by the firmware.
+    "AMP_PWR_EN": 34,     # PIN_SPEAKER_EN: U11 TPS22916 ON (VAMP rail for the MAX98357A), 100k pull-down R20
+    "I2S_BCLK": 35,       # PIN_I2S_BCLK  -> U10 BCLK  (32 x fs = 512 kHz at 16 kHz)
+    "I2S_LRCLK": 36,      # PIN_I2S_LRCLK -> U10 LRCLK (fs)
+    "I2S_DOUT": 37,       # PIN_I2S_DOUT  -> U10 DIN
     "USB_DM": 19, "USB_DP": 20,
     "IO0": 0,
 }
-# Exposed GPIOs intentionally left free (firmware -1): IO34..IO37 and IO44 (RXD0). On the N4R2 the
-# in-package quad PSRAM uses only SPICS1 = IO26; IO33..IO37 (SPIIO4..7/SPIDQS) are consumed by the
-# OCTAL PSRAM of R8 parts only (ESP-IDF GPIO guide for ESP32-S3; module datasheet footnote VERIFY).
-SPARE_GPIO = ("IO34", "IO35", "IO36", "IO37", "RXD0/IO44")
+# Exposed GPIO intentionally left free (firmware -1): IO44 (RXD0) — the ROM enables its pull-up at reset, so
+# it is the wrong pin for anything that must idle low. On the N4R2 the in-package quad PSRAM uses only
+# SPICS1 = IO26; IO33..IO37 (SPIIO4..7/SPIDQS) are consumed by the OCTAL PSRAM of R8 parts only (ESP-IDF
+# GPIO guide for ESP32-S3; module datasheet footnote VERIFY), so IO33 (LED gate) and IO34..IO37 (speaker) are
+# plain GPIOs here.
+SPARE_GPIO = ("RXD0/IO44",)
 
 # BQ25100 programming (VERIFY constants against SLUSBW6):
 #   I_CHG     = K_ISET / R_ISET,          K_ISET      = 230 A*ohm  -> 9.1k  => 25.3 mA (~0.85C of 30 mAh)
@@ -71,6 +89,33 @@ R_VSET = "267k"
 # ~80 % of the 25 uA stage-1 standby budget in hardware/power-budget.txt). The 100 nF holds the node
 # for the ADC sample bursts (8 reads) so the 500 k source impedance does not matter.
 R_DIVIDER = "1M"
+# MAX98357A gain select, R21 from GAIN_SLOT to VAMP (datasheet Table 1 "Gain Selection", VERIFY):
+#   100k to GND = 15 dB, GND = 12 dB, unconnected = 9 dB, VDD = 6 dB, 100k to VDD = 3 dB
+#   (0 dBFS -> 1 Vrms x 10^(dB/20): 1.4 / 2.0 / 2.8 / 4.0 / 5.6 Vrms).
+# The board gain is the hardware ceiling: the firmware's SPEAKER_VOLUME (255 = unity) can only attenuate.
+# 3 dB (R21 = 100k, fitted): 0 dBFS -> 1.41 Vrms -> 0.25 W into 8 ohm, so a full-scale tone at unity volume
+#   stays inside the AS01008MR-2-R's 300 mW *rated* power (0.33 W worst case with +0.5 dB gain tolerance and a
+#   -15 % / 6.8 ohm driver), draws ~90 mA from 3V3 (0.25 A peaks), and nothing the firmware does can overload
+#   the speaker. Matches the ~66 dB @ 1 m loudness figure in docs/04 (86 dB @ 10 cm is the rated-power SPL).
+# 6 dB (R21 = 0R): 0 dBFS -> 2.0 Vrms -> 0.5 W = the speaker's *maximum* (0.59-0.66 W with the same
+#   tolerances), ~180 mA from 3V3 (0.4 A peaks). Still clean from 3.3 V (the BTL output tops out at ~2.3 Vrms),
+#   but a sustained full-scale tone at volume 255 sits at/over the 500 mW limit -> bench option for +3 dB only,
+#   with the CLI/app volume kept <= 200 (-2.1 dB ~ rated power).
+# 9 dB (DNP, the Adafruit breakout's default) clips the top ~1.7 dB from 3.3 V, 12 dB (GND) everything above
+#   -4.7 dBFS. One 0402 position, bench-reversible.
+R_GAIN = "100k"
+# TPS22916 ON pull-down for the amp rail: 100k like R17 (camera). IO34 has no boot-time function and no ROM
+# pull-up; the pull-down only has to hold a floating pin (reset, download mode, deep sleep) below VIL.
+R_AMP_PD = "100k"
+# Series resistors in the three I2S lines (R22 BCLK, R23 LRCLK, R24 DIN), placed at the U10 end. While U11 is
+# open the amp is unpowered and a high level on any of them forward-biases the input ESD diode into VAMP (the
+# WS2812 DIN mechanism, README item 10). 1k bounds that to <= 2.6 mA per pin - harmless to the ESD structures
+# of both chips and to the ESP32-S3's 20 mA drive - so an I2S pin left high by the firmware is a battery-drain
+# bug, not a hardware hazard. It does NOT make the amp draw nothing: the firmware still parks IO35-37 low
+# while AMP_PWR_EN is low (README §7). Timing: 1k x ~10 pF = 10 ns against the 977 ns BCLK half-period at
+# 16 kHz, and DIN/LRCLK see the same delay. If the datasheet rates the digital inputs to +6 V independent of
+# VDD (no diode to VDD), R22-R24 can become 0R (README §6 item 19).
+R_I2S_SERIES = "1k"
 
 # --------------------------------------------------------------------------- #
 # Footprint shorthands (KiCad 7/8 library names; 'mcring:' = custom footprint)
@@ -81,6 +126,10 @@ C0603 = "Capacitor_SMD:C_0603_1608Metric"
 C1206 = "Capacitor_SMD:C_1206_3216Metric"
 SOT23 = "Package_TO_SOT_SMD:SOT-23"
 SOD523 = "Diode_SMD:D_SOD-523"
+# MAX98357AETE+T: 16-TQFN 3 x 3 x 0.75 mm, 0.5 mm pitch, exposed pad (Maxim package code T1633+4C / drawing
+# 21-0136, VERIFY). The KiCad generic QFN-16 3x3 land pattern has the same pad count/pitch; check the EP size
+# (1.7 vs 1.75/1.8 variants in the library) against the Maxim drawing before ordering.
+TQFN16 = "Package_DFN_QFN:QFN-16-1EP_3x3mm_P0.5mm_EP1.7x1.7mm"
 TP = "TestPoint:TestPoint_Pad_D1.0mm"
 # Wire pads (custom 'mcring' footprints): sizes/pitches match hardware/pcb/board_params.json
 # "wire_pads_bottom_mm" (J1a/J1b and PAD1w/PAD2w 1.5 mm, BZ1a/BZ1b 1.2 mm, 2.0 mm pitch).
@@ -112,14 +161,15 @@ def rc(v):
 
 def build() -> Netlist:
     nl = Netlist("mcring_v1", source="hardware/electrical/mcring_v1.py")
-    nl.declare_power_nets("GND", "3V3", "VBAT", "CHG_PAD", "CHG_IN", "CAM_3V3", "CAM_2V8", "CAM_1V2", "VLED")
+    nl.declare_power_nets("GND", "3V3", "VBAT", "CHG_PAD", "CHG_IN", "CAM_3V3", "CAM_2V8", "CAM_1V2", "VLED", "VAMP")
 
     # ------------------------------------------------------------------ MCU
     # ESP32-S3-MINI-1U pin table (VERIFY against esp32-s3-mini-1_mini-1u_datasheet_en.pdf,
     # Table "Pin Definitions"). 65 pads: 1-45 perimeter, 46-65 thermal/ground pads.
     # IO26 = SPICS1 = chip select of the in-package quad PSRAM on the N4R2 -> NC.  IO33..IO37 are
     # only taken by OCTAL PSRAM (R8 parts), so they are ordinary GPIOs here: IO33 = LED_PWR_EN,
-    # IO34..IO37 spare.  IO45/IO46 are strapping pins -> left floating (internal defaults).
+    # IO34 = AMP_PWR_EN, IO35..IO37 = I2S to the speaker amp.  IO44 (RXD0) is the one spare GPIO.
+    # IO45/IO46 are strapping pins -> left floating (internal defaults).
     u1_pins = {"1": "GND", "2": "GND", "3": "3V3"}
     for i, io in enumerate(range(0, 22)):           # pins 4..25 = IO0..IO21
         u1_pins[str(4 + i)] = f"IO{io}"
@@ -433,6 +483,79 @@ def build() -> Netlist:
     nl.connect_many("BUZZ_DRV", ("R15", "2"), ("BZ1", "DRV"), ("PZ1", "+"))
     nl.connect_many("AUX_EN", ("U1", f"IO{GPIO['AUX_EN']}"), ("Q1", "G"), ("R14", "1"))
     nl.connect_many("AUX_DRAIN", ("Q1", "D"), ("J2", "DRAIN"))
+
+    # ------------------------------------------------------ Outputs: optional speaker (voice-first)
+    # MAX98357A, 16-TQFN. Pin table assembled from the datasheet's pin description (pins 5, 6, 12, 13 = N.C.;
+    # EP not internally connected, tied to the GND pour for heat) — VERIFY every number against the
+    # "Pin Configuration" figure of the MAX98357A/B datasheet before layout (README §6).
+    #   1 DIN  2 GAIN_SLOT  3 GND  4 SD_MODE  5 NC  6 NC  7 VDD  8 VDD  9 OUTP  10 OUTN  11 GND  12 NC  13 NC
+    #   14 LRCLK  15 GND  16 BCLK  17 EP
+    # Supply: 3V3 -> U11 (TPS22916, ON = IO34 / AMP_PWR_EN, R20 100k pull-down) -> VAMP -> U10 VDD. With U11
+    # open the amp, its decoupling and its SD_MODE pull-down draw nothing (TPS22916 leakage <= 10 nA), which is
+    # what "optional speaker, draws nothing asleep" needs on a 30 mAh cell; the MAX98357A's own shutdown
+    # (SD_MODE < 0.16 V, ~0.5 uA) is not relied on.
+    # SD_MODE: < 0.16 V shutdown, 0.16-0.77 V (L+R)/2, 0.77-1.4 V right, > 1.4 V left (datasheet, VERIFY); the
+    # pin has an internal 100k pull-down. Tied straight to VAMP it comes up in LEFT mode as the rail rises —
+    # the firmware writes every mono sample into both I2S slots (audio_out.cpp), so the channel is irrelevant.
+    # Firmware rule (README §7): while AMP_PWR_EN is low the three I2S pins must be driven low or left as
+    # inputs without pull-up — a high level on BCLK/LRCLK/DIN back-feeds the unpowered amp through its
+    # input ESD diodes (same mechanism as the WS2812 DIN, item 10), and the ROM/IDF default pull-up on a
+    # "reset" GPIO would do the same at ~15 uA per pin. R22-R24 (R_I2S_SERIES, 1k) in series with the three
+    # lines bound that current to <= 2.6 mA per pin so the fault cannot damage either chip; the energy claim
+    # ("amp draws nothing asleep") still needs the firmware to park the pins (audio_out.cpp's driver_stop()
+    # currently only drops AMP_PWR_EN and uninstalls the I2S driver, which leaves BCLK/LRCLK at whatever
+    # level the stopped peripheral held).
+    nl.add(Part("U10", "MAX98357AETE+T", TQFN16, mpn="MAX98357AETE+T", manufacturer="Analog Devices (Maxim)",
+                pins={"1": "DIN", "2": "GAIN_SLOT", "3": "GND", "4": "SD_MODE", "5": "NC", "6": "NC", "7": "VDD",
+                      "8": "VDD", "9": "OUTP", "10": "OUTN", "11": "GND", "12": "NC", "13": "NC", "14": "LRCLK",
+                      "15": "GND", "16": "BCLK", "17": "EP"},
+                power_pins={"3", "7", "8", "11", "15"}, nc_pins={"5", "6", "12", "13"}, is_ic=True,
+                fields={"Alt MPN": "MAX98357AEWL+T (9-bump WLP 1.4 x 1.4 mm, not hand-solderable; same nets)",
+                        "LCSC": "C910544"},
+                description="I2S class-D mono amp, 16-TQFN 3x3x0.75 mm; VDD = VAMP (gated 3V3), SD_MODE = VAMP (left), "
+                            "gain via R21; BCLK IO35, LRCLK IO36, DIN IO37 through R22-R24 1k; OPTIONAL speaker group "
+                            "(fit with U11, C25, C26, R20-R24, LS1 or omit all); pin table VERIFY", sheet="Outputs"))
+    nl.add(tps22916("U11", "speaker amp rail gate (3V3 -> VAMP), ON = IO34 (AMP_PWR_EN, PIN_SPEAKER_EN); amp group "
+                           "draws nothing while open; OPTIONAL speaker group"))
+    nl.add(C("C25", "10u", C0603, "GRM188R60J106ME47", "VAMP bulk at U10 VDD (class-D peaks)", "Outputs"))
+    nl.add(C("C26", "100n", C0402, "GRM155R71C104KA88", "VAMP local at U10 VDD pins 7/8", "Outputs"))
+    nl.add(R("R20", R_AMP_PD, rc("100K"), f"AMP_PWR_EN pull-down: amp rail off while IO{GPIO['AMP_PWR_EN']} floats "
+                                          "(reset, download, deep sleep)", "Outputs"))
+    nl.add(R("R21", R_GAIN, rc("100K"), "MAX98357A gain select GAIN_SLOT -> VAMP: 100k = 3 dB (fitted; 0 dBFS = 1.4 Vrms "
+                                        "= 0.25 W, inside the speaker's 300 mW rating at any firmware volume), 0R = 6 dB "
+                                        "(0.5 W = the speaker's maximum; louder bench option), DNP = 9 dB (clips from 3.3 V)",
+             "Outputs"))
+    nl.add(R("R22", R_I2S_SERIES, rc("1K"), "I2S BCLK series at U10: bounds the ESD-diode back-feed into the unpowered amp "
+                                           "to <= 2.6 mA while VAMP is off", "Outputs"))
+    nl.add(R("R23", R_I2S_SERIES, rc("1K"), "I2S LRCLK series at U10 (same role as R22)", "Outputs"))
+    nl.add(R("R24", R_I2S_SERIES, rc("1K"), "I2S DIN series at U10 (same role as R22)", "Outputs"))
+    nl.add(Part("SPK1", "SPEAKER pads", PAD2x15, pins={"1": "OUTP", "2": "OUTN"},
+                description="two 1.5 mm wire pads, 2.0 mm pitch, bottom side (floorplan SPK1a/SPK1b), for the "
+                            "off-board speaker LS1; keep the OUTP/OUTN pair tight (filterless class D)",
+                sheet="Outputs"))
+    nl.add(Part("LS1", "AS01008MR-2-R", "offboard:Speaker_10mm_x2.9mm", mpn="AS01008MR-2-R",
+                manufacturer="PUI Audio", pins={"1": "+", "2": "-"}, offboard=True,
+                fields={"Alt MPN": "any 10 mm 8 ohm 0.3-0.5 W micro speaker (0.5-1 W oval speakers for the bench)"},
+                description="10 mm x 2.9 mm (max) 8 ohm micro speaker, 300 mW rated / 500 mW max, 86 dB, top port, "
+                            "NdFeB magnet, solder pads; in the enclosure's speaker pocket (board_params.json "
+                            "speaker_mm), 30 AWG leads to SPK1; polarity irrelevant (single driver)",
+                sheet="Outputs"))
+
+    nl.connect("3V3", "U11", "VIN")          # bulk C2/C3 sit on the same net next to the buck
+    nl.connect_many("GND", ("U11", "GND"), ("U10", "3"), ("U10", "11"), ("U10", "15"), ("U10", "EP"),
+                    ("C25", "2"), ("C26", "2"), ("R20", "2"))
+    nl.connect_many("AMP_PWR_EN", ("U1", f"IO{GPIO['AMP_PWR_EN']}"), ("U11", "ON"), ("R20", "1"))
+    nl.connect_many("VAMP", ("U11", "VOUT"), ("U10", "7"), ("U10", "8"), ("U10", "SD_MODE"), ("C25", "1"),
+                    ("C26", "1"), ("R21", "2"))
+    nl.connect_many("AMP_GAIN", ("U10", "GAIN_SLOT"), ("R21", "1"))
+    nl.connect_many("I2S_BCLK", ("U1", f"IO{GPIO['I2S_BCLK']}"), ("R22", "1"))
+    nl.connect_many("I2S_LRCLK", ("U1", f"IO{GPIO['I2S_LRCLK']}"), ("R23", "1"))
+    nl.connect_many("I2S_DOUT", ("U1", f"IO{GPIO['I2S_DOUT']}"), ("R24", "1"))
+    nl.connect_many("AMP_BCLK", ("R22", "2"), ("U10", "BCLK"))     # amp side of the 1k series resistors
+    nl.connect_many("AMP_LRCLK", ("R23", "2"), ("U10", "LRCLK"))
+    nl.connect_many("AMP_DIN", ("R24", "2"), ("U10", "DIN"))
+    nl.connect_many("SPK_P", ("U10", "OUTP"), ("SPK1", "OUTP"), ("LS1", "+"))
+    nl.connect_many("SPK_N", ("U10", "OUTN"), ("SPK1", "OUTN"), ("LS1", "-"))
     return nl
 
 
@@ -470,7 +593,9 @@ def main() -> int:
     # consistency with firmware/ring-esp32s3/src/config.h BOARD_MCRING_V1 (pin numbers only)
     expect = {"BAT_SENSE": "IO1", "BUTTON": "IO2", "nCHG": "IO3", "BUZZER": "IO4", "SDA": "IO5", "SCL": "IO6",
               "IMU_INT1": "IO7", "TOUCH": "IO8", "AUX_EN": "IO9", "CAM_PWR_EN": "IO21", "RGB_DATA": "TXD0/IO43",
-              "LED_PWR_EN": "IO33"}
+              "LED_PWR_EN": "IO33",
+              # config_audio.h BOARD_MCRING_V1 (PIN_SPEAKER_EN 34, PIN_I2S_BCLK 35, PIN_I2S_LRCLK 36, PIN_I2S_DOUT 37)
+              "AMP_PWR_EN": "IO34", "I2S_BCLK": "IO35", "I2S_LRCLK": "IO36", "I2S_DOUT": "IO37"}
     bad = [f"{net}: {pin}" for net, pin in expect.items() if used.get(pin) != net]
     if bad:
         print("GPIO/net mismatch versus config.h:", bad)

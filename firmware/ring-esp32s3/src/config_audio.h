@@ -31,12 +31,24 @@
   #define PIN_AUX          -1    // reassigned to I2S DIN (feedback.cpp compiles the aux channel out)
 
 #elif defined(BOARD_MCRING_V1)
-  // Placeholders: the hardware design pass assigns the speaker pins in hardware/pinmap.md and
-  // config.h's BOARD_MCRING_V1 section. -1 = no speaker → STATUS flag SPEAKER_OK stays clear.
-  #define PIN_I2S_BCLK     -1
-  #define PIN_I2S_LRCLK    -1
-  #define PIN_I2S_DOUT     -1
-  #define PIN_SPEAKER_EN   -1
+  // Stage-1 board (hardware/electrical/mcring_v1.py, hardware/pinmap.md): optional MAX98357A (U10, 16-TQFN) on a
+  // gated 3V3 rail (VAMP) behind a third TPS22916 load switch (U11). IO34-IO37 are plain GPIOs on the N4R2 module
+  // (only the octal-PSRAM R8 parts route SPIIO4-7 to them) with no boot-time function; IO44 (RXD0) stays spare.
+  // Omitting the speaker group on a board does not need a firmware change: the I2S outputs then drive nothing.
+  #define PIN_I2S_BCLK     35    // U10 BCLK  (net I2S_BCLK),  32 x fs = 512 kHz at 16 kHz
+  #define PIN_I2S_LRCLK    36    // U10 LRCLK (net I2S_LRCLK), fs = 16 kHz
+  #define PIN_I2S_DOUT     37    // U10 DIN   (net I2S_DOUT)
+  #define PIN_SPEAKER_EN   34    // U11 TPS22916 ON (net AMP_PWR_EN, 100k pull-down R20): HIGH powers the amp rail
+                                 // VAMP. SD_MODE is tied to VAMP on the board (> 1.4 V = left-channel mode), so this
+                                 // one pin is both the power gate and the amp enable; the amp draws nothing while LOW.
+                                 // HW NOTE: while this pin is LOW the three I2S pins must idle LOW (or be inputs with
+                                 // the pull-up off; not gpio_reset_pin(), which re-enables the pull-up) — a high level
+                                 // back-feeds the unpowered amp through its input ESD diodes. R22-R24 (1 kΩ in series
+                                 // with BCLK/LRCLK/DIN on the board) bound that to <= 2.6 mA per pin, so a pin left high
+                                 // after i2s_driver_uninstall() is a battery drain, not damage; park the three pins low
+                                 // in driver_stop() and drive all four low before deep sleep (hardware/electrical/README.md §7).
+                                 // Board gain is 3 dB (R21 = 100k): a full-scale sample at SPEAKER_VOLUME 255 is 0.25 W into
+                                 // the 8 Ω speaker, inside its 300 mW rating (R21 = 0R / 6 dB = 0.5 W is a bench option).
 
 #else
   #define PIN_I2S_BCLK     -1

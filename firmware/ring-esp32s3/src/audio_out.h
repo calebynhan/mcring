@@ -34,3 +34,6 @@ size_t audio_out_queued();                               // blocks waiting in th
 
 // Sink for AUDIO_UNDERRUN / AUDIO_DONE events; invoked from loop() context only (audio_out_tick).
 void audio_out_on_event(std::function<void(uint8_t ev, uint8_t arg)> h);
+
+// Call before deep sleep: stops playback, releases the driver, parks the I2S lines and the amp enable low.
+void audio_out_sleep_prepare();

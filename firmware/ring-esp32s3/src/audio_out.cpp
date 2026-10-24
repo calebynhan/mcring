@@ -133,6 +133,16 @@ bool driver_start() {
 #endif
 }
 
+// With the amp rail off, the MAX98357A's ESD diodes would be back-fed (~15 uA/pin) by the ~45k pull-ups
+// that gpio_reset_pin() re-enables after i2s_driver_uninstall(), slowly charging VAMP. Park the three
+// I2S lines as outputs driven LOW whenever the driver is not installed (hardware/electrical/README §6).
+void park_i2s_pins() {
+#if HAS_SPEAKER
+  const int pins[] = { PIN_I2S_BCLK, PIN_I2S_LRCLK, PIN_I2S_DOUT };
+  for (int p : pins) { pinMode(p, OUTPUT); digitalWrite(p, LOW); }
+#endif
+}
+
 void driver_stop() {
 #if HAS_SPEAKER
   if (!s_driver) return;
@@ -142,6 +152,7 @@ void driver_stop() {
   i2s_zero_dma_buffer(I2S_NUM_1);
   i2s_driver_uninstall(I2S_NUM_1);
   s_driver = false;
+  park_i2s_pins();
 #endif
 }
 
@@ -217,6 +228,7 @@ void begin_stream() {
 
 // ---------------------------------------------------------------------------------------------------
 void audio_out_init() {
+  park_i2s_pins();
 #if PIN_SPEAKER_EN >= 0
   pinMode(PIN_SPEAKER_EN, OUTPUT);
   digitalWrite(PIN_SPEAKER_EN, LOW);
@@ -288,6 +300,17 @@ void audio_out_on_packet(const uint8_t *d, size_t n) {
 // ABORT and the disconnect callback arrive on the NimBLE host task while loop() may be inside
 // audio_out_tick() → i2s_write(). So this only records the request, exactly like an AUDIO_STOP packet;
 // the driver teardown and AUDIO_DONE(1) happen in audio_out_tick() on the loop task.
+void audio_out_sleep_prepare() {
+  audio_out_stop();      // flush + driver_stop() (parks the I2S lines, amp rail off)
+#if HAS_SPEAKER
+  park_i2s_pins();
+#if PIN_SPEAKER_EN >= 0
+  pinMode(PIN_SPEAKER_EN, OUTPUT);
+  digitalWrite(PIN_SPEAKER_EN, LOW);
+#endif
+#endif
+}
+
 void audio_out_stop() {
   portENTER_CRITICAL(&s_mux);
   q_reset_locked();

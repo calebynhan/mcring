@@ -5,12 +5,12 @@ Pure-Python SVG/PNG generators (no KiCad / OpenSCAD needed; `cairosvg` renders t
 | File | What |
 |---|---|
 | `floorplan.py` | stage-1 board floorplan: placement of every part of `hardware/electrical/out/mcring_v1_nets.md` on a 2-layer 0.6 mm board, zones, routing corridors, critical nets; runs placement checks (overlaps, edge clearance, heights, zones, test pads on top, touch-contact height) and refuses to draw if one fails |
-| `board_params.json` | **the numbers the enclosure is generated from** — board size, part heights, switch/LED/mic/module/touch positions, stack (incl. the 3.4 mm cell pocket), camera-pod inputs (floor relief, head clearance, FPC fold) and the derived z levels, antenna cavity, switch slot, touch electrode/contact, test-pad positions, every placed part with its centre and size. The CAD reads it; `hardware/cad/fit_report.md` is the as-built check |
+| `board_params.json` | **the numbers the enclosure is generated from** — board size, part heights, switch/LED/mic/module/touch positions, stack (incl. the 3.4 mm cell pocket), camera-pod inputs (floor relief, head clearance, FPC fold) and the derived z levels, antenna cavity, switch slot, touch electrode/contact, test-pad positions, **the optional speaker pocket (`speaker_mm`: Ø10 × 2.9 speaker in the right signet wall, centre, grille normal, bump, back volume, lead exit)**, every placed part with its centre and size. The CAD reads it; `hardware/cad/fit_report.md` is the as-built check |
 | `floorplan.md` | the same placement as tables, keep-outs, layer usage, route rules, FPC pin order, stack, deviations |
 | `out/floorplan_top.svg/.png` | to-scale top side (module, FPC connector, switch, LED, touch landing + lid-foil outline, bulk cap, the 8 test pads) |
 | `out/floorplan_bottom.svg/.png` | to-scale bottom side **seen from below (mirrored)** — all small ICs, passives, wire pads |
 | `out/stackup.svg/.png` | vertical stack skin → band → cell (+ pocket slack) → PCB → parts → lid with running totals, and the camera-pod side section |
-| `wiring_stage0.py` | stage-0 bench wiring diagram for the Seeed XIAO ESP32S3 Sense |
+| `wiring_stage0.py` | stage-0 bench wiring diagram for the Seeed XIAO ESP32S3 Sense (incl. the optional MAX98357A amp breakout + 10 mm speaker on D7/D6/D10) |
 | `wiring_stage0.md` | connection table, parts and the check-before-power-on list |
 | `out/wiring_stage0.svg/.png` | the diagram |
 | `svgkit.py` | tiny SVG writer shared by both scripts |
@@ -23,7 +23,9 @@ Origin = the board's **front-left corner seen from the top**. `x` runs along the
 edge (camera / FPC connector, x = 0) to the back edge (antenna / u.FL, x = `board_length_mm`); `y` runs
 across the finger from the left edge (switch, y = 0) to the right edge (y = `board_width_mm`). Heights are
 measured from the board surface of the side the part is on. The bottom drawing is mirrored so it looks like
-the real board turned over; the JSON uses un-mirrored coordinates for both sides.
+the real board turned over; the JSON uses un-mirrored coordinates for both sides. `speaker_mm` (an off-board
+part outside the board outline) uses the same x/y and a `z` measured from the **board top**, positive toward the
+lid: CAD `X = L/2 − x`, `Y = y − W/2`, `Z = z_board_top + z`.
 
 ## Key numbers (stage 1)
 
@@ -39,5 +41,14 @@ the real board turned over; the JSON uses un-mirrored coordinates for both sides
 * Camera pod: lens axis 6.25 mm above the skin (head 0.3 above the pod floor at 1.7), 8.3 mm interior depth in front of the board edge,
   Ø4.6 bore, roof 12.7 (1.6 above the lid). Bay interior extends 2 mm behind the board for the u.FL pigtail and flex antenna.
 * No antenna copper keep-out on the board (the MINI-1U has no PCB antenna); the flex antenna stays ≥ 5 mm from the cell, LRA and metal.
+* **Optional speaker** (voice-first): the MAX98357A amp U10 (16-TQFN, 0.8 mm) + its TPS22916 gate U11 + 10 µF/100 nF + five 0402 (R20
+  pull-down, R21 gain = 100 kΩ / 3 dB, R22–R24 1 kΩ series in the I²S lines) sit in the back-left block of the bottom side (x 18.95–23.4,
+  y 0.4–8.8); SPK1a/SPK1b wire pads on the right edge at (18.8 / 20.8, 16.85). The speaker
+  itself (PUI AS01008MR-2-R, Ø10 × 2.9, 8 Ω) is **off-board in a pocket in the signet's RIGHT (+y) wall**, grille facing +y: `speaker_mm`
+  = centre board (18.45, 20.0, −3.2 from the board top = 3.5 above the skin), disc in the xz plane, pocket x 13.25–23.65 with the signet's +y
+  face pushed out 3.15 mm, back open to the bay (back volume), leads through the wall to SPK1, 5.7 mm from the flex antenna. The left
+  wall was rejected (switch key + pad-wire channels push the pocket into the antenna's 5 mm keep-out), the band side too (finger behind
+  a 1.2 mm wall). Bottom parts must end before the CAD's back ledge at x = 23.6 (new check).
 
-See `floorplan.md` §9 for deviations from the task text and the earlier notes (mic side, battery pads instead of the JST SH, 8 test pads, heights).
+See `floorplan.md` §9 for deviations from the task text and the earlier notes (mic side, battery pads instead of the JST SH, 8 test pads, heights,
+speaker side).

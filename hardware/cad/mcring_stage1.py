@@ -1,12 +1,13 @@
 #!/usr/bin/env python3
 """mcring stage-1 ring enclosure — parametric CadQuery model.
 
-Reads  hardware/pcb/board_params.json  (board size, part positions, stack, pod, antenna cavity) and builds
-  * the printable SHELL  (band + signet bay + camera pod, one SLA part)
-  * the printable LID    (rebated plate with a detent bead, Ø0.8 mic port + tube, LED window, touch dimple)
+Reads  hardware/pcb/board_params.json  (board size, part positions, stack, pod, antenna cavity, speaker) and builds
+  * the printable SHELL  (band + signet bay + camera pod + the optional speaker pocket in the +Y wall, one SLA part)
+  * the printable LID    (rebated plate with a detent bead, Ø0.8 mic port + tube, LED window, touch dimple, and the
+                          tab + boss that close the speaker slot)
   * the printable KEY    (side-switch button: flange + pin + cap)
   * PLACEHOLDER solids   (PCB, ESP32-S3-MINI-1U, OV2640 head + barrel + folded FPC, cell, LRA, switch, LED,
-                          mic, FPC1, bottom-side parts, flex antenna + u.FL pigtail)
+                          mic, FPC1, bottom-side parts, flex antenna + u.FL pigtail, speaker LS1)
 then runs a programmatic fit check (pairwise intersections must be 0, clearances, wall probes, finger-contact
 scan), prints the envelope and a mass estimate, writes fit_report.md and exports STL / STEP / SVG+PNG views.
 
@@ -16,7 +17,7 @@ World frame (mm):  X along the finger, +X toward the fingertip (camera / front);
 Board frame (board_params.json): bx from the front edge (0) to the back (L); by from the left (switch) edge.
     X = L/2 - bx,  Y = by - W/2   (board centred on the ring axis along the finger).
 
-Run:  python3 hardware/cad/mcring_stage1.py [--inner-d 20.0] [--lens-d 4.6] [--no-views] [--no-step]
+Run:  python3 hardware/cad/mcring_stage1.py [--inner-d 20.0] [--lens-d 4.6] [--no-speaker] [--no-views] [--no-step]
 """
 import argparse
 import json
@@ -80,6 +81,18 @@ def default_params():
         mic_tube_gap=0.3,      # tube end -> board top (foam / adhesive gasket)
         antenna=(15.0, 5.0, 0.25),   # flex PCB antenna placeholder (Y, Z, X) glued to the back wall
         pigtail_d=0.9,         # u.FL pigtail (U.FL-LP-040, Ø0.81 cable)
+        # optional on-ring speaker: WHAT and WHERE come from board_params.json speaker_mm (Ø, thickness, centre,
+        # pocket clearance, grille wall); these are the pocket's print details
+        speaker=True,          # build the pocket when speaker_mm exists (--no-speaker turns it off)
+        spk_depth_slack=0.3,   # pocket depth = speaker thickness + this
+        spk_back_seat=0.1,     # of which: behind the back face (the rest, 0.2, in front of the diaphragm)
+        spk_grille=dict(hole_d=1.0, ring_r=2.5, n=4),   # centre hole + n holes on a ring, through the grille plate
+        spk_lead_groove=(6.0, 1.0),   # lead relief in the pocket's back wall below the sub-board floor: width (X), depth (-Y)
+        spk_bump_r=1.0,        # vertical outer corners of the wall bump (<= 1.2 keeps the end walls >= the grille wall)
+        spk_bump_bottom_r=0.6, # bottom edge of the bump (<= 0.6 keeps the diagonal at the pocket's front-bottom edge >= 1.2)
+        spk_tab_clear=0.3,     # lid tab -> bump end walls (X); its outer face keeps lid_clear to the bump face
+        spk_boss_clear=(0.3, 0.3),   # lid boss -> slot walls (X, Y)
+        spk_boss_gap=0.2,      # lid boss underside -> speaker rim
     )
 
 
@@ -111,8 +124,20 @@ def cyl_x(r, x0, x1, y, z):
     return cq.Solid.makeCylinder(r, x1 - x0, V(x0, y, z), V(1, 0, 0))
 
 
+def cyl_y(r, y0, y1, x, z):
+    return cq.Solid.makeCylinder(r, y1 - y0, V(x, y0, z), V(0, 1, 0))
+
+
 def cyl_z(r, z0, z1, x, y):
     return cq.Solid.makeCylinder(r, z1 - z0, V(x, y, z0), V(0, 0, 1))
+
+
+def u_slot_y(r, x, zc, z_top, y0, y1):
+    """U-shaped slot along Y (a drop-in pocket for a disc standing in the XZ plane): semicircle of radius r below the
+    axis (x, zc), straight walls from the axis up to z_top; from y0 to y1."""
+    prof = (cq.Workplane("XZ").moveTo(x - r, zc).lineTo(x - r, z_top).lineTo(x + r, z_top).lineTo(x + r, zc)
+            .threePointArc((x, zc - r), (x - r, zc)).close())
+    return prof.extrude((y1 - y0) / 2, both=True).val().translate(V(0, (y0 + y1) / 2, 0))
 
 
 def cyl_between(r, p0, p1):
@@ -207,6 +232,39 @@ class Model:
         self.tpad = (self.bx(bp["touchpad_xy_mm"][0]), self.by(bp["touchpad_xy_mm"][1]))
         self.rib_x = tuple(p["rib_x"])
         self.placeholders = {}
+        # optional speaker (speaker_mm): a Ø d x t disc standing in the +Y (right) signet wall, grille facing +Y.
+        # The pocket is a U-slot (semicircle below the speaker axis, straight walls above it up to the lid's underside) so
+        # the speaker drops in from the top before the lid goes on; the lid's tab + boss close the slot.
+        self.spk = None
+        sp = bp.get("speaker_mm")
+        if p["speaker"] and sp:
+            if sp.get("location", "signet_right_wall") != "signet_right_wall" or sp.get("grille_normal_board", [0, 1, 0]) != [0, 1, 0]:
+                raise SystemExit(f"speaker_mm: only location 'signet_right_wall' with grille normal +y is modelled "
+                                 f"(got {sp.get('location')!r}, {sp.get('grille_normal_board')!r})")
+            d, t = sp["diameter"], sp["thickness"]
+            cl_ = sp.get("pocket_clearance", 0.2)
+            gw = sp.get("grille_wall", 1.0)
+            cxb, cyb, czb = sp["centre_board_xyz_mm"]
+            X, Y, Z = self.bx(cxb), self.by(cyb), self.z_board_top + czb
+            rp = d / 2 + cl_
+            y_back = Y - t / 2 - p["spk_back_seat"]
+            y_front = y_back + t + p["spk_depth_slack"]
+            y_out = y_front + gw
+            self.spk = dict(d=d, t=t, cl=cl_, gw=gw, X=X, Y=Y, Z=Z, rp=rp, depth=y_front - y_back,
+                            y_back=y_back, y_front=y_front, y_out=y_out, x0=X - rp, x1=X + rp,
+                            bx0=X - rp - p["bay_wall"], bx1=X + rp + p["bay_wall"], bump=y_out - self.Wo / 2,
+                            z_bot=Z - rp, mass=sp.get("mass_g", 1.0), part=sp.get("part", "10 mm 8 ohm micro speaker"),
+                            board=(cxb, cyb, czb))
+            s = self.spk
+            if abs(s["bump"] - sp.get("signet_right_face_bump_mm", s["bump"])) > 0.01:
+                print(f"  NOTE board_params speaker_mm.signet_right_face_bump_mm = {sp['signet_right_face_bump_mm']} but the pocket "
+                      f"geometry gives {s['bump']:.2f} (seat {p['spk_back_seat']} + {t} + {p['spk_depth_slack'] - p['spk_back_seat']:.1f} + grille {gw})")
+            if s["z_bot"] - self.z_slab0 < p["bay_wall"] - 1e-6:
+                print(f"  NOTE speaker pocket bottom is only {s['z_bot'] - self.z_slab0:.2f} above the slab bottom (< {p['bay_wall']})")
+            if s["bx0"] < self.x_back_out + self.ro or s["bx1"] > self.Lo / 2 - self.ro:
+                print(f"  NOTE speaker bump X {s['bx0']:.1f}..{s['bx1']:.1f} runs into the slab's rounded corners")
+            if Z + d / 2 + p["spk_boss_gap"] > self.z_lid_bot - 1e-6:
+                print(f"  NOTE speaker top {Z + d / 2:.2f} is too close to the lid underside {self.z_lid_bot:.2f} for the lid boss")
 
     # board -> world
     def bx(self, bx):
@@ -225,6 +283,16 @@ class Model:
         # 2. signet slab (bay body incl. the antenna cavity), fillet on the outer vertical edges = ro, soft bottom edge
         slab = rbox(self.Lo_tot, self.Wo, self.z_top - self.z_slab0, self.ro, -self.ant_depth / 2, 0, self.z_slab0)
         slab = try_fillet(slab, "<Z", p["slab_fillet"], "slab bottom")
+        # 2b. speaker bump: the +Y wall grows by `bump` over the pocket + its two end walls, full slab height (its top is
+        #     lowered to the lid underside later). It reaches slab_fillet into the slab so its own flat bottom replaces
+        #     the slab's bottom fillet over this length; its outer vertical corners and bottom edge get small fillets.
+        if self.spk:
+            s = self.spk
+            y_in = self.Wo / 2 - p["slab_fillet"]
+            bump = rbox(s["bx1"] - s["bx0"], s["y_out"] - y_in, self.z_top - self.z_slab0, p["spk_bump_r"],
+                        (s["bx0"] + s["bx1"]) / 2, (y_in + s["y_out"]) / 2, self.z_slab0)
+            bump = try_fillet(bump, "<Z", p["spk_bump_bottom_r"], "speaker bump bottom")
+            slab = slab.fuse(bump).clean()
         # 3. camera pod block; its roof is taller than the lid and reaches back over the lid's front edge (lid_lip)
         reb, lcl = p["lid_rebate"], p["lid_clear"]
         pod_x0 = self.Li / 2 + reb - lcl - p["lid_lip"]
@@ -295,6 +363,29 @@ class Model:
             p1 = (wx, -(self.Wi / 2 - 1.0), self.z_floor + 0.4)
             self.chan[wx] = (p0, p1)
             cuts.append(cyl_between(p["wire_r"], p0, p1))
+        # speaker pocket in the +Y wall bump (speaker_mm): a U-slot Ø(d + 2 cl) about the speaker axis (along Y), straight
+        # above the axis up to the lid underside so the speaker drops in from the top; depth t + 0.3. Above the sub-board
+        # floor the slot's back is open to the bay (the lidded bay is the back volume and the leads pass straight through
+        # to the SPK1 pads under the board); below the floor the pocket is a recess in the solid slab with a lead groove.
+        # A grille of Ø1.0 holes goes through the +Y plate; the bump's top is cut down to the lid underside (shelf) so the
+        # lid's tab + boss close the slot and hold the speaker.
+        if self.spk:
+            s = self.spk
+            zf = self.z_floor
+            pocket = u_slot_y(s["rp"], s["X"], s["Z"], self.z_lid_bot + 0.01, s["y_back"], s["y_front"])
+            back = u_slot_y(s["rp"], s["X"], s["Z"], self.z_lid_bot + 0.01, self.Wi / 2 - 0.1, s["y_back"] + 0.01)
+            back = back.intersect(box(-60, 60, -60, 60, zf, 60))
+            cuts.append(pocket.fuse(back).clean())
+            gwid, gdep = p["spk_lead_groove"]
+            self.spk_groove = (s["X"] - gwid / 2, s["X"] + gwid / 2, s["y_back"] - gdep, s["z_bot"] + 1.0)
+            cuts.append(box(self.spk_groove[0], self.spk_groove[1], self.spk_groove[2], s["y_back"] + 0.01, self.spk_groove[3], zf + 0.5))
+            g = p["spk_grille"]
+            self.spk_holes = [(s["X"], s["Z"])] + [
+                (s["X"] + g["ring_r"] * math.cos(math.radians(45 + 360.0 * i / g["n"])),
+                 s["Z"] + g["ring_r"] * math.sin(math.radians(45 + 360.0 * i / g["n"]))) for i in range(g["n"])]
+            for hx, hz in self.spk_holes:
+                cuts.append(cyl_y(g["hole_d"] / 2, s["y_front"] - 0.5, s["y_out"] + 1, hx, hz))
+            cuts.append(box(s["bx0"] - 0.01, s["bx1"] + 0.01, self.Wi / 2 - 0.01, s["y_out"] + 1, self.z_lid_bot, self.z_top + 1))
         # finger bore: radius R where the ring is meant to touch the finger (the band plus the cell-pocket
         # floor behind it), R + relief under the signet overhangs and the pod so they clear the skin; 0.5 mm
         # chamfer cones join the two radii and soften the band faces.
@@ -355,6 +446,22 @@ class Model:
         gz = self.z_lid_bot + p["lid_t"] / 2
         for sy in (+1, -1):
             lid = lid.fuse(cyl_x(p["bead_r"], -9.0, 9.0, sy * w / 2, gz))
+        # speaker: a tab over the +Y wall bump (it rests on the bump's shelf at the lid underside, lid_clear inside the
+        # bump's face, spk_tab_clear from its end walls) and a boss under the tab that fills the slot above the speaker
+        # (spk_boss_gap above its rim) - the lid closes the pocket and keeps the speaker down; no fourth printed part
+        if self.spk:
+            s = self.spk
+            tc = p["spk_tab_clear"]
+            y_tab_in = w / 2 - 1.0                       # 1 mm inside the lid plate (fused away)
+            y_tab_out = s["y_out"] - cl
+            tab = rbox(s["bx1"] - s["bx0"] - 2 * tc, y_tab_out - y_tab_in, p["lid_t"], max(p["spk_bump_r"] - cl - 0.15, 0.3),
+                       (s["bx0"] + s["bx1"]) / 2, (y_tab_in + y_tab_out) / 2, self.z_lid_bot)
+            bcx, bcy = p["spk_boss_clear"]
+            self.spk_boss_z0 = s["Z"] + s["d"] / 2 + p["spk_boss_gap"]
+            boss = box(s["x0"] + bcx, s["x1"] - bcx, s["y_back"] + bcy, s["y_front"] - bcy, self.spk_boss_z0, self.z_lid_bot + 0.01)
+            self.spk_boss = (s["x0"] + bcx, s["x1"] - bcx, s["y_back"] + bcy, s["y_front"] - bcy)
+            self.spk_tab = (s["bx0"] + tc, s["bx1"] - tc, y_tab_out)
+            lid = lid.fuse(tab).fuse(boss)
         # mic port straight above the T3902 port, with a tube down to the board so the mic does not listen to
         # the bay and the hole does not open the bay to dust (a 0.3 mm foam/adhesive ring seals the tube end)
         self.mic_tube_z0 = self.z_board_top + p["mic_tube_gap"]
@@ -469,6 +576,10 @@ class Model:
         pig = pig.fuse(cq.Solid.makeSphere(pr, V(x_turn, ufl_y, z_pig)))
         pig = pig.fuse(cyl_z(pr, self.z_floor + 0.6, z_pig, x_turn, ufl_y))
         ph["pigtail"] = pig.clean()
+        # optional speaker LS1: a Ø d x t disc standing in the +Y wall pocket (axis along Y, grille side +Y)
+        if self.spk:
+            s = self.spk
+            ph["speaker"] = cyl_y(s["d"] / 2, s["Y"] - s["t"] / 2, s["Y"] + s["t"] / 2, s["X"], s["Z"])
         self.placeholders = ph
         return ph
 
@@ -529,6 +640,8 @@ class Model:
             ("switch key cap stand-off from the signet side (button travel)", -self.Wo / 2 - self.key_cap_in, 0.25),
             ("switch key flange inner face -> plunger tip (gap)", (-self.Wi / 2 - 0.1) - key.ymax, 0.0),
         ]
+        # the +Y long-wall probes move clear of the speaker pocket (X -10.4..0) when the speaker is built
+        xw = 3.0 if self.spk else 0.0
         probes = [
             ("floor under the cell pocket (X=cell centre, Y=0)", (cx, 0, R - 0.5), (cx, 0, self.z_pocket_bot + 0.5), 1.2),
             ("floor under the cell pocket's back end (X=pocket back+0.3, Y=0)", (cx - p["cell_pocket"][0] / 2 + 0.3, 0, R - 0.5), (cx - p["cell_pocket"][0] / 2 + 0.3, 0, self.z_pocket_bot + 0.5), 1.2),
@@ -538,8 +651,9 @@ class Model:
              (2, -(R + 3) * math.sin(phi), (R + 3) * math.cos(phi)), 1.2),
             ("band + rib under the pad-wire groove A (100 deg)", (self.rib_x[0], -(R - 0.5) * math.sin(phi), (R - 0.5) * math.cos(phi)),
              (self.rib_x[0], -(R + 3) * math.sin(phi), (R + 3) * math.cos(phi)), 1.2),
-            ("bay long wall (X=0, Z=board top+1)", (0, self.Wi / 2 - 1, self.z_board_top + 1), (0, self.Wo / 2 + 1, self.z_board_top + 1), 1.2),
-            ("bay long wall rim at the lid groove (X=0)", (0, self.Wi / 2 - 1, self.z_lid_bot + p["lid_t"] / 2), (0, self.Wo / 2 + 1, self.z_lid_bot + p["lid_t"] / 2), 0.35),
+            (f"bay long wall (+Y, X={xw:.0f}, Z=board top+1)", (xw, self.Wi / 2 - 1, self.z_board_top + 1), (xw, self.Wo / 2 + 1, self.z_board_top + 1), 1.2),
+            (f"bay long wall rim at the lid groove (+Y, X={xw:.0f})", (xw, self.Wi / 2 - 1, self.z_lid_bot + p["lid_t"] / 2), (xw, self.Wo / 2 + 1, self.z_lid_bot + p["lid_t"] / 2), 0.35),
+            ("bay long wall (-Y, X=0, Z=board top+1)", (0, -self.Wi / 2 + 1, self.z_board_top + 1), (0, -self.Wo / 2 - 1, self.z_board_top + 1), 1.2),
             ("bay long wall rim beyond the groove (X=12)", (12, self.Wi / 2 - 1, self.z_lid_bot + p["lid_t"] / 2), (12, self.Wo / 2 + 1, self.z_lid_bot + p["lid_t"] / 2), 0.6),
             ("bay back wall behind the antenna cavity (Y=0, Z=board top+1)", (self.x_back_in + 1, 0, self.z_board_top + 1), (self.x_back_out - 1, 0, self.z_board_top + 1), 1.2),
             ("bay front wall beside the pod opening (Y=7)", (self.Li / 2 - 1, 7, self.z_board_top + 1), (self.Lo / 2 + 1, 7, self.z_board_top + 1), 1.2),
@@ -573,15 +687,63 @@ class Model:
                 probes.append((f"skin beside wire channel X={wx:+.1f} toward -Y (outer face) at Z={z - R:+.1f}", (q.x, q.y, q.z), (q.x, q.y - 4, q.z), 1.2))
                 probes.append((f"skin beside wire channel X={wx:+.1f} diagonal (-Y,-Z, bottom fillet) at Z={z - R:+.1f}", (q.x, q.y, q.z), (q.x, q.y - 3, q.z - 3), 1.2))
                 probes.append((f"skin beside wire channel X={wx:+.1f} toward +Y (cell pocket) at Z={z - R:+.1f}", (q.x, q.y, q.z), (q.x, q.y + 4, q.z), 1.2))
-        for pr_ in probes:
-            name, a, b, want = pr_[:4]
-            t = self.probe(a, b, self.lid if len(pr_) > 4 and pr_[4] == "lid" else None)
-            res["probes"].append((name, t, want, t + 1e-3 >= want))
         # openings that must be open (material 0): pad windows
         opens = []
         for ang, wx in ((-p["pad_angle"], self.rib_x[0]), (+p["pad_angle"], self.rib_x[1])):
             a = math.radians(ang)
             opens.append((f"pad window {'A (-Y)' if ang < 0 else 'B (+Y)'} open at X={wx:+.1f}", (wx, *rad(R - 0.5, a)), (wx, *rad(R + 3, a))))
+        # speaker pocket: clearances to the metal parts (antenna keep-out, cell), the pocket's own clearances, the walls
+        # around the pocket (grille plate, end walls, floor, back wall to the cell pocket, bump corner), the lid tab + boss,
+        # and the openings that must be open (grille holes, lead path to the SPK1 pads, slot up to the lid)
+        if self.spk:
+            s = self.spk
+            spk = self.placeholders["speaker"].BoundingBox()
+            ab = lambda bb: ((bb.xmin, bb.xmax), (bb.ymin, bb.ymax), (bb.zmin, bb.zmax))
+            gap = lambda a, b: math.sqrt(sum(max(0.0, lo2 - hi1, lo1 - hi2) ** 2 for (lo1, hi1), (lo2, hi2) in zip(a, b)))
+            keepout = self.bp.get("antenna_keepout_beyond_edge_mm", 5.0)
+            gx, gz_, gy = s["X"], s["Z"], s["Y"]
+            yb, yf, yo = s["y_back"], s["y_front"], s["y_out"]
+            self.spk_antenna_gap = gap(ab(spk), ab(self.placeholders["antenna"].BoundingBox()))
+            res["clearances"] += [
+                ("speaker LS1 (NdFeB magnet) -> flex antenna, 3-D gap (metal keep-out)", self.spk_antenna_gap, keepout),
+                ("speaker LS1 -> u.FL pigtail, 3-D gap", gap(ab(spk), ab(self.placeholders["pigtail"].BoundingBox())), keepout),
+                ("speaker LS1 -> cell, 3-D gap (through the slab wall)", gap(ab(spk), ab(self.placeholders["cell"].BoundingBox())), 2.0),
+                ("speaker LS1 -> LRA, 3-D gap", gap(ab(spk), ab(self.placeholders["LRA"].BoundingBox())), 2.0),
+                ("speaker rim -> pocket wall (radial)", s["rp"] - s["d"] / 2, 0.15),
+                ("speaker back face -> pocket back wall (below the floor)", spk.ymin - yb, 0.05),
+                ("speaker front -> grille plate", yf - spk.ymax, 0.15),
+                ("speaker top -> lid boss underside", self.spk_boss_z0 - spk.zmax, 0.15),
+                ("lid boss -> slot end walls (X)", min(self.spk_boss[0] - s["x0"], s["x1"] - self.spk_boss[1]), 0.2),
+                ("lid boss -> slot back / grille plate (Y)", min(self.spk_boss[2] - yb, yf - self.spk_boss[3]), 0.2),
+                ("lid tab -> bump end walls (X)", min(self.spk_tab[0] - s["bx0"], s["bx1"] - self.spk_tab[1]), 0.2),
+                ("lid tab outer face -> bump face (Y)", yo - self.spk_tab[2], p["lid_clear"] - 0.01),
+            ]
+            cw_ = p["cell_pocket"][1]
+            probes += [
+                (f"speaker grille plate between the holes (X=spk, Z=spk+2.5)", (gx, yf - 0.5, gz_ + 2.5), (gx, yo + 1, gz_ + 2.5), s["gw"]),
+                (f"speaker grille plate between the holes (X=spk+3.5, Z=spk)", (gx + 3.5, yf - 0.5, gz_), (gx + 3.5, yo + 1, gz_), s["gw"]),
+                ("slab under the speaker pocket (X=spk, Y=spk)", (gx, gy, self.z_slab0 - 1), (gx, gy, s["z_bot"] + 0.5), 1.2),
+                ("bump end wall at the pocket's front (+X) end, speaker axis height", (s["x1"] - 0.5, gy, gz_), (s["x1"] + 2.5, gy, gz_), 1.2),
+                ("bump end wall at the pocket's back (-X) end, speaker axis height", (s["x0"] + 0.5, gy, gz_), (s["x0"] - 2.5, gy, gz_), 1.2),
+                ("bump end wall at the pocket's back (-X) end, slot top (Z=lid underside-0.5)", (s["x0"] + 0.5, gy, self.z_lid_bot - 0.5), (s["x0"] - 2.5, gy, self.z_lid_bot - 0.5), 1.2),
+                ("bump bottom-front corner, diagonal from the pocket's front-bottom edge (X=spk)", (gx, yf - 0.3, s["z_bot"] + 0.3), (gx, yf + 2.7, s["z_bot"] - 2.7), 1.2),
+                ("slab between the speaker pocket back and the cell pocket, through the lead groove (X=spk, Z=floor-1.5)", (gx, cw_ / 2 - 0.5, zf - 1.5), (gx, yb + 0.5, zf - 1.5), 1.2),
+                ("slab between the speaker pocket back and the cell pocket, beside the groove (X=spk-4, Z=floor-1.5)", (gx - 4, cw_ / 2 - 0.5, zf - 1.5), (gx - 4, yb + 0.5, zf - 1.5), 1.2),
+                ("slab behind the lead groove's bottom (X=spk, Y=spk back, Z=groove bottom-0.5 .. slab bottom)", (gx, (yb + self.spk_groove[2]) / 2, self.spk_groove[3] + 0.3), (gx, (yb + self.spk_groove[2]) / 2, self.z_slab0 - 1), 1.2),
+                ("lid: tab + boss over the speaker (X=spk, Y=spk) (lid part)", (gx, gy, self.spk_boss_z0 - 0.5), (gx, gy, self.z_top + 1), 1.2, "lid"),
+                ("lid: tab over the bump shelf (X=spk, Y=bump face-0.5) (lid part)", (gx, yo - 0.5, self.z_lid_bot - 0.5), (gx, yo - 0.5, self.z_top + 1), 1.2, "lid"),
+            ]
+            pads = self.bp["wire_pads_bottom_mm"]
+            for pad in ("SPK1a", "SPK1b"):
+                px, py = self.bx(pads[pad][0]), self.by(pads[pad][1])
+                opens.append((f"speaker lead path: pocket back above the floor -> {pad} under the board", (gx, gy - s['t'] / 2 - 0.05, zf + 0.7), (px, py, self.z_board_bot - 0.1)))
+            opens.append(("speaker grille centre hole open (X=spk, Z=spk)", (gx, yf - 0.5, gz_), (gx, yo + 1, gz_)))
+            opens.append(("speaker slot open from the speaker rim up to the lid underside (X=spk, Y=spk)", (gx, gy, spk.zmax + 0.05), (gx, gy, self.z_lid_bot - 0.05)))
+            opens.append(("speaker lead groove open at the floor (X=spk, Y=groove centre)", (gx, (yb + self.spk_groove[2]) / 2, self.spk_groove[3] + 0.5), (gx, (yb + self.spk_groove[2]) / 2, zf + 0.3)))
+        for pr_ in probes:
+            name, a, b, want = pr_[:4]
+            t = self.probe(a, b, self.lid if len(pr_) > 4 and pr_[4] == "lid" else None)
+            res["probes"].append((name, t, want, t + 1e-3 >= want))
         for name, a, b in opens:
             t = self.probe(a, b)
             res["probes"].append((name + " (must be 0)", t, 0.0, t < 0.01))
@@ -597,13 +759,19 @@ class Model:
             band_od=band_od, band_od_at_ribs=band_od + 2 * self.p["pad_rib_h"],
             height_above_skin=self.z_top - self.R, pod_above_skin=self.z_pod_roof - self.R, lid_top_z=self.z_top,
             bay_footprint=(self.Lo_tot, self.Wo), length_with_pod=self.pod_x_out - self.x_back_out,
-            signet_width=self.Wo,
+            signet_width=self.Wo, signet_width_at_speaker=(self.Wo + self.spk["bump"]) if self.spk else self.Wo,
         )
+
+    def component_masses(self):
+        m = dict(COMPONENT_MASS_G)
+        if self.spk:
+            m["speaker"] = self.spk["mass"]
+        return m
 
     def mass(self):
         vs, vl, vk = self.shell.Volume(), self.lid.Volume(), self.key.Volume()
         resin = (vs + vl + vk) / 1000.0 * RESIN_G_PER_CC
-        comp = sum(COMPONENT_MASS_G.values())
+        comp = sum(self.component_masses().values())
         return dict(shell_cc=vs / 1000, lid_cc=vl / 1000, key_cc=vk / 1000, resin_g=resin, components_g=comp, total_g=resin + comp)
 
 
@@ -628,21 +796,69 @@ def write_report(m, path, args):
     L.append("The wall probes are line samples at the places listed below, not a global thickness analysis. Known spots "
              "thinner than the 1.2 mm wall rule, by design: the 0.4 / 0.7 mm rebate rim under the lid detent groove, the "
              "0.7 mm wall around the switch key's counterbore, the first ~1.3 mm of each wire channel where it leaves the "
-             "open groove at the slab's bottom corner, and the 0.8 mm resin over the touch pad.\n")
+             "open groove at the slab's bottom corner, "
+             + (f"the 0.8 mm resin over the touch pad, and the {m.spk['gw']:.1f} mm speaker grille plate (the pocket's +Y face, "
+                f"{len(m.spk_holes)} × Ø{m.p['spk_grille']['hole_d']:.1f} holes)." if m.spk else "and the 0.8 mm resin over the touch pad.") + "\n")
     L.append("## Stack (Z above the finger skin, mm)\n")
     R = m.R
     L.append("| level | z |\n|---|---|")
-    for n, z in [("pocket floor (band wall)", m.z_pocket_bot), ("sub-board floor (cell pocket top)", m.z_floor),
-                 ("board bottom (ledges)", m.z_board_bot), ("board top", m.z_board_top),
-                 ("lid underside", m.z_lid_bot), ("lid top", m.z_top),
-                 (f"pod underside (bore relief {m.relief})", R + m.relief), ("pod floor", m.pod_z_floor),
-                 ("OV2640 head bottom / top", None), ("lens axis", m.lens_z),
-                 ("pod ceiling (head top + FPC fold)", m.pod_z_ceil), ("pod roof top", m.z_pod_roof)]:
+    rows = [("pocket floor (band wall)", m.z_pocket_bot), ("sub-board floor (cell pocket top)", m.z_floor),
+            ("board bottom (ledges)", m.z_board_bot), ("board top", m.z_board_top),
+            ("lid underside", m.z_lid_bot), ("lid top", m.z_top),
+            (f"pod underside (bore relief {m.relief})", R + m.relief), ("pod floor", m.pod_z_floor),
+            ("OV2640 head bottom / top", None), ("lens axis", m.lens_z),
+            ("pod ceiling (head top + FPC fold)", m.pod_z_ceil), ("pod roof top", m.z_pod_roof)]
+    if m.spk:
+        s = m.spk
+        rows += [("speaker pocket bottom (slab bottom + 1.3)", s["z_bot"]), ("speaker axis", s["Z"]),
+                 ("speaker rim top / lid boss underside", (s["Z"] + s["d"] / 2, m.spk_boss_z0)),
+                 ("speaker slot top = bump shelf = lid underside", m.z_lid_bot)]
+    for n, z in rows:
         if z is None:
             L.append(f"| {n} | {m.head_z0 - R:.2f} / {m.head_z1 - R:.2f} |")
+        elif isinstance(z, tuple):
+            L.append(f"| {n} | {z[0] - R:.2f} / {z[1] - R:.2f} |")
         else:
             L.append(f"| {n} | {z - R:.2f} |")
     L.append("")
+    if m.spk:
+        s = m.spk
+        g = m.p["spk_grille"]
+        open_area = len(m.spk_holes) * math.pi * (g["hole_d"] / 2) ** 2
+        pads = m.bp["wire_pads_bottom_mm"]
+        lead = []
+        for pad in ("SPK1a", "SPK1b"):
+            px, py = m.bx(pads[pad][0]), m.by(pads[pad][1])
+            lead.append(math.dist((s["X"], s["Y"] - s["t"] / 2, m.z_floor + 0.7), (px, py, m.z_board_bot)))
+        L.append("## Speaker LS1 (optional, `speaker_mm`)\n")
+        L.append(f"* part: {s['part']}; placeholder Ø{s['d']:.1f} × {s['t']:.1f} mm disc standing in the XZ plane, axis along Y, "
+                 f"centre board ({s['board'][0]}, {s['board'][1]}, {s['board'][2]} from the board top) = world X {s['X']:.2f}, Y {s['Y']:.2f}, "
+                 f"Z {s['Z'] - R:.2f} above the skin; rim Z {s['Z'] - s['d'] / 2 - R:.2f}..{s['Z'] + s['d'] / 2 - R:.2f} above the skin, "
+                 f"back face Y {s['Y'] - s['t'] / 2:.2f} ({s['Y'] - s['t'] / 2 - m.Wi / 2:+.2f} from the bay's inner wall plane), front face Y {s['Y'] + s['t'] / 2:.2f}")
+        L.append(f"* pocket: U-slot Ø{2 * s['rp']:.1f} ({s['cl']:.1f} radial clearance) about the axis, straight walls above the axis up to the lid "
+                 f"underside (drop-in from the top), depth {s['depth']:.1f} along Y ({m.p['spk_back_seat']:.1f} behind the back face, "
+                 f"{s['depth'] - s['t'] - m.p['spk_back_seat']:.1f} in front); X {s['x0']:.1f}..{s['x1']:.1f}, Y {s['y_back']:.2f}..{s['y_front']:.2f}, "
+                 f"bottom {s['z_bot'] - R:.2f} above the skin ({s['z_bot'] - m.z_slab0:.1f} above the slab bottom)")
+        L.append(f"* +Y wall bump: {s['bump']:.2f} mm over X {s['bx0']:.1f}..{s['bx1']:.1f} ({s['bx1'] - s['bx0']:.1f} long = pocket + two "
+                 f"{m.p['bay_wall']:.1f} end walls), full slab height, top cut down to the lid underside (shelf); the signet is "
+                 f"{m.Wo + s['bump']:.2f} wide there (asymmetric: +Y side only); outer corners r {m.p['spk_bump_r']}, bottom edge r {m.p['spk_bump_bottom_r']}")
+        L.append(f"* grille: {len(m.spk_holes)} × Ø{g['hole_d']:.1f} holes (centre + {g['n']} on a Ø{2 * g['ring_r']:.0f} ring at 45°) through the "
+                 f"{s['gw']:.1f} mm +Y plate = {open_area:.1f} mm² open ({100 * open_area / (math.pi * (s['d'] / 2) ** 2):.0f} % of the Ø{s['d']:.0f} disc)")
+        L.append(f"* back volume: above the sub-board floor ({m.z_floor - R:.2f}) the slot's back is open to the bay over its full width, so the "
+                 f"lidded bay (~1.4 cm³ minus parts) is the back volume and the terminals/leads pass straight through; below the floor the pocket is a "
+                 f"recess in the solid slab with a lead groove {m.p['spk_lead_groove'][0]:.0f} wide × {m.p['spk_lead_groove'][1]:.1f} deep in its "
+                 f"back wall (Y {m.spk_groove[2]:.2f}..{s['y_back']:.2f}, Z {m.spk_groove[3] - R:.1f}..floor) for terminals in the lower half of the disc")
+        L.append(f"* leads: two 30 AWG wires from the speaker's back terminals into the sub-board cavity (Z {m.z_floor - R:.1f}..{m.z_board_bot - R:.1f} above "
+                 f"the skin, under the board's +Y edge) to SPK1a/SPK1b on the board bottom at board ({pads['SPK1a'][0]}, {pads['SPK1a'][1]}) / "
+                 f"({pads['SPK1b'][0]}, {pads['SPK1b'][1]}): ≈ {lead[0]:.1f} / {lead[1]:.1f} mm straight-line from the pocket's back at floor level (allow 6 mm)")
+        L.append(f"* lid: tab X {m.spk_tab[0]:.1f}..{m.spk_tab[1]:.1f} × Y {(m.Wi + 2 * m.p['lid_rebate'] - 2 * m.p['lid_clear']) / 2:.2f}..{m.spk_tab[2]:.2f} "
+                 f"({m.p['lid_t']:.1f} thick, {s['y_out'] - m.spk_tab[2]:.2f} inside the bump face, {m.spk_tab[0] - s['bx0']:.1f} from the bump's end walls) rests on the shelf; "
+                 f"boss X {m.spk_boss[0]:.1f}..{m.spk_boss[1]:.1f} × Y {m.spk_boss[2]:.2f}..{m.spk_boss[3]:.2f} under it fills the slot down to "
+                 f"{m.spk_boss_z0 - R:.2f} above the skin = {m.spk_boss_z0 - s['Z'] - s['d'] / 2:.1f} mm above the speaker rim (the lid holds the speaker; "
+                 f"a foam pad or a drop of glue takes up the play). The +Y detent groove is interrupted over the bump (X {s['bx0']:.1f}..{s['bx1']:.1f}).")
+        L.append(f"* antenna: 3-D gap speaker ↔ flex antenna placeholder {m.spk_antenna_gap:.2f} mm (keep-out {m.bp.get('antenna_keepout_beyond_edge_mm', 5.0):.1f}); "
+                 f"mass +{s['mass']:.1f} g speaker")
+        L.append("")
     L.append("## Placeholder vs shell / lid intersection volumes (mm³, must be 0)\n")
     L.append("| placeholder | ∩ shell | ∩ lid |\n|---|---|---|")
     for n in f["shell"]:
@@ -679,13 +895,14 @@ def write_report(m, path, args):
     L.append(f"* bounding box (X along the finger, Y across, Z up): {bb[0]:.1f}..{bb[1]:.1f} × {bb[2]:.1f}..{bb[3]:.1f} × {bb[4]:.1f}..{bb[5]:.1f} mm "
              f"→ {bb[1]-bb[0]:.1f} × {bb[3]-bb[2]:.1f} × {bb[5]-bb[4]:.1f} mm")
     L.append(f"* band OD {env['band_od']:.1f} mm (inner {m.p['inner_d']:.1f}, wall {m.p['band_wall']:.1f}); {env['band_od_at_ribs']:.1f} across the pad-wire rib")
-    L.append(f"* signet (bay) footprint {env['bay_footprint'][0]:.1f} × {env['bay_footprint'][1]:.1f} mm (incl. the {m.ant_depth:.1f} mm antenna cavity), "
-             f"lid top {env['height_above_skin']:.2f} mm above the skin, pod roof {env['pod_above_skin']:.2f} mm, "
+    L.append(f"* signet (bay) footprint {env['bay_footprint'][0]:.1f} × {env['bay_footprint'][1]:.1f} mm (incl. the {m.ant_depth:.1f} mm antenna cavity)"
+             + (f", {env['signet_width_at_speaker']:.2f} wide across the speaker bump (X {m.spk['bx0']:.1f}..{m.spk['bx1']:.1f}, +Y side)" if m.spk else "")
+             + f", lid top {env['height_above_skin']:.2f} mm above the skin, pod roof {env['pod_above_skin']:.2f} mm, "
              f"{env['length_with_pod']:.1f} mm long along the finger including the camera pod")
     L.append("")
     L.append("## Mass estimate\n")
     L.append(f"* shell {mass['shell_cc']:.2f} cm³ + lid {mass['lid_cc']:.2f} cm³ + key {mass['key_cc']:.3f} cm³ of resin at {RESIN_G_PER_CC} g/cm³ = **{mass['resin_g']:.1f} g**")
-    L.append(f"* components {mass['components_g']:.1f} g ({', '.join(f'{k} {v}' for k, v in COMPONENT_MASS_G.items())})")
+    L.append(f"* components {mass['components_g']:.1f} g ({', '.join(f'{k} {v}' for k, v in m.component_masses().items())})")
     L.append(f"* **total ≈ {mass['total_g']:.1f} g**")
     L.append("")
     with open(path, "w") as fh:
@@ -716,6 +933,14 @@ def export_all(m, out, views=True, step=True):
             ("view_front", front, "front view along the camera axis: lens bore, pod, signet over the band, Z up"),
             ("view_section", section, "section through the camera axis (Y = 0): bore, head + barrel + folded FPC, cell pocket, board, module, antenna cavity, lid"),
         ]
+        if m.spk:
+            right = comp.rotate(O, X, 90).rotate(O, Z, 180)                 # viewer at +Y: right = -X (pod on the left), up = +Z
+            spk_half = comp.intersect(box(-60, m.spk["X"], -60, 60, -60, 60))   # keep X < speaker axis, look from +X at the cut
+            spk_section = spk_half.rotate(O, Y, -90).rotate(O, Z, -90)      # right = +Y (speaker side), up = +Z
+            views_ += [
+                ("view_right", right, "right view (+Y, the speaker side): wall bump with the grille holes, lid tab, band and pad-wire ribs beyond"),
+                ("view_section_speaker", spk_section, "section through the speaker axis (X = speaker): U-pocket, speaker, grille plate, lead groove, lid tab + boss, cell pocket, board, module"),
+            ]
         for name, shape, _ in views_:
             svg = os.path.join(out, f"{name}.svg")
             cq.exporters.export(cq.Workplane().add(shape), svg, exportType="SVG",
@@ -731,6 +956,8 @@ def main(argv=None):
     ap.add_argument("--lens-d", type=float, default=None, help="lens bore, mm (default 4.6; 3.5 for the HM01B0 module)")
     ap.add_argument("--params", default=PARAMS_JSON)
     ap.add_argument("--out", default=OUT_DIR)
+    ap.add_argument("--report", default=os.path.join(HERE, "fit_report.md"), help="where to write the fit report")
+    ap.add_argument("--no-speaker", action="store_true", help="build the ring without the optional speaker pocket / lid tab")
     ap.add_argument("--no-views", action="store_true")
     ap.add_argument("--no-step", action="store_true")
     args = ap.parse_args(argv)
@@ -739,7 +966,11 @@ def main(argv=None):
         p["inner_d"] = args.inner_d
     if args.lens_d:
         p["lens_d"] = args.lens_d
+    if args.no_speaker:
+        p["speaker"] = False
     bp = load_board_params(args.params)
+    if p["speaker"] and "speaker_mm" not in bp:
+        print("  NOTE board_params.json has no speaker_mm: building without the speaker pocket")
     t0 = time.time()
     m = Model(p, bp)
     m.build_shell()
@@ -747,7 +978,7 @@ def main(argv=None):
     m.build_key()
     m.build_placeholders()
     f = m.fit_check()
-    ok = write_report(m, os.path.join(HERE, "fit_report.md"), args)
+    ok = write_report(m, args.report, args)
     env, mass = m.envelope(), m.mass()
     print(f"placeholder∩shell: " + ", ".join(f"{k}={v:.3f}" for k, v in f["shell"].items()))
     print(f"placeholder∩lid:   " + ", ".join(f"{k}={v:.3f}" for k, v in f["lid"].items()))
@@ -760,7 +991,13 @@ def main(argv=None):
     c = f["contact"]
     print(f"finger contact: top X {c['top']}, bottom X {c['bottom']}")
     print(f"envelope: band OD {env['band_od']:.1f}, lid top {env['height_above_skin']:.2f} / pod roof {env['pod_above_skin']:.2f} above skin, "
-          f"bay {env['bay_footprint'][0]:.1f} x {env['bay_footprint'][1]:.1f}, length incl. pod {env['length_with_pod']:.1f}")
+          f"bay {env['bay_footprint'][0]:.1f} x {env['bay_footprint'][1]:.1f}, length incl. pod {env['length_with_pod']:.1f}"
+          + (f", {env['signet_width_at_speaker']:.2f} wide at the speaker bump" if m.spk else ""))
+    if m.spk:
+        s = m.spk
+        print(f"speaker: Ø{s['d']} x {s['t']} at X {s['X']:.2f} Y {s['Y']:.2f} Z {s['Z'] - m.R:.2f} above skin; pocket Ø{2 * s['rp']:.1f} x {s['depth']:.1f} deep, "
+              f"X {s['x0']:.1f}..{s['x1']:.1f}, bump {s['bump']:.2f} over X {s['bx0']:.1f}..{s['bx1']:.1f}; {len(m.spk_holes)} grille holes Ø{p['spk_grille']['hole_d']}; "
+              f"antenna gap {m.spk_antenna_gap:.2f}")
     print(f"mass: resin {mass['resin_g']:.1f} g + components {mass['components_g']:.1f} g = {mass['total_g']:.1f} g")
     export_all(m, args.out, views=not args.no_views, step=not args.no_step)
     print(f"{'FIT CHECK PASS' if ok else 'FIT CHECK FAIL'}  ({time.time() - t0:.1f} s)")

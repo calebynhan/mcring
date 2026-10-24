@@ -12,7 +12,7 @@ Reference designators and nets follow `hardware/electrical/out/mcring_v1_nets.md
 | Orientation | x along the finger: **front edge = camera / FPC** (x = 0), **back edge = antenna / u.FL** (x = 26.5); y across the finger: **left edge = switch** (y = 0) |
 | Module | ESP32-S3-MINI-1U 15.4 × 15.4 × 2.4, centre (18.8, 9.0), u.FL end **flush with the back edge** (pin positions along the three rows: **verify against the Espressif footprint** — nothing below depends on them except the stub lengths in §6) |
 | Top side | U1 module, FPC1 (24-pin 0.5 mm bottom-contact), SW1 side switch, D1 WS2812B-2020 + R7, C3 100 µF 1206, TPAD1 3 × 4 touch landing with hatched GND ring (the touch **electrode** is a copper foil on the lid underside — §2), **8 test pads** (TP1 IO0, TP2 EN, TP3 D-, TP4 D+, TP5 GND, TP6 3V3, TP7 nCHG, TP8 VBAT) |
-| Bottom side (≤ 1.15 mm) | everything else: U2–U9, L1, D2, D3, Q1, MK1 mic (bottom-port, port through the board), 38 × 0402, 3 × 0603, wire pads (cell, charge pads, LRA, piezo, aux) |
+| Bottom side (≤ 1.15 mm) | everything else: U2–U11 (U10 MAX98357A + U11 its TPS22916 gate = the optional speaker amp), L1, D2, D3, Q1, MK1 mic (bottom-port, port through the board), 44 × 0402, 4 × 0603, wire pads (cell, charge pads, LRA, piezo, aux, speaker) |
 | Tallest top part | mated u.FL plug on the module ≈ 2.9 mm (module shield 2.4; front strip x < 11.1: FPC1 2.0) |
 | Why 26.5 long | 11.1 mm front strip (FPC1 4.0 + 1.0 actuator clearance + 5.6 for SW1/TPAD1/D1/C3/mic port) + 15.4 module |
 | Why 18.0 wide | FPC1 body 16 mm + 2 × 1.0 edge; module 15.4 + 2 × 1.3 |
@@ -89,19 +89,29 @@ unsoldered. Wire pads stay on the bottom (the wires go down into the band).
 | C1 | 0603 | 11.60, 3.30 | 1.6 × 0.8 | 0.95 | 10 µF buck input |
 | L1 | 2.2 µH 2016 (DFE201610E) | 13.70, 3.30 | 2.0 × 1.6 | 1.0 | buck inductor — tight loop with U8/C2 |
 | C2 | 0603 | 15.80, 3.30 | 1.6 × 0.8 | 0.95 | 10 µF buck output |
-| D2 | PESD5V0S1BB SOD-523 | 18.40, 2.90 | 1.2 × 0.8 | 0.6 | bidirectional TVS on CHG_PAD, < 2 mm from the pad |
-| D3 | PMEG2005EB SOD-523 | 18.40, 4.10 | 1.2 × 0.8 | 0.6 | Schottky CHG_PAD → CHG_IN (reversed-cradle protection), right after D2 |
+| D2 | PESD5V0S1BB SOD-523 | 18.10, 2.90 | 1.2 × 0.8 | 0.6 | bidirectional TVS on CHG_PAD, < 2 mm from the pad (moved 0.3 toward the front for the R22–R24 column) |
+| D3 | PMEG2005EB SOD-523 | 18.10, 4.10 | 1.2 × 0.8 | 0.6 | Schottky CHG_PAD → CHG_IN (reversed-cradle protection), right after D2 (moved 0.3 toward the front with D2) |
 | U8 | TPS62840DLC SOT-583 | 12.60, 5.60 | 2.1 × 1.6 | 0.6 | 3V3 buck |
 | R12 | 0402 | 14.40, 5.30 | 1.0 × 0.5 | 0.35 | VSET (3.3 V code) |
 | U7 | BQ25100 DSBGA-6 | 16.60, 5.30 | 1.6 × 0.9 | 0.6 | charger 25 mA / 1 mA term |
-| C7 | 0402 | 18.40, 5.30 | 1.0 × 0.5 | 0.35 | 1 µF charger IN |
+| C7 | 0402 | 18.15, 5.30 | 1.0 × 0.5 | 0.35 | 1 µF charger IN (moved 0.25 toward U7 for the R22–R24 column) |
 | R8 | 0402 | 11.80, 6.90 | 1.0 × 0.5 | 0.35 | 1 M divider top (VBAT) |
 | R9 | 0402 | 13.00, 6.90 | 1.0 × 0.5 | 0.35 | 1 M divider bottom |
 | C23 | 0402 | 14.20, 6.90 | 1.0 × 0.5 | 0.35 | 100n BAT_SENSE |
 | C8 | 0402 | 15.60, 6.90 | 1.0 × 0.5 | 0.35 | 1 µF charger OUT / VBAT |
 | R10 | 0402 | 16.90, 6.90 | 1.0 × 0.5 | 0.35 | 9.1k ISET |
 | R11 | 0402 | 18.10, 6.90 | 1.0 × 0.5 | 0.35 | 11.5k PRE_TERM |
-| R19 | 0402 | 19.30, 6.90 | 1.0 × 0.5 | 0.35 | 100k nCHG pull-up |
+| R19 | 0402 | 17.60, 8.00 | 1.0 × 0.5 | 0.35 | 100k nCHG pull-up (moved from (19.3, 6.9) for the speaker amp block) |
+| R2 | 0402 | 12.30, 7.90 | 1.0 × 0.5 | 0.35 | 10k IO0 pull-up (moved from (21.2, 1.6) for the speaker amp block) |
+| U10 | MAX98357A 16-TQFN 3×3 | 21.30, 4.30 | 3.0 × 3.0 | 0.8 | I2S class-D amp, VDD = VAMP (gated), SD_MODE = VAMP; EP to the GND pour; OPTIONAL group |
+| R22 | 0402 | 19.20, 3.10 | 0.5 × 1.0 | 0.35 | 1k I2S BCLK series → U10 pin 16 (bounds the ESD back-feed into the unpowered amp while VAMP is off) |
+| R23 | 0402 | 19.20, 4.30 | 0.5 × 1.0 | 0.35 | 1k I2S LRCLK series → U10 pin 14 |
+| R24 | 0402 | 19.20, 5.50 | 0.5 × 1.0 | 0.35 | 1k I2S DIN series → U10 pin 1 |
+| R20 | 0402 | 21.00, 1.30 | 1.0 × 0.5 | 0.35 | 100k AMP_PWR_EN pull-down (IO34) |
+| R21 | 0402 | 22.50, 1.30 | 1.0 × 0.5 | 0.35 | 100k gain select GAIN_SLOT→VAMP (3 dB; 0R = 6 dB bench option, DNP = 9 dB) |
+| U11 | TPS22916C DSBGA-4 | 19.90, 7.00 | 1.2 × 0.9 | 0.6 | speaker amp rail gate 3V3→VAMP, ON = IO34 (AMP_PWR_EN) |
+| C25 | 0603 | 21.60, 6.60 | 1.6 × 0.8 | 0.95 | 10 µF VAMP at U10 |
+| C26 | 0402 | 23.00, 6.60 | 0.5 × 1.0 | 0.35 | 100n VAMP at U10 VDD pins |
 | Q1 | AO3400A SOT-23 | 14.60, 9.30 | 2.9 × 1.6 | 1.15 | low-side N-FET, gate IO9 |
 | R14 | 0402 | 17.00, 9.30 | 1.0 × 0.5 | 0.35 | 100k AUX_EN pull-down |
 | J2a | pad | 14.20, 11.20 | 1.2 × 1.2 | 0.0 | VBAT to the aux load |
@@ -109,18 +119,19 @@ unsoldered. Wire pads stay on the bottom (the wires go down into the band).
 | U5 | DRV2605L VSSOP-10 | 16.20, 13.60 | 3.0 × 3.0 | 1.1 | haptic driver 0x5A |
 | C15 | 0402 | 13.60, 12.60 | 0.5 × 1.0 | 0.35 | 1 µF DRV VDD |
 | C16 | 0402 | 13.60, 14.00 | 0.5 × 1.0 | 0.35 | 1 µF DRV REG |
-| M1a | pad | 15.40, 16.70 | 1.5 × 1.5 | 0.0 | LRA wire OUT+ |
-| M1b | pad | 17.40, 16.70 | 1.5 × 1.5 | 0.0 | LRA wire OUT- |
+| M1a | pad | 15.00, 16.70 | 1.5 × 1.5 | 0.0 | LRA wire OUT+ (moved 0.4 toward the front for the SPK1 pads) |
+| M1b | pad | 17.00, 16.70 | 1.5 × 1.5 | 0.0 | LRA wire OUT- (moved 0.4 toward the front for the SPK1 pads) |
+| SPK1a | pad | 18.80, 16.85 | 1.5 × 1.5 | 0.0 | speaker wire OUTP (SPK_P) → LS1 in the right-wall pocket |
+| SPK1b | pad | 20.80, 16.85 | 1.5 × 1.5 | 0.0 | speaker wire OUTN (SPK_N) → LS1 |
 | R3 | 0402 | 18.20, 11.00 | 1.0 × 0.5 | 0.35 | 4.7k SDA pull-up |
 | R4 | 0402 | 19.40, 11.00 | 1.0 × 0.5 | 0.35 | 4.7k SCL pull-up |
 | U6 | LIS2DW12 LGA-12 2×2 | 20.30, 13.80 | 2.0 × 2.0 | 0.7 | accelerometer 0x18 (SA0=GND) |
-| C17 | 0402 | 20.30, 15.90 | 1.0 × 0.5 | 0.35 | 100n LIS VDD |
-| C18 | 0402 | 18.90, 15.90 | 1.0 × 0.5 | 0.35 | 100n LIS VDD_IO |
+| C17 | 0402 | 20.30, 15.50 | 1.0 × 0.5 | 0.35 | 100n LIS VDD (moved 0.4 toward U6 for the SPK1 pads) |
+| C18 | 0402 | 22.10, 13.80 | 1.0 × 0.5 | 0.35 | 100n LIS VDD_IO (moved beside U6 for the SPK1 pads) |
 | C4 | 0603 | 20.40, 9.30 | 1.6 × 0.8 | 0.95 | 10 µF module 3V3 |
 | C5 | 0402 | 21.00, 10.50 | 1.0 × 0.5 | 0.35 | 100n module 3V3 |
 | R18 | 0402 | 21.40, 11.60 | 1.0 × 0.5 | 0.35 | 4.7k LED_PWR_EN pull-down |
-| R2 | 0402 | 21.20, 1.60 | 1.0 × 0.5 | 0.35 | 10k IO0 pull-up |
-| R1 | 0402 | 21.20, 16.60 | 1.0 × 0.5 | 0.35 | 10k EN pull-up |
+| R1 | 0402 | 22.80, 15.40 | 1.0 × 0.5 | 0.35 | 10k EN pull-up (moved from (21.2, 16.6) for the SPK1 pads) |
 | C6 | 0402 | 22.60, 16.60 | 1.0 × 0.5 | 0.35 | 1 µF EN delay |
 
 ## 4. Keep-outs and zones
@@ -133,6 +144,8 @@ unsoldered. Wire pads stay on the bottom (the wires go down into the band).
 | FPC actuator swing | top | (4.5, 1.0 – 5.5, 17.0) | parts ≤ 0.6 mm only (R7 is fine) |
 | DVP corridor | bottom | (1.0, 8.3 – 12.6, 13.8) | Y2–Y9, PCLK, HREF, VSYNC, XCLK only; vias up to U1 in the last 1.5 mm |
 | Under the module | top | module footprint | bare FR-4 under the shield (no silkscreen), ≥ 9 GND vias on the thermal pads |
+| Back ledge (enclosure) | bottom | (x ≥ 23.6) | the CAD's back board ledge carries the board here at the sub-board level: no bottom-side part or wire pad may reach it (checked by the script) |
+| Speaker pocket (enclosure) | — | right (+y) signet wall, board x 13.25–23.65, centre 2.0 mm outside the right edge | the Ø10.0 × 2.9 speaker LS1 stands vertically in a pocket cut into the +y wall (face pushed out 3.15 mm), grille facing +y, back open to the bay; leads through the wall to SPK1a/SPK1b; its magnet stays ≥ 5 mm from the flex antenna — `board_params.json` → `speaker_mm` |
 
 ## 5. Layer usage
 
@@ -160,6 +173,8 @@ unsoldered. Wire pads stay on the bottom (the wires go down into the band).
 | PDM CLK/DATA | IO42/IO41 → MK1 on the right-front, ≤ 10 mm |
 | USB D−/D+ | IO19/IO20 (module pins 23/24, in the **front row**) → TP3/TP4 directly in front of that row at x = 10.15; the stub is the pin-to-pad run, routed as a pair on the top layer, ≤ 10 mm (expect 1–8 mm depending on where pins 23/24 sit along the row — verify on the footprint), nothing else on the nets |
 | Touch | IO8 → R13 (1 kΩ) → TPAD1 landing → foam/spring contact → lid foil electrode; keep the trace short and away from the DVP corridor |
+| I²S (optional speaker) | IO35/36/37 → R22/R23/R24 (1 kΩ series, the column at x 19.2 beside U10's pin-1/16 corner) → U10 BCLK/LRCLK/DIN (pins 16/14/1), 0.1 mm, 512 kHz / 16 kHz, no matching, no MCLK; the resistors bound the ESD-diode back-feed into the unpowered amp to ≤ 2.6 mA per pin while VAMP is off; AMP_PWR_EN IO34 → U11 ON + R20 |
+| VAMP / SPK_P–SPK_N | 3V3 → U11 → C25 (10 µF) + C26 (100 nF, ≤ 1 mm from U10 VDD pins 7/8); OUTP/OUTN as a **0.3 mm pair** down the back column x 22–23.4 to SPK1a/b (≈ 12 mm), GND pour both sides, ≥ 1 mm from SDA/SCL, IMU_INT1 and the PDM lines (filterless class D); U10 EP → GND pour with 2–4 vias |
 
 ## 7. Camera FPC pin order (assumed ESP32-CAM / Arducam M0031 — verify on the purchased head)
 
@@ -237,8 +252,24 @@ board's back edge for the u.FL pigtail and the flex antenna. Side-switch slot th
     bore Ø4.6 not 4.7; switch slot 3.4 × 1.6 not 3.2 × 1.5. The CAD still hard-codes `cell_pocket`,
     `lens_d`, `lid_t` and `switch_slot` — it should read `stack_mm.cell_pocket_depth`, `pod_mm.bore_d`, `stack_mm.lid` and
     `switch_slot_mm` from this JSON so the two cannot drift again. `hardware/cad/fit_report.md` is the as-built check.
-12. **D3** (PMEG2005EB Schottky, CHG_PAD → CHG_IN) added at (18.4, 4.1) — it is in the electrical netlist but was missing here.
+12. **D3** (PMEG2005EB Schottky, CHG_PAD → CHG_IN) added at (18.1, 4.1) — it is in the electrical netlist but was missing here.
+13. **Optional speaker amp block** (voice-first, `hardware/electrical/README.md` §1 item 20): U10 MAX98357A 16-TQFN (3 × 3 × 0.8),
+    U11 TPS22916, C25 10 µF, C26 100 nF, R20 100 kΩ, R21 100 kΩ (3 dB gain), R22–R24 1 kΩ I²S series (a column at x 19.2 beside
+    U10's pin-1/16 corner) in the back-left block under the module (x 18.95–23.4, y 0.4–8.8);
+    SPK1a/SPK1b 1.5 mm wire pads on the **right** edge at (18.8 / 20.8, 16.85), in line with the speaker pocket. To make room:
+    R2 → (12.3, 7.9), R19 → (17.6, 8.0), R1 → (22.8, 15.4), C17 → (20.3, 15.5), C18 → (22.1, 13.8), M1a/M1b 0.4 mm toward the
+    front, D2/D3 → x 18.1 and C7 → x 18.15 (0.25–0.3 toward the front; D2 stays 1.75 mm from the PAD1w centre). The OUTP/OUTN pair runs ≈ 12 mm down the back column — acceptable for a filterless class-D output, see §6. New
+    check: nothing on the bottom reaches the CAD's back ledge (x ≥ 23.6).
+14. **Speaker in the signet's RIGHT wall, not the left** (task text offered `signet_left_wall` / `band_side`): on the −y side the
+    switch key (x 6.3–9.7) and the two charging-pad wire channels (x 14.75 / 16.75, climbing inside the −y shoulder) push a
+    10.4 mm pocket behind x ≈ 17.7, whose back end lands 0.7 mm from the flex antenna's plane — an NdFeB magnet inside the 5 mm
+    keep-out. The +y wall has nothing on it (mic port, LED and touch dimple are in the lid, the LRA pocket in the floor, both
+    pad-wire ribs on −y). `speaker_mm`: centre board x 18.45, y 20.0 (2.0 outside the right edge), z -3.2
+    from the board top (3.5 above the skin); Ø10.0 × 2.9; disc in the xz plane, grille normal +y; pocket
+    x 13.25–23.65, 0.2 clearance, 1.0 grille wall → the signet's +y face grows 3.15 mm over that length; back open
+    to the bay above the sub-board floor (bay = back volume), recess in the slab below it; 5.7 mm from the antenna. "band_side"
+    was rejected: 1.2 mm band wall with the finger behind it and no lead path except outside the band.
 
 ## 10. Checks performed by the script
 
-* no overlaps, no edge/keep-out/height violations
+* no overlaps, no edge/keep-out/height violations, no bottom part on the back ledge

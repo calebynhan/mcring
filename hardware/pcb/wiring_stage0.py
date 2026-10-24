@@ -1,10 +1,13 @@
 #!/usr/bin/env python3
 """Stage-0 bench wiring diagram: Seeed XIAO ESP32S3 Sense + DRV2605L/LRA + LIS2DW12 + button + piezo
-+ battery divider + LiPo.  Pure Python → out/wiring_stage0.svg/.png and wiring_stage0.md.
++ battery divider + LiPo + the optional MAX98357A I2S amp breakout with a 10 mm speaker.
+Pure Python → out/wiring_stage0.svg/.png and wiring_stage0.md.
 
-Pin assignments are BOARD_XIAO_ESP32S3_SENSE from firmware/ring-esp32s3/src/config.h:
+Pin assignments are BOARD_XIAO_ESP32S3_SENSE from firmware/ring-esp32s3/src/config.h + config_audio.h:
   D0/A0 = GPIO1 battery sense, D1 = GPIO2 button, D2 = GPIO3 haptic (DRV EN), D3 = GPIO4 buzzer,
-  D4 = GPIO5 SDA, D5 = GPIO6 SCL, D8 = GPIO7 IMU INT1, D9 = GPIO8 touch, D10 = GPIO9 aux.
+  D4 = GPIO5 SDA, D5 = GPIO6 SCL, D8 = GPIO7 IMU INT1, D9 = GPIO8 touch,
+  D6 = GPIO43 I2S LRCLK, D7 = GPIO44 I2S BCLK, D10 = GPIO9 I2S DIN (was PIN_AUX; the air-puff experiment
+  is parked on the dev kit, config_audio.h sets PIN_AUX -1). Amp SD and VIN go to 3V3; PIN_SPEAKER_EN = -1.
 """
 from __future__ import annotations
 
@@ -18,16 +21,16 @@ from svgkit import SVG  # noqa: E402
 OUT = os.path.join(HERE, "out")
 
 # colours
-C_3V3, C_GND, C_BAT, C_SDA, C_SCL, C_SIG, C_INT, C_LRA, C_OPT = (
-    "#d62728", "#111111", "#b03a2e", "#1f77b4", "#d4a017", "#2ca02c", "#8e44ad", "#8c564b", "#7f8c8d")
+C_3V3, C_GND, C_BAT, C_SDA, C_SCL, C_SIG, C_INT, C_LRA, C_OPT, C_I2S = (
+    "#d62728", "#111111", "#b03a2e", "#1f77b4", "#d4a017", "#2ca02c", "#8e44ad", "#8c564b", "#7f8c8d", "#17a589")
 
 # XIAO header (top view, USB-C up).  Left column D0..D6, right column 5V, GND, 3V3, D10, D9, D8, D7.
 LEFT = [("D0 / A0", "GPIO1", "BAT_SENSE"), ("D1", "GPIO2", "BUTTON"), ("D2", "GPIO3", "HAPTIC (DRV EN)"),
         ("D3", "GPIO4", "BUZZER"), ("D4 / SDA", "GPIO5", "I²C SDA"), ("D5 / SCL", "GPIO6", "I²C SCL"),
-        ("D6 / TX", "GPIO43", "n/c (UART0)")]
+        ("D6 / TX", "GPIO43", "I²S LRC (amp)")]
 RIGHT = [("5V", "VBUS", "n/c"), ("GND", "GND", "GND"), ("3V3", "3V3", "3.3 V out ≤ 700 mA"),
-         ("D10", "GPIO9", "AUX (n/c)"), ("D9", "GPIO8", "TOUCH (optional pad)"), ("D8", "GPIO7", "IMU INT1"),
-         ("D7 / RX", "GPIO44", "n/c (UART0)")]
+         ("D10", "GPIO9", "I²S DIN"), ("D9", "GPIO8", "TOUCH (optional pad)"), ("D8", "GPIO7", "IMU INT1"),
+         ("D7 / RX", "GPIO44", "I²S BCLK (amp)")]
 
 XX0, XX1, XY0, XY1 = 600, 860, 200, 620      # XIAO body
 PIN_Y = [250 + 55 * i for i in range(7)]
@@ -69,18 +72,34 @@ wire(C_GND, [], "GND bus (XIAO GND pin)", (760, 990), anchor="middle")
 wire(C_GND, [(1060, 755), (1020, 755)], "", (0, 0))
 wire(C_3V3, [(1060, 780), (1035, 780), (1035, 805)], "", (0, 0))
 # INT1
-wire(C_INT, [(1060, 705), (920, 705), (920, 525), (RPIN_X, 525)], "INT1 → D8 / GPIO7 (EXT1 wake)", (990, 696), anchor="middle")
+wire(C_INT, [(1060, 705), (912, 705), (912, 525), (RPIN_X, 525)], "INT1 → D8 / GPIO7 (EXT1 wake)", (990, 696), anchor="middle")
 # LRA
 wire(C_LRA, [(120, 700), (85, 700)], "OUT+", (100, 690), anchor="middle")
 wire(C_LRA, [(120, 730), (85, 730)], "OUT−", (100, 745), anchor="middle")
 # optional / n-c stubs on the right
-wire(C_OPT, [(RPIN_X, 470), (930, 470)], "D9 / GPIO8 → optional touch pad: copper foil / coin via 1 kΩ", (975, 470), dash="4 3")
-wire(C_OPT, [(RPIN_X, 415), (930, 415)], "D10 aux n/c", (975, 415), dash="4 3")
-wire(C_OPT, [(RPIN_X, 250), (930, 250)], "5V n/c", (975, 250), dash="4 3")
-wire(C_OPT, [(RPIN_X, 580), (930, 580)], "D7 RX n/c", (975, 580), dash="4 3")
-wire(C_OPT, [(LPIN_X, 580), (540, 580)], "D6 TX — n/c", (534, 580), anchor="end", dash="4 3")
+wire(C_OPT, [(RPIN_X, 470), (915, 470)], "D9 / GPIO8 → optional touch pad: copper foil / coin via 1 kΩ", (960, 470), dash="4 3")
+wire(C_OPT, [(RPIN_X, 250), (915, 250)], "5V n/c", (960, 250), dash="4 3")
+# ---- optional MAX98357A I2S amp breakout (box at x 1330-1530, y 530-760; left pins DIN/BCLK/LRC/GAIN, right pins VIN/GND/SD)
+AMP_X0, AMP_X1, AMP_Y0, AMP_Y1 = 1330, 1530, 530, 760
+AMP_PIN_Y = {"DIN": 600, "BCLK": 630, "LRC": 660, "GAIN": 700, "VIN": 600, "GND": 630, "SD": 660}
+# DIN from D10 runs through the corridor between the check-list box and the LIS breakout (y 540)
+wire(C_I2S, [(RPIN_X, 415), (926, 415), (926, 540), (1300, 540), (1300, AMP_PIN_Y["DIN"]), (AMP_X0, AMP_PIN_Y["DIN"])],
+     "D10 / GPIO9 → I²S DIN (was AUX)", (1110, 532), anchor="middle")
+# BCLK from D7 and LRC from D6 run under the I2C bus lines and above the 3V3/GND buses (y 920 / 935)
+wire(C_I2S, [(RPIN_X, 580), (900, 580), (900, 920), (1310, 920), (1310, AMP_PIN_Y["BCLK"]), (AMP_X0, AMP_PIN_Y["BCLK"])],
+     "D7 / GPIO44 → I²S BCLK", (1105, 915), anchor="middle")
+wire(C_I2S, [(LPIN_X, 580), (558, 580), (558, 935), (1320, 935), (1320, AMP_PIN_Y["LRC"]), (AMP_X0, AMP_PIN_Y["LRC"])],
+     "D6 / GPIO43 → I²S LRC", (600, 931))
+# amp power from the 3V3 / GND buses (right of the amp), SD tied to 3V3 = left-channel mode
+wire(C_3V3, [(940, 950), (1560, 950), (1560, AMP_PIN_Y["VIN"]), (AMP_X1, AMP_PIN_Y["VIN"])], "3V3 → amp VIN", (1250, 962), anchor="middle")
+wire(C_GND, [(960, 975), (1575, 975), (1575, AMP_PIN_Y["GND"]), (AMP_X1, AMP_PIN_Y["GND"])], "GND → amp GND", (1250, 987), anchor="middle")
+wire(C_3V3, [(AMP_X1, AMP_PIN_Y["SD"]), (1560, AMP_PIN_Y["SD"])], "SD→3V3", (1566, 655))
+# speaker on the amp's terminal block
+wire(C_LRA, [(1400, AMP_Y1), (1400, 808)], "+", (1392, 790), anchor="end")
+wire(C_LRA, [(1460, AMP_Y1), (1460, 808)], "−", (1468, 790))
 
-JUNCTIONS = [(400, 165), (520, 750), (500, 720), (940, 605), (960, 630), (1000, 880), (980, 905)]
+JUNCTIONS = [(400, 165), (520, 750), (500, 720), (940, 605), (960, 630), (1000, 880), (980, 905),
+             (940, 950), (960, 975), (1560, AMP_PIN_Y["SD"])]
 
 
 def gnd_symbol(svg, x, y, label="GND"):
@@ -99,11 +118,11 @@ def resistor(svg, x0, y0, x1, y1, label):
 
 
 def draw() -> None:
-    svg = SVG(1500, 1060)
-    svg.text(20, 30, "mcring stage 0 — bench wiring: Seeed XIAO ESP32S3 Sense", size=22, weight="bold")
-    svg.text(20, 54, "BOARD_XIAO_ESP32S3_SENSE pin map (firmware/ring-esp32s3/src/config.h). Top view, USB-C up. Every wire is labelled.",
+    svg = SVG(1640, 1060)
+    svg.text(20, 30, "mcring stage 0 — bench wiring: Seeed XIAO ESP32S3 Sense (+ optional MAX98357A speaker)", size=22, weight="bold")
+    svg.text(20, 54, "BOARD_XIAO_ESP32S3_SENSE pin map (firmware/ring-esp32s3/src/config.h + config_audio.h). Top view, USB-C up. Every wire is labelled.",
              size=11.5, fill="#444")
-    svg.text(20, 72, "Colours: red 3V3 · black GND · dark-red BAT+ · blue SDA · amber SCL · green GPIO · purple INT · brown LRA · grey dashed = optional / n/c.",
+    svg.text(20, 72, "Colours: red 3V3 · black GND · dark-red BAT+ · blue SDA · amber SCL · green GPIO · purple INT · teal I²S · brown LRA/speaker · grey dashed = optional / n/c.",
              size=11.5, fill="#444")
 
     # ---- XIAO + Sense ----
@@ -217,6 +236,34 @@ def draw() -> None:
     svg.text(1065, 822, "SA0 → GND  →  I²C address 0x18", size=9, fill="#333")
     svg.text(1065, 836, "CS → 3V3 (I²C mode; skip if the breakout already ties it)", size=9, fill="#333")
 
+    # ---- MAX98357A I2S amp breakout (optional) + 10 mm speaker ----
+    svg.rect(AMP_X0, AMP_Y0, AMP_X1 - AMP_X0, AMP_Y1 - AMP_Y0, fill="#fdf2e9", stroke="#b9770e", sw=1.5, rx=6)
+    svg.text((AMP_X0 + AMP_X1) / 2, AMP_Y0 + 18, "MAX98357A I²S amp (optional)", size=12, anchor="middle", weight="bold", fill="#b9770e")
+    svg.text((AMP_X0 + AMP_X1) / 2, AMP_Y0 + 32, "Adafruit 3006 / clone · class-D mono · 2.5–5.5 V", size=8.5, anchor="middle", fill="#b9770e")
+    for lab in ("DIN", "BCLK", "LRC", "GAIN"):
+        y = AMP_PIN_Y[lab]
+        svg.line(AMP_X0, y, AMP_X0 + 15, y, stroke="#b9770e", sw=3)
+        svg.circle(AMP_X0, y, 3.5, fill="#fff", stroke="#b9770e", sw=1.2)
+        svg.text(AMP_X0 + 20, y + 3, lab, size=9, fill="#b9770e", weight="bold")
+    svg.text(AMP_X0 + 56, AMP_PIN_Y["GAIN"] + 3, "open = 9 dB (firmware volume trims clipping at 3.3 V)", size=7.5, fill="#555")
+    for lab in ("VIN", "GND", "SD"):
+        y = AMP_PIN_Y[lab]
+        svg.line(AMP_X1 - 15, y, AMP_X1, y, stroke="#b9770e", sw=3)
+        svg.circle(AMP_X1, y, 3.5, fill="#fff", stroke="#b9770e", sw=1.2)
+        svg.text(AMP_X1 - 20, y + 3, lab, size=9, fill="#b9770e", weight="bold", anchor="end")
+    svg.text((AMP_X0 + AMP_X1) / 2, 722, "SD → 3V3 = left channel; the breakout's own pull-up ((L+R)/2)", size=7.5, anchor="middle", fill="#555")
+    svg.text((AMP_X0 + AMP_X1) / 2, 734, "works too — the firmware writes mono into both I²S slots", size=7.5, anchor="middle", fill="#555")
+    svg.text((AMP_X0 + AMP_X1) / 2, 750, "speaker terminal block ▼  (≈ 2.4 mA idle: SD has no GPIO on the dev kit)", size=7.5, anchor="middle", fill="#555")
+    for x in (1400, 1460):
+        svg.circle(x, AMP_Y1, 3.5, fill="#fff", stroke="#b9770e", sw=1.2)
+    svg.circle(1430, 838, 30, fill="#d7bde2", stroke="#4a235a", sw=1.5)
+    svg.circle(1430, 838, 18, fill="none", stroke="#4a235a", sw=1)
+    svg.text(1430, 835, "speaker", size=9, anchor="middle", weight="bold")
+    svg.text(1430, 847, "Ø10 · 8 Ω", size=8, anchor="middle")
+    svg.text(1430, 884, "PUI AS01008MR-2-R (stage-1 part)", size=7.5, anchor="middle")
+    svg.text(1430, 896, "or a 1 W 8 Ω oval (Adafruit 3923) for the bench", size=7.5, anchor="middle")
+    svg.text(1430, 908, "polarity irrelevant", size=7.5, anchor="middle")
+
     # ---- wires ----
     for color, pts, label, (lx, ly), anchor, dash, rot in WIRES:
         if pts:
@@ -226,21 +273,22 @@ def draw() -> None:
                      weight="bold" if color in (C_3V3, C_GND) else "normal")
     for (jx, jy) in JUNCTIONS:
         svg.circle(jx, jy, 3.8, fill="#111", stroke="none")
-    svg.text(1010, 1000, "wire crossings without a dot are NOT connected", size=9, fill="#555", italic=True)
+    svg.text(1010, 1045, "wire crossings without a dot are NOT connected", size=9, fill="#555", italic=True)
 
     # ---- legend ----
     lx, ly = 20, 880
-    svg.rect(lx - 6, ly - 18, 300, 170, fill="#fdfefe", stroke="#bbb", sw=1, rx=6)
+    svg.rect(lx - 6, ly - 18, 300, 186, fill="#fdfefe", stroke="#bbb", sw=1, rx=6)
     svg.text(lx, ly, "Wire colours", size=11, weight="bold")
-    for i, (c, t) in enumerate([(C_3V3, "3V3 (XIAO 3V3 pin → VIN/VDD)"), (C_GND, "GND"), (C_BAT, "BAT+ (raw cell voltage)"),
+    for i, (c, t) in enumerate([(C_3V3, "3V3 (XIAO 3V3 pin → VIN/VDD, amp VIN + SD)"), (C_GND, "GND"), (C_BAT, "BAT+ (raw cell voltage)"),
                                 (C_SDA, "I²C SDA (D4 / GPIO5)"), (C_SCL, "I²C SCL (D5 / GPIO6)"), (C_SIG, "GPIO signals"),
-                                (C_INT, "interrupt INT1 → D8 / GPIO7"), (C_LRA, "LRA drive pair"), (C_OPT, "optional / leave open")]):
+                                (C_INT, "interrupt INT1 → D8 / GPIO7"), (C_I2S, "I²S to the amp (D7 BCLK, D6 LRC, D10 DIN)"),
+                                (C_LRA, "LRA / speaker drive pair"), (C_OPT, "optional / leave open")]):
         svg.line(lx, ly + 16 + i * 15, lx + 30, ly + 16 + i * 15, stroke=c, sw=3)
         svg.text(lx + 38, ly + 16 + i * 15, t, size=9)
 
     # ---- check list ----
     cx, cy = 1070, 60
-    svg.rect(cx - 10, cy - 16, 420, 400, fill="#fef9e7", stroke="#b7950b", sw=1.2, rx=6)
+    svg.rect(cx - 10, cy - 16, 420, 410, fill="#fef9e7", stroke="#b7950b", sw=1.2, rx=6)
     svg.text(cx, cy, "Check before power-on", size=13, weight="bold", fill="#7d6608")
     checks = [
         "1. LiPo polarity: red → BAT+, black → BAT− (underside pads). A reversed",
@@ -256,15 +304,18 @@ def draw() -> None:
         "7. Button and piezo go to GND, not to 3V3 (GPIO2/GPIO4 drive them",
         "   with the internal pull-up / LEDC).",
         "8. GPIO2 (D1) is not a strapping pin on the S3 — but keep D1 released at",
-        "   reset anyway. Do not use D6/D7 (UART0) if you want serial logs.",
+        "   reset anyway. D6/D7 carry I²S once the amp is fitted (logs are USB-CDC).",
         "9. Sense board seated fully on both B2B connectors; camera FPC latched.",
         "10. First power from USB with the cell disconnected; check 3V3 = 3.3 V,",
         "    then connect the cell and confirm the charge LED.",
         "11. i2cdetect / firmware boot log must list 0x18 and 0x5A.",
         "12. The dev kit draws ~3 mA in deep sleep with the Sense board attached",
         "    (no camera power gate) — expected, see hardware/power-budget.txt.",
+        "13. Speaker amp (optional): VIN = 3V3 (not 5V), SD → 3V3, GAIN open; BCLK → D7,",
+        "    LRC → D6, DIN → D10. Speaker only on the amp's +/− terminal, never to GND/3V3.",
+        "14. With the amp fitted D6/D7 are I²S (no UART0 logs) and D10 is no longer PIN_AUX.",
     ]
-    svg.multiline(cx, cy + 20, checks, size=9.5, lh=18)
+    svg.multiline(cx, cy + 20, checks, size=9, lh=16)
 
     svg.save(os.path.join(OUT, "wiring_stage0.svg"), png_scale=2.0)
 
@@ -279,17 +330,22 @@ def write_md() -> None:
         ("XIAO D5 (GPIO6)", "SCL", "DRV2605L SCL + LIS2DW12 SCL", "amber"),
         ("XIAO D8 (GPIO7)", "LIS2DW12 INT1", "double-tap interrupt, EXT1 wake (any-high)", "purple"),
         ("XIAO D9 (GPIO8)", "touch pad (optional)", "copper foil / coin via 1 kΩ; touch channel T8", "grey, dashed"),
-        ("XIAO D10 (GPIO9)", "aux", "leave open", "grey, dashed"),
-        ("XIAO 3V3", "DRV2605L VIN, LIS2DW12 VDD (+ CS)", "3.3 V regulator output", "red"),
-        ("XIAO GND", "DRV2605L GND, LIS2DW12 GND, LIS SA0, button, piezo, divider, C1", "common ground", "black"),
+        ("XIAO D10 (GPIO9)", "MAX98357A DIN (optional speaker)", "I²S data; **was `PIN_AUX`** — `config_audio.h` reassigns D10 and sets `PIN_AUX` −1 on the dev kit (the air-puff experiment is parked)", "teal"),
+        ("XIAO D7 / RX (GPIO44)", "MAX98357A BCLK (optional speaker)", "I²S bit clock, 32 × fs = 512 kHz at 16 kHz; UART0 RXD0 is free (logging is USB-CDC)", "teal"),
+        ("XIAO D6 / TX (GPIO43)", "MAX98357A LRC (optional speaker)", "I²S word clock = 16 kHz; UART0 TXD0 — the ROM banner at reset is ~50 ms of garbage frames without BCLK, inaudible", "teal"),
+        ("XIAO 3V3", "DRV2605L VIN, LIS2DW12 VDD (+ CS), MAX98357A VIN + SD", "3.3 V regulator output; SD → 3V3 = left-channel mode (the breakout's own pull-up, (L+R)/2, works too: mono is written into both slots)", "red"),
+        ("XIAO GND", "DRV2605L GND, LIS2DW12 GND, LIS SA0, MAX98357A GND, button, piezo, divider, C1", "common ground", "black"),
         ("XIAO BAT+ / BAT− (underside pads)", "LiPo 1S 100 mAh (PCM)", "BAT+ also feeds the divider", "dark red / black"),
         ("DRV2605L OUT+ / OUT−", "LRA 8 mm (INEED LRA0825BC-0167F)", "polarity irrelevant; closed-loop LRA mode", "brown"),
-        ("XIAO 5V, D6 (GPIO43), D7 (GPIO44)", "—", "leave open", "—"),
+        ("MAX98357A + / − terminal", "10 mm 8 Ω speaker (PUI AS01008MR-2-R, or a 1 W 8 Ω oval for the bench)", "polarity irrelevant; GAIN left open = 9 dB; `PIN_SPEAKER_EN` is −1 on the dev kit, so the amp idles at ~2.4 mA", "brown"),
+        ("XIAO 5V", "—", "leave open", "—"),
         ("Sense board", "B2B on top of the XIAO", "OV2640 DVP (GPIO10–18, 38–40, 47, 48), PDM mic (GPIO41/42)", "—"),
     ]
     md = ["# Stage-0 bench wiring — XIAO ESP32S3 Sense", "",
           "Drawing: `out/wiring_stage0.svg` / `.png` (generated by `wiring_stage0.py`). Pin map = "
-          "`BOARD_XIAO_ESP32S3_SENSE` in `firmware/ring-esp32s3/src/config.h` (also `hardware/pinmap.md`).", "",
+          "`BOARD_XIAO_ESP32S3_SENSE` in `firmware/ring-esp32s3/src/config.h` + `config_audio.h` (also `hardware/pinmap.md`). "
+          "The MAX98357A amp + speaker are optional: without them D6/D7/D10 stay open and the firmware still runs "
+          "(`HAS_SPEAKER` is 1 on this board, so the I²S pins just drive nothing).", "",
           "## Connections", "", "| From | To | Detail | Colour |", "|---|---|---|---|"]
     md += [f"| {a} | {b} | {c} | {d} |" for a, b, c, d in rows]
     md += ["", "## XIAO header (top view, USB-C up)", "",
@@ -302,6 +358,8 @@ def write_md() -> None:
            "* LIS2DW12 breakout (SA0 pin accessible); 0.1 µF already on the breakout",
            "* 6 × 6 mm tactile button, 12 mm piezo sounder, 2 × 100 kΩ 1 %, 1 × 100 nF",
            "* LiPo 1S 100 mAh with PCM (XIAO charger ≈ 100 mA, so ~1 C — fine)",
+           "* optional: MAX98357A I²S amp breakout (Adafruit 3006 or clone) + a 10 mm 8 Ω speaker (PUI AS01008MR-2-R — "
+           "the stage-1 part — or a 1 W 8 Ω oval such as Adafruit 3923) on BCLK D7 / LRC D6 / DIN D10, SD + VIN → 3V3",
            "* breadboard + jumper wires; optional copper-foil touch pad + 1 kΩ", "",
            "## Check before power-on", "",
            "1. **LiPo polarity**: red → BAT+, black → BAT− on the underside pads; the cell has a PCM. Nothing on the 5V pin.",
@@ -311,11 +369,14 @@ def write_md() -> None:
            "5. One SDA, one SCL shared by both breakouts; their on-board pull-ups are enough — add none.",
            "6. LIS2DW12 SA0 → GND (address 0x18); CS → 3V3 if exposed; INT1 → D8 only.",
            "7. Button and piezo return to GND, never to 3V3.",
-           "8. Keep D1 (button) released at reset; D6/D7 free if you want UART0 logs (USB-CDC is the default).",
+           "8. Keep D1 (button) released at reset; D6/D7 carry I²S once the amp is fitted (USB-CDC logging is the default anyway).",
            "9. Sense board fully seated on both B2B connectors, camera FPC latched.",
            "10. First power from USB with the cell disconnected → 3V3 = 3.3 V; then connect the cell, charge LED on.",
            "11. Boot log / `i2cdetect` lists **0x18** and **0x5A**.",
            "12. ~3 mA deep-sleep current with the Sense board attached is expected on the dev kit (no camera power gate).",
+           "13. Speaker amp (optional): VIN = 3V3 (not 5 V), SD → 3V3, GAIN open; BCLK → D7, LRC → D6, DIN → D10; the speaker "
+           "only on the amp's +/− terminal, never to GND or 3V3. Expect ~2.4 mA extra idle current (no SD GPIO on the dev kit).",
+           "14. With the amp fitted D10 is no longer `PIN_AUX` — the air-puff experiment is parked on the dev kit.",
            ""]
     with open(os.path.join(HERE, "wiring_stage0.md"), "w", encoding="utf-8") as f:
         f.write("\n".join(md))

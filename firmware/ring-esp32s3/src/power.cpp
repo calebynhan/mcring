@@ -4,6 +4,7 @@
 #include "settings.h"
 #include "imu_lis2dw12.h"
 #include "feedback.h"
+#include "audio_out.h"
 #include <Arduino.h>
 #include <esp_sleep.h>
 #include <driver/rtc_io.h>
@@ -53,6 +54,7 @@ void power_deep_sleep_now() {
   LOGI(TAG, "deep sleep");
   Serial.flush();
   feedback_stop();                       // outputs off, WS2812 rail (PIN_RGB_PWR) dropped
+  audio_out_sleep_prepare();             // amp rail off, I2S lines parked low
 #if defined(PIN_RGB_PWR) && PIN_RGB_PWR >= 0
   digitalWrite(PIN_RGB_PWR, LOW);        // belt and braces: the load switch must be off in sleep
 #endif

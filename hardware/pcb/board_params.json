@@ -25,7 +25,7 @@
     8.1,
     5.6
   ],
-  "notes": "Coordinates from the board's FRONT-LEFT corner seen from the top: x along the finger (0 = front/camera edge, board_length = back/antenna edge), y across the finger (0 = left edge where the switch is). Module ESP32-S3-MINI-1U 15.4x15.4x2.4 with its u.FL end flush with the back edge; the u.FL pigtail leaves over the back edge and runs down the inside of the bay's back wall to the flex antenna, which stays >= antenna_keepout_beyond_edge_mm (5) from the cell, the LRA and any other metal (the -1U has no on-module antenna, so there is no copper keep-out on the board). top_max_height is the mated u.FL plug (2.9), the module shield is 2.4 (the lid may be lower over the front strip, x < 11.1: tallest part there is FPC1 at 2.0). Bottom parts max 1.15 (SOT-23/VSSOP) - allow >= 0.35 clearance to the cell. Mic MK1 is a bottom-port part mounted on the BOTTOM side at mic_xy; its 0.6 mm port goes through the board, so the lid needs a ~0.8 mm hole straight above mic_xy. LED D1 is on top at led_xy under a 1.0-1.5 mm thinned window (~3 mm). Switch SW1 body 3.0x2.5x1.2 on the top side, plunger pointing out of the left edge at x = switch_offset; wall slot switch_slot_mm (3.4 x 1.6) centred z = board_top+0.6. Touch (touch_mm): the electrode is a 4x5 copper-foil pad on the LID UNDERSIDE at touchpad_xy under the 0.8 mm dimple; TPAD1 on the board is the landing for a conductive-foam / spring contact that the lid compresses from 3.6 to 3.2 mm (= top_parts + lid_clearance). The 8 test pads (test_pads_top_mm) are on the TOP side so the board can be flashed and probed while seated in the bay. FPC connector FPC1 on top at x 0.5-4.5 spanning y 1-17, FPC enters from the front edge; the camera head sits in a pod in front of the board (see stackup.svg / pod_mm). Wire pads for the cell (J1), charging pads (PAD1/2), LRA (M1), piezo (BZ1) and aux (J2) are all on the BOTTOM side, so the wire channel into the band should open under the board near x 12-20 (left) and x 15-18 (right). stack_mm and pod_mm carry the enclosure's as-built numbers (cell pocket 3.4 deep, lid top 11.1, pod roof flush with the lid, bore 4.6).",
+  "notes": "Coordinates from the board's FRONT-LEFT corner seen from the top: x along the finger (0 = front/camera edge, board_length = back/antenna edge), y across the finger (0 = left edge where the switch is). Module ESP32-S3-MINI-1U 15.4x15.4x2.4 with its u.FL end flush with the back edge; the u.FL pigtail leaves over the back edge and runs down the inside of the bay's back wall to the flex antenna, which stays >= antenna_keepout_beyond_edge_mm (5) from the cell, the LRA and any other metal (the -1U has no on-module antenna, so there is no copper keep-out on the board). top_max_height is the mated u.FL plug (2.9), the module shield is 2.4 (the lid may be lower over the front strip, x < 11.1: tallest part there is FPC1 at 2.0). Bottom parts max 1.15 (SOT-23/VSSOP) - allow >= 0.35 clearance to the cell. Mic MK1 is a bottom-port part mounted on the BOTTOM side at mic_xy; its 0.6 mm port goes through the board, so the lid needs a ~0.8 mm hole straight above mic_xy. LED D1 is on top at led_xy under a 1.0-1.5 mm thinned window (~3 mm). Switch SW1 body 3.0x2.5x1.2 on the top side, plunger pointing out of the left edge at x = switch_offset; wall slot switch_slot_mm (3.4 x 1.6) centred z = board_top+0.6. Touch (touch_mm): the electrode is a 4x5 copper-foil pad on the LID UNDERSIDE at touchpad_xy under the 0.8 mm dimple; TPAD1 on the board is the landing for a conductive-foam / spring contact that the lid compresses from 3.6 to 3.2 mm (= top_parts + lid_clearance). The 8 test pads (test_pads_top_mm) are on the TOP side so the board can be flashed and probed while seated in the bay. FPC connector FPC1 on top at x 0.5-4.5 spanning y 1-17, FPC enters from the front edge; the camera head sits in a pod in front of the board (see stackup.svg / pod_mm). Wire pads for the cell (J1), charging pads (PAD1/2), LRA (M1), piezo (BZ1), aux (J2) and the optional speaker (SPK1) are all on the BOTTOM side, so the wire channel into the band should open under the board near x 12-20 (left) and x 15-21 (right). The optional 10 mm speaker (speaker_mm) is OFF-BOARD in a pocket in the signet's RIGHT (+y) wall, grille facing +y, its two leads entering the sub-board cavity through that wall to the SPK1a/SPK1b pads; the amp (U10) and its load switch (U11) are bottom-side parts in the back-left block. stack_mm and pod_mm carry the enclosure's as-built numbers (cell pocket 3.4 deep, lid top 11.1, pod roof flush with the lid, bore 4.6).",
   "switch_xy_mm": [
     8.0,
     1.45
@@ -136,6 +136,66 @@
     "depth_behind_board_edge": 2.0,
     "note": "bay interior extends behind the board's back edge for the u.FL pigtail turn and the flex antenna glued to the back wall"
   },
+  "speaker_mm": {
+    "part": "PUI Audio AS01008MR-2-R — Ø10 x 2.9 mm max, 8 Ω, 300 mW rated / 500 mW max, 86 dB, top port, NdFeB magnet, solder-pad terminals (netlist LS1, off-board; alt. any 10 mm 8 Ω micro speaker)",
+    "diameter": 10.0,
+    "thickness": 2.9,
+    "location": "signet_right_wall",
+    "frame": "board: x from the front edge, y from the left (switch) edge, z from the board TOP (+ toward the lid); CAD X = L/2 - x, Y = y - W/2, Z = z_board_top + z",
+    "centre_board_xyz_mm": [
+      18.45,
+      20.0,
+      -3.2
+    ],
+    "centre_z_above_skin_mm": 3.5,
+    "axis": "y",
+    "grille_normal": "+y",
+    "grille_normal_board": [
+      0,
+      1,
+      0
+    ],
+    "disc_plane": "xz (the speaker stands vertically in the right wall)",
+    "speaker_extent_board_mm": {
+      "x": [
+        13.45,
+        23.45
+      ],
+      "y": [
+        18.55,
+        21.45
+      ],
+      "z_from_board_top": [
+        -8.2,
+        1.8
+      ]
+    },
+    "pocket_clearance": 0.2,
+    "grille_wall": 1.0,
+    "grille": "Ø0.8 holes on a 1.2 mm grid inside Ø8 on the +y face, or 3 slots 0.8 x 6; 1.0 mm wall",
+    "signet_right_face_bump_mm": 3.15,
+    "pocket_board_x_range": [
+      13.25,
+      23.65
+    ],
+    "back_volume": "open into the bay: remove the +y bay wall over the pocket outline above the sub-board floor (z_floor 4.6 .. pocket top 8.7 above the skin) so the bay is the back volume and the leads pass straight through; below the floor the pocket is a recess in the solid slab. Sealed alternative: keep the 1.2 wall with a 3 x 1.5 wire slot + 3 x Ø1.0 vents into the sub-board cavity and move the speaker out so its back sits 0.2 outside the old face (bump 4.3 mm)",
+    "wire_pads": {
+      "SPK1a": [
+        18.8,
+        16.85
+      ],
+      "SPK1b": [
+        20.8,
+        16.85
+      ]
+    },
+    "wire_exit": "two 30 AWG leads from the speaker's back terminals, +y 1.5 mm through the wall opening into the sub-board cavity, to SPK1a/SPK1b on the board bottom (<= 6 mm)",
+    "antenna_clearance_mm": 5.7,
+    "antenna_note": "speaker back-left corner (board x 23.45, y 18.55) to the flex antenna edge (board x 28.75, y 1.5..16.5): 5.3 along x, 5.7 diagonal — the NdFeB magnet stays outside the 5 mm keep-out",
+    "why_not_left_wall": "switch key at board x 6.3-9.7 and the pad-wire channels at board x 14.75/16.75 push a 10.4 mm pocket behind x 17.7, whose back end is 0.7 mm from the flex antenna plane",
+    "why_not_band_side": "1.2 mm band wall with the finger behind it; no lead path except outside the band",
+    "mass_g": 1.0
+  },
   "wire_pads_bottom_mm": {
     "BZ1a": [
       6.3,
@@ -170,12 +230,20 @@
       11.2
     ],
     "M1a": [
-      15.4,
+      15.0,
       16.7
     ],
     "M1b": [
-      17.4,
+      17.0,
       16.7
+    ],
+    "SPK1a": [
+      18.8,
+      16.85
+    ],
+    "SPK1b": [
+      20.8,
+      16.85
     ]
   },
   "test_pads_top_mm": {
@@ -815,27 +883,27 @@
       "ref": "D2",
       "name": "PESD5V0S1BB SOD-523",
       "side": "bottom",
-      "cx": 18.4,
+      "cx": 18.1,
       "cy": 2.9,
       "w": 1.2,
       "h": 0.8,
       "kind": "diode",
       "height": 0.6,
       "label": "D2",
-      "note": "bidirectional TVS on CHG_PAD, < 2 mm from the pad"
+      "note": "bidirectional TVS on CHG_PAD, < 2 mm from the pad (moved 0.3 toward the front for the R22–R24 column)"
     },
     {
       "ref": "D3",
       "name": "PMEG2005EB SOD-523",
       "side": "bottom",
-      "cx": 18.4,
+      "cx": 18.1,
       "cy": 4.1,
       "w": 1.2,
       "h": 0.8,
       "kind": "diode",
       "height": 0.6,
       "label": "D3",
-      "note": "Schottky CHG_PAD → CHG_IN (reversed-cradle protection), right after D2"
+      "note": "Schottky CHG_PAD → CHG_IN (reversed-cradle protection), right after D2 (moved 0.3 toward the front with D2)"
     },
     {
       "ref": "U8",
@@ -880,14 +948,14 @@
       "ref": "C7",
       "name": "0402",
       "side": "bottom",
-      "cx": 18.4,
+      "cx": 18.15,
       "cy": 5.3,
       "w": 1.0,
       "h": 0.5,
       "kind": "passive",
       "height": 0.35,
       "label": "C7",
-      "note": "1 µF charger IN"
+      "note": "1 µF charger IN (moved 0.25 toward U7 for the R22–R24 column)"
     },
     {
       "ref": "R8",
@@ -971,14 +1039,144 @@
       "ref": "R19",
       "name": "0402",
       "side": "bottom",
-      "cx": 19.3,
-      "cy": 6.9,
+      "cx": 17.6,
+      "cy": 8.0,
       "w": 1.0,
       "h": 0.5,
       "kind": "passive",
       "height": 0.35,
       "label": "R19",
-      "note": "100k nCHG pull-up"
+      "note": "100k nCHG pull-up (moved from (19.3, 6.9) for the speaker amp block)"
+    },
+    {
+      "ref": "R2",
+      "name": "0402",
+      "side": "bottom",
+      "cx": 12.3,
+      "cy": 7.9,
+      "w": 1.0,
+      "h": 0.5,
+      "kind": "passive",
+      "height": 0.35,
+      "label": "R2",
+      "note": "10k IO0 pull-up (moved from (21.2, 1.6) for the speaker amp block)"
+    },
+    {
+      "ref": "U10",
+      "name": "MAX98357A 16-TQFN 3×3",
+      "side": "bottom",
+      "cx": 21.3,
+      "cy": 4.3,
+      "w": 3.0,
+      "h": 3.0,
+      "kind": "ic",
+      "height": 0.8,
+      "label": "U10 amp",
+      "note": "I2S class-D amp, VDD = VAMP (gated), SD_MODE = VAMP; EP to the GND pour; OPTIONAL group"
+    },
+    {
+      "ref": "R22",
+      "name": "0402",
+      "side": "bottom",
+      "cx": 19.2,
+      "cy": 3.1,
+      "w": 0.5,
+      "h": 1.0,
+      "kind": "passive",
+      "height": 0.35,
+      "label": "R22",
+      "note": "1k I2S BCLK series → U10 pin 16 (bounds the ESD back-feed into the unpowered amp while VAMP is off)"
+    },
+    {
+      "ref": "R23",
+      "name": "0402",
+      "side": "bottom",
+      "cx": 19.2,
+      "cy": 4.3,
+      "w": 0.5,
+      "h": 1.0,
+      "kind": "passive",
+      "height": 0.35,
+      "label": "R23",
+      "note": "1k I2S LRCLK series → U10 pin 14"
+    },
+    {
+      "ref": "R24",
+      "name": "0402",
+      "side": "bottom",
+      "cx": 19.2,
+      "cy": 5.5,
+      "w": 0.5,
+      "h": 1.0,
+      "kind": "passive",
+      "height": 0.35,
+      "label": "R24",
+      "note": "1k I2S DIN series → U10 pin 1"
+    },
+    {
+      "ref": "R20",
+      "name": "0402",
+      "side": "bottom",
+      "cx": 21.0,
+      "cy": 1.3,
+      "w": 1.0,
+      "h": 0.5,
+      "kind": "passive",
+      "height": 0.35,
+      "label": "R20",
+      "note": "100k AMP_PWR_EN pull-down (IO34)"
+    },
+    {
+      "ref": "R21",
+      "name": "0402",
+      "side": "bottom",
+      "cx": 22.5,
+      "cy": 1.3,
+      "w": 1.0,
+      "h": 0.5,
+      "kind": "passive",
+      "height": 0.35,
+      "label": "R21",
+      "note": "100k gain select GAIN_SLOT→VAMP (3 dB; 0R = 6 dB bench option, DNP = 9 dB)"
+    },
+    {
+      "ref": "U11",
+      "name": "TPS22916C DSBGA-4",
+      "side": "bottom",
+      "cx": 19.9,
+      "cy": 7.0,
+      "w": 1.2,
+      "h": 0.9,
+      "kind": "ic",
+      "height": 0.6,
+      "label": "U11",
+      "note": "speaker amp rail gate 3V3→VAMP, ON = IO34 (AMP_PWR_EN)"
+    },
+    {
+      "ref": "C25",
+      "name": "0603",
+      "side": "bottom",
+      "cx": 21.6,
+      "cy": 6.6,
+      "w": 1.6,
+      "h": 0.8,
+      "kind": "passive",
+      "height": 0.95,
+      "label": "C25",
+      "note": "10 µF VAMP at U10"
+    },
+    {
+      "ref": "C26",
+      "name": "0402",
+      "side": "bottom",
+      "cx": 23.0,
+      "cy": 6.6,
+      "w": 0.5,
+      "h": 1.0,
+      "kind": "passive",
+      "height": 0.35,
+      "label": "C26",
+      "note": "100n VAMP at U10 VDD pins"
     },
     {
       "ref": "Q1",
@@ -1075,27 +1273,53 @@
       "ref": "M1a",
       "name": "pad",
       "side": "bottom",
-      "cx": 15.4,
+      "cx": 15.0,
       "cy": 16.7,
       "w": 1.5,
       "h": 1.5,
       "kind": "pad",
       "height": 0.0,
       "label": "LRA+",
-      "note": "LRA wire OUT+"
+      "note": "LRA wire OUT+ (moved 0.4 toward the front for the SPK1 pads)"
     },
     {
       "ref": "M1b",
       "name": "pad",
       "side": "bottom",
-      "cx": 17.4,
+      "cx": 17.0,
       "cy": 16.7,
       "w": 1.5,
       "h": 1.5,
       "kind": "pad",
       "height": 0.0,
       "label": "LRA-",
-      "note": "LRA wire OUT-"
+      "note": "LRA wire OUT- (moved 0.4 toward the front for the SPK1 pads)"
+    },
+    {
+      "ref": "SPK1a",
+      "name": "pad",
+      "side": "bottom",
+      "cx": 18.8,
+      "cy": 16.85,
+      "w": 1.5,
+      "h": 1.5,
+      "kind": "pad",
+      "height": 0.0,
+      "label": "SPK+",
+      "note": "speaker wire OUTP (SPK_P) → LS1 in the right-wall pocket"
+    },
+    {
+      "ref": "SPK1b",
+      "name": "pad",
+      "side": "bottom",
+      "cx": 20.8,
+      "cy": 16.85,
+      "w": 1.5,
+      "h": 1.5,
+      "kind": "pad",
+      "height": 0.0,
+      "label": "SPK-",
+      "note": "speaker wire OUTN (SPK_N) → LS1"
     },
     {
       "ref": "R3",
@@ -1141,26 +1365,26 @@
       "name": "0402",
       "side": "bottom",
       "cx": 20.3,
-      "cy": 15.9,
+      "cy": 15.5,
       "w": 1.0,
       "h": 0.5,
       "kind": "passive",
       "height": 0.35,
       "label": "C17",
-      "note": "100n LIS VDD"
+      "note": "100n LIS VDD (moved 0.4 toward U6 for the SPK1 pads)"
     },
     {
       "ref": "C18",
       "name": "0402",
       "side": "bottom",
-      "cx": 18.9,
-      "cy": 15.9,
+      "cx": 22.1,
+      "cy": 13.8,
       "w": 1.0,
       "h": 0.5,
       "kind": "passive",
       "height": 0.35,
       "label": "C18",
-      "note": "100n LIS VDD_IO"
+      "note": "100n LIS VDD_IO (moved beside U6 for the SPK1 pads)"
     },
     {
       "ref": "C4",
@@ -1202,30 +1426,17 @@
       "note": "4.7k LED_PWR_EN pull-down"
     },
     {
-      "ref": "R2",
-      "name": "0402",
-      "side": "bottom",
-      "cx": 21.2,
-      "cy": 1.6,
-      "w": 1.0,
-      "h": 0.5,
-      "kind": "passive",
-      "height": 0.35,
-      "label": "R2",
-      "note": "10k IO0 pull-up"
-    },
-    {
       "ref": "R1",
       "name": "0402",
       "side": "bottom",
-      "cx": 21.2,
-      "cy": 16.6,
+      "cx": 22.8,
+      "cy": 15.4,
       "w": 1.0,
       "h": 0.5,
       "kind": "passive",
       "height": 0.35,
       "label": "R1",
-      "note": "10k EN pull-up"
+      "note": "10k EN pull-up (moved from (21.2, 16.6) for the SPK1 pads)"
     },
     {
       "ref": "C6",
