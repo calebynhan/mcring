@@ -3,6 +3,7 @@
 #include "log.h"
 #include "settings.h"
 #include "imu_lis2dw12.h"
+#include "feedback.h"
 #include <Arduino.h>
 #include <esp_sleep.h>
 #include <driver/rtc_io.h>
@@ -51,6 +52,10 @@ void power_note_activity() { s_last_activity = millis(); }
 void power_deep_sleep_now() {
   LOGI(TAG, "deep sleep");
   Serial.flush();
+  feedback_stop();                       // outputs off, WS2812 rail (PIN_RGB_PWR) dropped
+#if defined(PIN_RGB_PWR) && PIN_RGB_PWR >= 0
+  digitalWrite(PIN_RGB_PWR, LOW);        // belt and braces: the load switch must be off in sleep
+#endif
 #if PIN_IMU_INT >= 0
   if (imu_available()) {
     imu_wake();  // tap-to-wake costs ~1 µA; INT1 (RTC GPIO) wakes us via EXT1

@@ -31,6 +31,20 @@ uint32_t s_rgb_off_ms = 0;
 const int LEDC_CH_LED = 2;      // channel 0/1 are taken by the camera XCLK
 const int LEDC_CH_BUZ = 3;
 
+// WS2812 supply rail (stage 1: TPS22916 on PIN_RGB_PWR, net LED_PWR_EN). An un-gated WS2812 idles at
+// ~0.6-1 mA, 20x the whole standby budget, so the rail is only up while the LED is lit.
+void rgb_rail(bool on) {
+#if defined(PIN_RGB_PWR) && PIN_RGB_PWR >= 0
+  static bool s_rail = false;
+  if (on == s_rail) return;
+  digitalWrite(PIN_RGB_PWR, on ? HIGH : LOW);
+  s_rail = on;
+  if (on) delayMicroseconds(300);   // load-switch rise + WS2812 power-on reset before the first data frame
+#else
+  (void)on;
+#endif
+}
+
 void led_write(bool on) {
 #if PIN_LED >= 0
   uint8_t b = settings().led_brightness;
@@ -39,8 +53,8 @@ void led_write(bool on) {
   ledcWrite(LEDC_CH_LED, duty);
 #endif
 #if PIN_RGB >= 0
-  if (on) neopixelWrite(PIN_RGB, 0, settings().led_brightness / 2, settings().led_brightness);
-  else if (s_rgb_off_ms == 0) neopixelWrite(PIN_RGB, 0, 0, 0);
+  if (on) { rgb_rail(true); neopixelWrite(PIN_RGB, 0, settings().led_brightness / 2, settings().led_brightness); }
+  else if (s_rgb_off_ms == 0) { neopixelWrite(PIN_RGB, 0, 0, 0); rgb_rail(false); }
 #endif
   (void)on;
 }
@@ -78,6 +92,7 @@ void set_outputs(bool on) {
 
 void all_off() {
   led_write(false); haptic_write(false); buzzer_write(false); aux_write(false);
+  rgb_rail(false);
   s_on = false;
 }
 }  // namespace
@@ -96,6 +111,10 @@ void feedback_init() {
 #endif
 #if PIN_AUX >= 0
   pinMode(PIN_AUX, OUTPUT);
+#endif
+#if defined(PIN_RGB_PWR) && PIN_RGB_PWR >= 0
+  pinMode(PIN_RGB_PWR, OUTPUT);
+  digitalWrite(PIN_RGB_PWR, LOW);
 #endif
   all_off();
 }
@@ -138,7 +157,7 @@ void feedback_play_morse_text(const char *text, uint8_t wpm, uint8_t channels) {
 void feedback_tick() {
   uint32_t now = millis();
 #if PIN_RGB >= 0
-  if (s_rgb_off_ms && (int32_t)(now - s_rgb_off_ms) >= 0) { s_rgb_off_ms = 0; if (!s_playing) neopixelWrite(PIN_RGB, 0, 0, 0); }
+  if (s_rgb_off_ms && (int32_t)(now - s_rgb_off_ms) >= 0) { s_rgb_off_ms = 0; if (!s_playing) { neopixelWrite(PIN_RGB, 0, 0, 0); rgb_rail(false); } }
 #endif
   if (!s_playing) return;
   uint32_t dur = (uint32_t)s_units[s_idx] * s_unit_ms;
@@ -165,6 +184,7 @@ void feedback_signal_connected() {
 
 void feedback_rgb(uint8_t r, uint8_t g, uint8_t b, uint16_t ms) {
 #if PIN_RGB >= 0
+  rgb_rail(true);
   neopixelWrite(PIN_RGB, r, g, b);
   s_rgb_off_ms = millis() + (ms ? ms : 200);
 #else
