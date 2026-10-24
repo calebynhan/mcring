@@ -1,5 +1,5 @@
 (export (version "E")
-  (design (source "hardware/electrical/mcring_v1.py") (date "2026-10-24 06:51:16") (tool "mcring netlist_model 0.1")
+  (design (source "hardware/electrical/mcring_v1.py") (date "2026-10-24 07:04:49") (tool "mcring netlist_model 0.1")
     (sheet (number "1") (name "/") (tstamps "/") (title_block (title "mcring_v1") (company "mcring") (rev "v1") (date "2026-10-24"))))
   (components
     (comp (ref "U1")
