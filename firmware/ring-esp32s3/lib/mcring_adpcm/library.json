@@ -1,0 +1,1 @@
+{ "name": "mcring_adpcm", "version": "1.0.0", "description": "mcring shared mcring_adpcm library (C99, host-testable)", "frameworks": "*", "platforms": "*" }

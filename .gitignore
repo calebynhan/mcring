@@ -1,0 +1,31 @@
+# Python
+__pycache__/
+*.pyc
+.venv/
+venv/
+*.egg-info/
+.pytest_cache/
+.mypy_cache/
+.ruff_cache/
+dist/
+build/
+
+# Node / Expo
+node_modules/
+.expo/
+*.tsbuildinfo
+app/android/
+app/ios/
+
+# PlatformIO
+.pio/
+.vscode/
+
+# Secrets / local
+.env
+*.local
+captures/
+*.jpg.local
+
+# OS
+.DS_Store

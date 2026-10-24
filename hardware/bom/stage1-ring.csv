@@ -1,0 +1,21 @@
+qty,part,mpn,description,footprint_mm,price_usd_1pc,source,url,notes
+1,ESP32-S3 module,ESP32-S3-MINI-1U-N4R2 (or Unexpected Maker NanoS3),Wi-Fi/BLE SoC with DVP camera interface; 4MB flash + 2MB PSRAM,15.4 x 15.4 x 2.4 (NanoS3 28 x 11 x 2.4),4-10,LCSC / Mouser / UM,https://www.espressif.com/sites/default/files/documentation/esp32-s3-mini-1_mini-1u_datasheet_en.pdf,"u.FL variant lets a flex antenna sit along the band"
+1,Camera module,OV2640 24-pin 0.5 mm FPC (Arducam M0031) OR Himax HM01B0-MNA-00FT870,Colour 2MP JPEG (OV2640) or ultra-low-power 320x320 mono (HM01B0),21 x 12.5 x 5.85 (OV2640) / 20 x 12.5 x 3.39 (HM01B0),1-4 / 11.74,AliExpress / Arducam / DigiKey,https://www.digikey.com/en/products/detail/himax/HM01B0-MNA-00FT870/14109821,"OV2640 works today with esp_camera; HM01B0 needs the esp32-camera HM01B0 driver (exists in esp32-camera)"
+1,FPC connector,24-pin 0.5 mm bottom-contact (e.g. F32R-1A7H1-11024),Mates with the OV2640 FPC,~16 x 4,0.3,LCSC,,
+1,Camera load switch,TPS22916CYFPR,Hard power-gate the camera rail (3 mA sleep otherwise),0.9 x 1.2 CSP,0.3,LCSC,https://www.ti.com/product/TPS22916,
+1,2.8 V LDO,XC6206P282MR or TLV75528,Camera AVDD,SOT-23 / 1.5 x 1.5,0.1,LCSC,,
+1,Haptic driver,DRV2605LDGS or DRV2624YFFR,Closed-loop LRA drive via I2C,3 x 3 VSSOP / 1.5 x 1.5 DSBGA,1.34 / 1.09,LCSC / DigiKey,https://www.lcsc.com/product-detail/C425927.html,
+1,LRA,INEED LRA0825BC-0167F (8 x 2.5 mm) or PMD C08-005 (8 x 3.3 mm),Haptic Morse,Ø8 x 2.5-3.3,3-5.15,DigiKey marketplace / PMD,https://azcus.digikey.com/en/products/detail/ineed-motor/LRA0825BC-0167F/21840080,"Thinner INEED part preferred"
+1,Accelerometer,LIS2DW12TR,Double-tap wake/trigger (~1 µA),2 x 2 x 0.7 LGA,1.38,DigiKey / LCSC,https://www.digikey.com/en/products/detail/stmicroelectronics/LIS2DW12TR/7914708,
+1,RGB LED,WS2812B-2020 (or XL-1010RGBC-WS2812B),Light Morse / status under a thinned white-resin window,2 x 2 (1 x 1),0.09,LCSC C965555,https://datasheet.lcsc.com/lcsc/2012110135_Worldsemi-WS2812B-2020_C965555.pdf,"Check 3.7 V operation; else use WS2812C-2020-V1"
+1,Side tactile switch,Omron B3U-3000P,Hard trigger / wake,3.0 x 2.5 x 1.2,0.5,DigiKey,https://www.digikey.com/en/products/detail/omron-electronics-inc-emc-div/B3U-3000P-B/1811779,"Place palm-opposite; long-press semantics in firmware"
+1,PDM microphone,TDK T3902 (or Infineon IM69D130),Voice questions,3.5 x 2.65 x 0.98,1.30-2.02,Mouser / DigiKey,https://invensense.tdk.com/products/t3902,"Needs a 0.5 mm acoustic port"
+1,Piezo sounder (optional),Murata PKMCS0909E4000-R1,4 kHz Morse beeps,9 x 9 x 1.9,1.5,DigiKey (Last Time Buy),https://digikey.in/en/products/detail/murata-electronics/PKMCS0909E4000-R1/4878400,
+1,Battery,301012 30 mAh or 501012 40 mAh LiPo with PCM,Flat cell placed chord-wise in the band,3 x 10 x 12 / 5 x 10 x 12,~1-2.5 each (multi-packs),eBay / AliExpress / Robu,https://www.ebay.de/itm/127362229239,"Verify PCM present; 1C charge max"
+1,Charger,TI BQ25100AYFPR,10-250 mA charge with 1 mA termination for tiny cells,1.6 x 0.9 DSBGA,1.0,DigiKey,https://www.ti.com/document-viewer/BQ25100/datasheet,"MCP73831 is OK for ≥40 mAh cells"
+1,3.3 V buck/LDO,TPS62840 (buck, 60 nA IQ) or TLV75533 (LDO),System rail,1.5 x 1.5 / SOT-23,0.5-1.5,DigiKey,,
+2,Charging pads + pogo cradle,Exposed gold pads on the inner band + 2-pin pogo dock,Charging without a coil,—,2,—,,"Stage 2 moves to a flex coil"
+1,Air-puff experiment (optional),Murata MZB1001T02 microblower + driver (MZBD-type or discrete boost + half-bridge),Only puff actuator with a perceptible jet; mounts as a 22 x 22 mm signet plate,20 x 20 x 1.85 (+1.6 nozzle),12-15 + driver,Mouser / DigiKey,https://www.mouser.com/datasheet/2/281/MZB1001T02_SPEC_Ver2-202918.pdf,"Stock is thin; aux channel (PIN_AUX) already in firmware"
+1,PCB,2-layer 0.6 mm rigid or 4-layer rigid-flex,Ring-shaped board (see enclosure/),~30 OD,5-30,JLCPCB / PCBWay,,
+1,Enclosure,SLA resin print from enclosure/mcring_stage1.scad,White/translucent resin for the LED window,30 OD x 12 wide,2-15,Home SLA / JLC3DP,,
+,,,,,TOTAL ≈ 45-80 (+ PCB),,,

@@ -1,0 +1,1 @@
+"""mcring desktop companion."""

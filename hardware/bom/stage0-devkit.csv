@@ -1,0 +1,11 @@
+qty,part,description,why,approx_price_usd,source,url,notes
+1,Seeed XIAO ESP32S3 Sense,ESP32-S3 + 8MB PSRAM + OV2640 camera + PDM mic + microSD,Runs firmware/ring-esp32s3 unmodified; proves capture→BLE→phone→LLM→Morse end to end,14-20,Seeed / Pi Hut / AliExpress,https://thepihut.com/products/seeed-studio-xiao-esp32s3-sense,"Some units ship with OV3660; both supported"
+1,Adafruit DRV2605L breakout,Haptic driver (I2C 0x5A) for LRA/ERM,Clean Morse edges with closed-loop LRA drive,7.95,Adafruit,https://www.adafruit.com/products/2305,"Or DRV2605LDGS bare chip on LCSC ~$1.34"
+1,8 mm coin LRA (235 Hz),e.g. Precision Microdrives C08-005 or Jameco 8 mm LRA,Primary Morse channel,1.75-5.15,PMD / Jameco,https://www.precisionmicrodrives.com/?p=12426,"Jameco closeout $1.75: https://www.jameco.com/z/1162213-"
+1,LIS2DW12 breakout,3-axis accel with double-tap interrupt,Double-tap trigger + deep-sleep wake,2-6,AliExpress / Adafruit (LIS3DH is a fallback),https://www.digikey.com/en/products/detail/stmicroelectronics/LIS2DW12TR/7914708,"Any LIS2DW12 module; address 0x18/0x19"
+1,Tactile switch 6x6 mm,Momentary button to GND,Primary trigger during bring-up,0.1,any,,
+1,Piezo sounder 9-12 mm,e.g. Murata PKMCS0909E4000-R1 (LTB) or any 12 mm passive piezo,Audible Morse beeps (optional),0.5-2,DigiKey / AliExpress,https://digikey.in/en/products/detail/murata-electronics/PKMCS0909E4000-R1/4878400,
+1,LiPo 100 mAh,Adafruit 1570 (31 x 11.5 x 3.8 mm) for bench battery tests,Realistic power testing,5.95,Adafruit,https://www.adafruit.com/categories/889,"XIAO has an on-board charger (BAT pads)"
+2,10 kΩ resistors,Battery sense divider to A0,Battery % in status,0.02,any,,
+1,Breadboard + jumper wires,,,5,any,,
+,,,,TOTAL ≈ 40-55,,,

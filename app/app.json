@@ -1,0 +1,28 @@
+{
+  "expo": {
+    "name": "mcring",
+    "slug": "mcring",
+    "version": "0.1.0",
+    "orientation": "portrait",
+    "userInterfaceStyle": "automatic",
+    "scheme": "mcring",
+    "ios": {
+      "bundleIdentifier": "dev.mcring.companion",
+      "infoPlist": {
+        "NSBluetoothAlwaysUsageDescription": "mcring talks to your camera ring over Bluetooth.",
+        "UIBackgroundModes": ["bluetooth-central"]
+      }
+    },
+    "android": {
+      "package": "dev.mcring.companion",
+      "permissions": [
+        "android.permission.BLUETOOTH_SCAN",
+        "android.permission.BLUETOOTH_CONNECT",
+        "android.permission.ACCESS_FINE_LOCATION"
+      ]
+    },
+    "plugins": [
+      ["react-native-ble-plx", { "isBackgroundEnabled": true, "modes": ["central"], "bluetoothAlwaysPermission": "mcring talks to your camera ring over Bluetooth." }]
+    ]
+  }
+}

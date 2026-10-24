@@ -1,0 +1,1 @@
+{ "name": "mcring_proto", "version": "1.0.0", "description": "mcring shared mcring_proto library (C99, host-testable)", "frameworks": "*", "platforms": "*" }

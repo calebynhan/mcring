@@ -1,0 +1,20 @@
+[build-system]
+requires = ["setuptools>=68"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "mcring-core"
+version = "0.1.0"
+description = "mcring shared protocol, Morse and ADPCM codecs (pure Python, no deps)"
+requires-python = ">=3.10"
+license = {text = "MIT"}
+dependencies = []
+
+[project.optional-dependencies]
+test = ["pytest>=8"]
+
+[tool.setuptools.packages.find]
+include = ["mcring_core*"]
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]

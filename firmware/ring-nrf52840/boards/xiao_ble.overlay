@@ -1,0 +1,41 @@
+/* Seeed XIAO nRF52840 Sense as the stage-2 bring-up board.
+ * External parts on the XIAO header: button D1, DRV2605L + LIS2DW12 on I2C0, LRA via DRV2605,
+ * LED on the on-board RGB LED, camera (HM01B0 1-bit or OV7670 8-bit) on D2..D10 — see hardware/pinmap.md. */
+/ {
+	mcring_pins {
+		compatible = "gpio-keys";
+		trigger_button: button {
+			gpios = <&xiao_d 1 (GPIO_PULL_UP | GPIO_ACTIVE_LOW)>;
+			label = "ring button";
+		};
+		imu_int: imu_int {
+			gpios = <&xiao_d 8 GPIO_ACTIVE_HIGH>;
+			label = "LIS2DW12 INT1";
+		};
+	};
+	cam_pins: cam_pins {
+		compatible = "gpio-leds";   /* reusing a generic gpio binding for a pin group */
+		cam_d0: cam_d0 { gpios = <&xiao_d 2 GPIO_ACTIVE_HIGH>; };
+		cam_pclk: cam_pclk { gpios = <&xiao_d 3 GPIO_ACTIVE_HIGH>; };
+		cam_hsync: cam_hsync { gpios = <&xiao_d 9 GPIO_ACTIVE_HIGH>; };
+		cam_vsync: cam_vsync { gpios = <&xiao_d 10 GPIO_ACTIVE_HIGH>; };
+	};
+	aliases {
+		mcring-button = &trigger_button;
+		mcring-imu-int = &imu_int;
+	};
+};
+
+&i2c0 {
+	status = "okay";
+	drv2605: drv2605@5a {
+		compatible = "i2c-device";
+		reg = <0x5a>;
+		label = "DRV2605L";
+	};
+	lis2dw12: lis2dw12@18 {
+		compatible = "st,lis2dw12";
+		reg = <0x18>;
+		irq-gpios = <&xiao_d 8 GPIO_ACTIVE_HIGH>;
+	};
+};

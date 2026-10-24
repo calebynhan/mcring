@@ -1,0 +1,1 @@
+{ "name": "mcring_morse", "version": "1.0.0", "description": "mcring shared mcring_morse library (C99, host-testable)", "frameworks": "*", "platforms": "*" }

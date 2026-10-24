@@ -1,0 +1,42 @@
+{
+  "name": "mcring-companion",
+  "version": "0.1.0",
+  "private": true,
+  "main": "node_modules/expo/AppEntry.js",
+  "scripts": {
+    "start": "expo start --dev-client",
+    "android": "expo run:android",
+    "ios": "expo run:ios",
+    "prebuild": "expo prebuild",
+    "typecheck": "tsc --noEmit",
+    "test": "jest"
+  },
+  "dependencies": {
+    "@react-native-async-storage/async-storage": "~2.1.0",
+    "expo": "~52.0.0",
+    "expo-av": "~15.0.0",
+    "expo-dev-client": "~5.0.0",
+    "expo-file-system": "~18.0.0",
+    "expo-speech": "~13.0.0",
+    "expo-status-bar": "~2.0.0",
+    "react": "18.3.1",
+    "react-native": "0.76.9",
+    "react-native-ble-plx": "^3.2.1"
+  },
+  "devDependencies": {
+    "@babel/core": "^7.25.0",
+    "@types/jest": "^29.5.12",
+    "@types/react": "~18.3.12",
+    "jest": "^29.7.0",
+    "ts-jest": "^29.2.5",
+    "typescript": "~5.3.3",
+    "@types/node": "^22.10.0"
+  },
+  "jest": {
+    "preset": "ts-jest",
+    "testEnvironment": "node",
+    "testMatch": [
+      "**/__tests__/**/*.test.ts"
+    ]
+  }
+}

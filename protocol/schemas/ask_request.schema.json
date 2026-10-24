@@ -1,0 +1,20 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://mcring.dev/schemas/ask_request.schema.json",
+  "title": "mcring AskRequest (multipart form fields)",
+  "description": "POST /v1/ask is multipart/form-data: an `image` file part (JPEG/PNG), an optional `audio` part (IMA-ADPCM or WAV voice question), and these text fields.",
+  "type": "object",
+  "properties": {
+    "question": {"type": "string", "maxLength": 2000, "description": "Free-text question about the image. Empty = use the mode's default question."},
+    "mode": {"type": "string", "enum": ["identify", "describe", "read_text", "translate", "custom"], "default": "identify"},
+    "provider": {"type": "string", "enum": ["anthropic", "openai"], "default": "anthropic"},
+    "session_id": {"type": "string", "maxLength": 64, "description": "Opaque id; lets follow-up questions refer to the previous image."},
+    "want_morse": {"type": "boolean", "default": true},
+    "want_speech": {"type": "boolean", "default": false, "description": "Ask the server to synthesize speech (phone-side TTS is the default)."},
+    "morse_char_wpm": {"type": "integer", "minimum": 5, "maximum": 40, "default": 15},
+    "morse_overall_wpm": {"type": "integer", "minimum": 3, "maximum": 40, "default": 8},
+    "max_short_chars": {"type": "integer", "minimum": 4, "maximum": 64, "default": 32},
+    "language": {"type": "string", "default": "en"}
+  },
+  "additionalProperties": false
+}

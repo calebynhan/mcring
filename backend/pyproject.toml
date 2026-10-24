@@ -1,0 +1,29 @@
+[build-system]
+requires = ["setuptools>=68"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "mcring-backend"
+version = "0.1.0"
+description = "mcring cloud/edge service: image + question -> LLM answer -> Morse pattern (+ optional speech)"
+requires-python = ">=3.10"
+dependencies = [
+  "fastapi>=0.115",
+  "uvicorn[standard]>=0.30",
+  "python-multipart>=0.0.9",
+  "pydantic>=2.7",
+  "pydantic-settings>=2.3",
+  "anthropic>=1.0",
+  "pillow>=10.3",
+]
+
+[project.optional-dependencies]
+openai = ["openai>=1.40"]
+test = ["pytest>=8", "httpx>=0.27", "pytest-asyncio>=0.23"]
+
+[tool.setuptools.packages.find]
+include = ["app*"]
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
+asyncio_mode = "auto"
