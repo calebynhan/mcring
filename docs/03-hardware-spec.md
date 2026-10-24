@@ -25,24 +25,24 @@ for stage 2.** Everything else follows from this.
 | Audio | 12 mm piezo | optional beeps |
 | Power | 100 mAh LiPo on the XIAO's charger | realistic current measurements |
 
-## 3.3 Stage 1 — oversized printed ring (~30 mm OD × 12 mm)
+## 3.3 Stage 1 — oversized printed signet ring (band Ø20 ID / 22.4 OD × 12 mm; signet 31.5 × 21 mm, 11.1 mm tall)
 
 | Block | Choice | Alternatives / notes |
 |---|---|---|
-| MCU/radio | **ESP32-S3-MINI-1U** (15.4 × 15.4 × 2.4) or UM NanoS3 (28 × 11 × 2.4) | keeps the stage-0 firmware; needs 30–40 mAh and a 100 µF+ buffer; accept ~1–4 days standby |
+| MCU/radio | **ESP32-S3-MINI-1U** (15.4 × 15.4 × 2.4), antenna/u.FL end away from the camera — decided | UM NanoS3 (28 × 11 × 2.4) was the alternative; keeps the stage-0 firmware; needs 30–40 mAh and a 100 µF+ buffer; accept ~1–4 days standby |
 | Camera | **OV2640 24-pin FPC head** (~8–9 mm head, 5–6 mm tall) | **HM01B0 lensed module** 20 × 12.5 × 3.4 mm, <2 mW, mono 320×320 — the low-power path that also prepares stage 2 |
 | Camera power | TPS22916 load switch + 2.8 V LDO | mandatory: un-gated camera = 3 mA sleep |
 | Haptic | INEED LRA0825BC-0167F (8 × 2.5 mm) or PMD C08-005 (8 × 3.3) + DRV2605L/DRV2624 | PowerHap piezo + BOS1901 if you want <1 ms edges |
 | Light | WS2812B-2020 under 1.2 mm white resin | XL-1010RGBC (1 × 1 mm) later |
 | Trigger | LIS2DW12 double-tap (INT1 → deep-sleep wake) + Omron B3U-3000P side switch | touch pad optional (ESP32-S3 touch) |
-| Mic | TDK T3902 PDM | 0.5 mm port hole |
+| Mic | TDK T3902 PDM (bottom-port, on the board's underside) | Ø0.6 port hole through the board, Ø0.8 lid port with a tube (`hardware/cad/`) |
 | Audio out | Murata PKMCS0909 9 × 9 × 1.9 piezo (LTB — buy now) | speech from a ring is not realistic; use the phone |
 | Air puff | **Murata MZB1001T02** microblower as a 22 × 22 mm signet aimed at the next finger, 15–20 Vpp @ ~26 kHz driver | the only pump with a perceptible jet; stage-1 experiment only, stock is thin |
-| Battery | 301012 30 mAh / 501012 40 mAh flat cell, PCM | chord-wise in the thick band section |
-| Charger | TI BQ25100 (1 mA termination) | MCP73831 OK for ≥ 40 mAh |
+| Battery | 301012 30 mAh flat cell, PCM | in a 10.4 × 12.4 × 3.4 mm pocket in the bay floor under the board (`hardware/cad/`); the 5 mm 501012 needs a deeper pocket; band-side placement would give a 7.7 mm signet |
+| Charger | TI BQ25100 (25 mA charge, 1 mA termination; /CHG → IO3 + test pad) | MCP73831 OK for ≥ 40 mAh |
 | Charging | two inner-band pads + pogo cradle | coil in stage 2 |
-| PCB | 2-layer 0.6 mm rigid in the bay, FPC to the camera | rigid-flex in stage 2 |
-| Enclosure | `hardware/enclosure/mcring_stage1.scad`, SLA white resin | |
+| PCB | 2-layer 0.6 mm rigid, **26.5 × 18.0 mm** in the signet bay (`hardware/pcb/board_params.json`), FPC to the camera | rigid-flex in stage 2 |
+| Enclosure | `hardware/cad/` — CadQuery model generated from `board_params.json` (shell + lid + key STLs, fit report), SLA tough white/translucent resin | the OpenSCAD concept was removed |
 
 Expected: ~65 shots/week at 40 mAh with aggressive sleep (ESP32-S3) — see `hardware/power-budget.txt`.
 
@@ -77,7 +77,7 @@ than the photo (`hardware/power-budget.txt`).
 
 ## 3.6 Trigger verdicts
 
-Double-tap on a LIS2DW12 (hardware interrupt, ~1 µA) is the primary trigger at every stage;
+Double-tap on a LIS2DW12 (hardware interrupt; ~1 µA in a low-power ODR, but the current firmware keeps it at 400 Hz high-performance for tap-wake, ~90 µA — `docs/07-build-guide.md` §2.4) is the primary trigger at every stage;
 a side switch is the bring-up and fallback trigger at stages 0/1; capacitive touch only works
 as a deliberate thumb press on the top face. Expect to tune tap thresholds against hand
 impacts — the firmware exposes the threshold and uses an 800 ms burst filter.

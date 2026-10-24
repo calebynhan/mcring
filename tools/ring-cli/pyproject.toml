@@ -4,8 +4,8 @@ build-backend = "setuptools.build_meta"
 
 [project]
 name = "mcring-cli"
-version = "0.1.0"
-description = "Desktop companion for the mcring camera ring: BLE bridge, backend client, simulator"
+version = "0.2.0"
+description = "Desktop companion for the mcring voice ring: push-to-talk, BLE bridge, backend client, simulator"
 requires-python = ">=3.10"
 dependencies = [
   "bleak>=0.22",
@@ -14,7 +14,8 @@ dependencies = [
 ]
 
 [project.optional-dependencies]
-audio = ["simpleaudio>=1.0"]
+mic = ["sounddevice>=0.4"]        # `mcring talk` with the laptop microphone
+audio = ["simpleaudio>=1.0"]      # beeps for the legacy Morse player
 test = ["pytest>=8", "pytest-asyncio>=0.23"]
 
 [project.scripts]

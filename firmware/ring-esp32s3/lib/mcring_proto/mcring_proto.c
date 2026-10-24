@@ -48,3 +48,40 @@ size_t mc_encode_xfer_end(uint16_t xfer_id, uint8_t *o) {
   mc_put_u16(o + 1, xfer_id);
   return 3;
 }
+
+size_t mc_encode_event(uint8_t event, uint8_t arg, uint32_t t_ms, uint8_t *o) {
+  o[0] = event;
+  o[1] = arg;
+  mc_put_u32(o + 2, t_ms);
+  return MC_EVENT_LEN;
+}
+
+int mc_decode_event(const uint8_t *in, size_t len, mc_event_t *out) {
+  if (len < MC_EVENT_LEN) return -1;
+  out->event = in[0];
+  out->arg = in[1];
+  out->t_ms = mc_get_u32(in + 2);
+  return 0;
+}
+
+size_t mc_encode_audio_start(uint16_t sample_rate_hz, uint8_t codec, uint8_t volume, uint8_t *o) {
+  o[0] = MC_AO_START;
+  mc_put_u16(o + 1, (uint16_t)(sample_rate_hz / 100));
+  o[3] = codec;
+  o[4] = volume;
+  return MC_AUDIO_START_LEN;
+}
+
+int mc_decode_audio_start(const uint8_t *in, size_t len, mc_audio_start_t *out) {
+  if (len < MC_AUDIO_START_LEN || in[0] != MC_AO_START) return -1;
+  out->sample_rate_div100 = mc_get_u16(in + 1);
+  out->codec = in[3];
+  out->volume = in[4];
+  return 0;
+}
+
+size_t mc_encode_audio_data_hdr(uint16_t seq, uint8_t *o) {
+  o[0] = MC_AO_DATA;
+  mc_put_u16(o + 1, seq);
+  return MC_AUDIO_DATA_HDR_LEN;
+}

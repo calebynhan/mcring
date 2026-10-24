@@ -56,6 +56,8 @@
   #define PIN_LED        21    // on-board user LED
   #define LED_ACTIVE_LOW  1
   #define PIN_RGB        -1    // no WS2812 on the dev kit
+  #define PIN_RGB_PWR    -1    // no WS2812 supply switch on the dev kit
+  #define PIN_CHG        -1    // charger status not wired on the dev kit
 
 // ---------------------------------------------------------------------------
 // mcring v1 — stage 1 custom board (placeholders; finalise with hardware/pinmap.md)
@@ -89,9 +91,11 @@
   #define PIN_PDM_CLK    42
   #define PIN_PDM_DATA   41
 
-  #define PIN_BATTERY_ADC 1
+  #define PIN_BATTERY_ADC 1    // 1 M / 1 M divider + 100 nF (BATTERY_DIVIDER 2.0; 2 µA permanent drain)
   #define PIN_BUTTON      2
-  #define PIN_HAPTIC      3
+  #define PIN_HAPTIC     -1    // DRV2605L EN is tied to 3V3 on this board: haptics are I2C-only (drv2605_set /
+                               // drv2605_standby). MUST stay -1 — IO3 is the charger /CHG input (PIN_CHG) and
+                               // driving it as an output would fight the BQ25100's open drain.
   #define PIN_BUZZER      4
   #define PIN_I2C_SDA     5
   #define PIN_I2C_SCL     6
@@ -100,12 +104,15 @@
   #define PIN_AUX         9
   #define PIN_LED        -1
   #define LED_ACTIVE_LOW  0
-  #define PIN_RGB        43    // WS2812B-2020 data via 100 R. IO43 = UART0 TXD0, free because logging is USB-CDC;
-                               // ROM boot output on TXD0 is harmless since the LED rail is power-gated.
+  #define PIN_RGB        43    // WS2812B-2020 data via 1 k. IO43 = UART0 TXD0, free because logging is USB-CDC;
+                               // ROM boot output on TXD0 only reaches the LED through 1 k while its rail is off.
                                // (was IO20 = native USB D+)
-                               // HW NOTE: the LED supply is gated by a TPS22916 whose ON pin is IO44 (RXD0, 4.7k
-                               // pull-down, net LED_PWR_EN). Firmware must drive IO44 HIGH before neopixelWrite()
-                               // and LOW before sleep — a PIN_RGB_PWR define is still to be added (hardware/electrical/README.md).
+  #define PIN_RGB_PWR    33    // TPS22916 ON for the WS2812 rail (3V3 -> VLED), net LED_PWR_EN, 4.7k pull-down.
+                               // HW NOTE: the LED is unpowered until firmware drives this HIGH before
+                               // neopixelWrite() (and LOW before deep sleep) — see hardware/electrical/README.md §7.
+                               // IO33 is a plain GPIO on the N4R2 module (only octal-PSRAM parts use IO33-37).
+  #define PIN_CHG         3    // BQ25100 /CHG, open drain, active LOW while charging (100k pull-up on the board).
+                               // Input only; battery_charging() should read it (firmware follow-up).
 
 #else
   #error "Define a board: -DBOARD_XIAO_ESP32S3_SENSE or -DBOARD_MCRING_V1"
@@ -134,7 +141,10 @@
 
 #define BUTTON_LONG_PRESS_MS      700
 #define BUTTON_DEBOUNCE_MS        30
-#define VOICE_CLIP_MAX_S          5
+#define VOICE_CLIP_MAX_S          8       // RECORD_START / long press cap (protocol: max 8 s)
 #define VOICE_SAMPLE_RATE         16000
 
 #define MORSE_MAX_UNITS           1024
+
+// Speaker pins, cue/mic defaults and audio-out tuning (voice-first additions; keeps this file's board sections intact)
+#include "config_audio.h"

@@ -48,3 +48,57 @@ test('crc32 and base64', () => {
   expect(Array.from(P.fromBase64(P.toBase64(b)))).toEqual(Array.from(b));
   expect(Array.from(P.fromBase64('AQ=='))).toEqual([1]);
 });
+
+// ---- voice-first additions (byte-identical with python/mcring_core tests/test_proto.py) ----
+
+test('record / cue / new config packets', () => {
+  expect(P.UUID_EVENTS).toBe('7a3b0007-9c2e-4f3a-b1d4-6d6372696e67');
+  expect(P.UUID_AUDIO_OUT).toBe('7a3b0008-9c2e-4f3a-b1d4-6d6372696e67');
+  expect(hex(P.recordStart())).toBe('09');
+  expect(hex(P.recordStop())).toBe('0a');
+  expect(hex(P.getStatus())).toBe('08');
+  expect(hex(P.fbCue(P.Cue.ANSWER_READY))).toBe('1602');
+  expect(hex(P.setConfig(P.Cfg.MIC_SOURCE_HINT, P.MicSource.PHONE))).toBe('030b01000000');
+  expect(hex(P.setConfig(P.Cfg.CUES_MASK, P.Cues.HAPTIC | P.Cues.LED))).toBe('030a03000000');
+  expect(P.Flag.SPEAKER_OK).toBe(0x40);
+  expect(P.statusFlags(P.unpackStatus(Uint8Array.from([1, 0, 0, 0, 0, 0x48, 0, 0, 0, 0, 0, 0]))).speaker).toBe(true);
+});
+
+test('event packets', () => {
+  const b = P.packEvent(P.RingEvent.BUTTON_UP, 23, 0x01020304);
+  expect(hex(b)).toBe('021704030201');
+  expect(P.unpackEvent(b)).toEqual({ event: 2, arg: 23, tMs: 0x01020304 });
+  expect(P.eventName(2)).toBe('button_up');
+  expect(P.eventName(99)).toBe('unknown(99)');
+  expect(P.unpackEvent(Uint8Array.from([6, 2, 0x15, 0xcd, 0x5b, 0x07])).tMs).toBe(123456789);
+  expect(() => P.unpackEvent(Uint8Array.from([1, 2, 3]))).toThrow();
+  // trailing bytes tolerated
+  expect(P.unpackEvent(Uint8Array.from([...b, 0xff])).arg).toBe(23);
+});
+
+test('audio out: start/end/stop and whole-block splitting', () => {
+  expect(hex(P.audioStart())).toBe('20a00002ff');
+  expect(hex(P.audioStart(8000, 2, 128))).toBe('2050000280');
+  expect(hex(P.audioEnd())).toBe('22');
+  expect(hex(P.audioStop())).toBe('23');
+  const adpcm = Uint8Array.from(Array.from({ length: 132 * 10 }, (_, i) => (i * 7) & 0xff));
+  expect(() => P.audioDataWrites(adpcm.subarray(0, 100))).toThrow();
+  let w = P.audioDataWrites(adpcm, 182);
+  expect(w.length).toBe(10);
+  expect(w.every((x) => x.length === 135)).toBe(true);
+  expect(hex(w[0].subarray(0, 3))).toBe('210000');
+  expect(hex(w[9].subarray(0, 3))).toBe('210900');
+  expect(P.maxWriteForMtu(517)).toBe(514);
+  expect(P.audioBlocksPerWrite(514)).toBe(3);
+  expect(P.audioBlocksPerWrite(20)).toBe(1);
+  w = P.audioDataWrites(adpcm, 514, 65534);
+  expect(w.map((x) => x.length)).toEqual([399, 399, 399, 135]);
+  expect(w.map((x) => x[1] | (x[2] << 8))).toEqual([65534, 65535, 0, 1]);
+  const joined = Uint8Array.from(w.flatMap((x) => Array.from(x.subarray(3))));
+  expect(Array.from(joined)).toEqual(Array.from(adpcm));
+  const seq = P.audioOutSequence(adpcm, 182, 180);
+  expect(seq.length).toBe(12);
+  expect(hex(seq[0])).toBe('20a00002b4');
+  expect(hex(seq[11])).toBe('22');
+  expect(() => P.audioData(0, new Uint8Array(0))).toThrow();
+});

@@ -46,9 +46,14 @@ class Part:
     pins       : {pin_number: pin_name}; pin numbers are strings ("1", "A1", ...).
     power_pins : pin numbers that are supply/ground pins. ERC requires them to sit
                  on a power-named net and (for ICs) to have a capacitor on the net.
-    nc_pins    : pin numbers that may legitimately be left unconnected.
+    nc_pins    : pin numbers that may legitimately be left unconnected (no function here).
+    spare_pins : pin numbers that are usable but intentionally left free (spare GPIOs);
+                 like nc_pins for the "unconnected" ERC check, but reported as "spare".
     is_ic      : enables the "supply pin needs a capacitor" check.
     dnp        : do-not-populate (still exported; marked in the BOM).
+    offboard   : the part is wired to the board (cell, antenna, piezo element, band contacts)
+                 but has no PCB footprint: it is kept in the BOM / net listing / ERC and left
+                 out of the KiCad netlist, so pcbnew never looks for a footprint for it.
     """
     ref: str
     value: str
@@ -63,14 +68,19 @@ class Part:
     manufacturer: str = ""
     fields: Dict[str, str] = field(default_factory=dict)
     sheet: str = ""          # schematic sheet name (for the SVG renderer)
+    spare_pins: Set[str] = field(default_factory=set)
+    offboard: bool = False
 
     def __post_init__(self) -> None:
         self.pins = OrderedDict((str(k), str(v)) for k, v in self.pins.items())
         self.power_pins = {str(p) for p in self.power_pins}
         self.nc_pins = {str(p) for p in self.nc_pins}
-        unknown = (self.power_pins | self.nc_pins) - set(self.pins)
+        self.spare_pins = {str(p) for p in self.spare_pins}
+        unknown = (self.power_pins | self.nc_pins | self.spare_pins) - set(self.pins)
         if unknown:
-            raise ValueError(f"{self.ref}: power/nc pins not in pin table: {sorted(unknown)}")
+            raise ValueError(f"{self.ref}: power/nc/spare pins not in pin table: {sorted(unknown)}")
+        if self.nc_pins & self.spare_pins:
+            raise ValueError(f"{self.ref}: pins cannot be both NC and spare: {sorted(self.nc_pins & self.spare_pins)}")
 
     # pin lookup by number or by unique name
     def resolve_pin(self, pin: str) -> str:
@@ -183,6 +193,7 @@ class Netlist:
         return {
             "parts": len(self.parts),
             "parts_populated": sum(1 for p in self.parts.values() if not p.dnp),
+            "parts_offboard": sum(1 for p in self.parts.values() if p.offboard),
             "pins": n_pins,
             "nets": len(self.nets),
             "nodes": n_nodes,
@@ -192,11 +203,11 @@ class Netlist:
     # ---- ERC --------------------------------------------------------------- #
     def erc(self) -> List[ERCWarning]:
         warns: List[ERCWarning] = []
-        # 1. unconnected non-NC pins, and NC pins that are connected (info)
+        # 1. unconnected non-NC, non-spare pins, and NC pins that are connected (info)
         for p in self.parts.values():
             for pn, name in p.pins.items():
                 connected = (p.ref, pn) in self._pin_net
-                if not connected and pn not in p.nc_pins:
+                if not connected and pn not in p.nc_pins and pn not in p.spare_pins:
                     warns.append(ERCWarning("unconnected", f"{p.ref}.{pn} ({name}) is not connected"))
                 if connected and pn in p.nc_pins:
                     warns.append(ERCWarning("nc-connected",
@@ -249,7 +260,11 @@ class Netlist:
         return "passive" if not part.is_ic else "bidirectional"
 
     def export_kicad_netlist(self, path: str) -> str:
-        """Write a KiCad (version 'E') netlist that pcbnew imports via File > Import Netlist."""
+        """Write a KiCad (version 'E') netlist that pcbnew imports via File > Import Netlist.
+
+        Off-board parts (``offboard=True``) and their nodes are left out: they have no footprint
+        on the PCB (the wire pads they attach to are separate on-board parts).
+        """
         q = self._q
         now = _dt.datetime.now().strftime("%Y-%m-%d %H:%M:%S")
         out: List[str] = []
@@ -259,6 +274,8 @@ class Netlist:
                    f' (title_block (title {q(self.name)}) (company "mcring") (rev "v1") (date {q(now[:10])}))))')
         out.append('  (components')
         for p in self.parts.values():
+            if p.offboard:
+                continue
             out.append(f'    (comp (ref {q(p.ref)})')
             out.append(f'      (value {q(p.value)})')
             out.append(f'      (footprint {q(p.footprint)})')
@@ -290,9 +307,12 @@ class Netlist:
         out.append('  (nets')
         code = 0
         for n in self.nets.values():
+            nodes = [(ref, pn) for ref, pn in n.nodes if not self.parts[ref].offboard]
+            if not nodes:
+                continue      # net exists only through off-board parts (e.g. the antenna's RF node)
             code += 1
             out.append(f'    (net (code {q(code)}) (name {q(n.name)})')
-            for ref, pn in n.nodes:
+            for ref, pn in nodes:
                 part = self.parts[ref]
                 out.append(f'      (node (ref {q(ref)}) (pin {q(pn)}) (pinfunction {q(part.pins[pn])})'
                            f' (pintype {q(self._pintype(part, pn))}))')
@@ -305,13 +325,18 @@ class Netlist:
         return text
 
     def export_bom_csv(self, path: str) -> List[dict]:
-        """Grouped by value + footprint (+ MPN); DNP parts are grouped separately and marked."""
+        """Grouped by value + footprint (+ MPN); DNP parts are grouped separately and marked.
+
+        The ``Mount`` column is ``PCB`` for parts the netlist places on the board and ``off-board``
+        for parts that are wired to it (cell, antenna, piezo element, band contacts).
+        """
         groups: "OrderedDict[tuple, dict]" = OrderedDict()
         for p in self.parts.values():
-            key = (p.value, p.footprint, p.mpn, p.dnp)
+            key = (p.value, p.footprint, p.mpn, p.dnp, p.offboard)
             g = groups.setdefault(key, {"qty": 0, "refs": [], "value": p.value, "footprint": p.footprint,
                                         "mpn": p.mpn, "manufacturer": p.manufacturer,
-                                        "descriptions": [], "dnp": "DNP" if p.dnp else ""})
+                                        "descriptions": [], "dnp": "DNP" if p.dnp else "",
+                                        "mount": "off-board" if p.offboard else "PCB"})
             g["qty"] += 1
             g["refs"].append(p.ref)
             if p.description and p.description not in g["descriptions"]:
@@ -326,8 +351,9 @@ class Netlist:
                 desc = ""
             rows.append({"Qty": g["qty"], "Refs": " ".join(sorted(g["refs"], key=_natkey)),
                          "Value": g["value"], "Footprint": g["footprint"], "MPN": g["mpn"],
-                         "Manufacturer": g["manufacturer"], "Description": desc, "DNP": g["dnp"]})
-        rows.sort(key=lambda r: (r["DNP"] != "", _natkey(r["Refs"].split()[0])))
+                         "Manufacturer": g["manufacturer"], "Description": desc, "Mount": g["mount"],
+                         "DNP": g["dnp"]})
+        rows.sort(key=lambda r: (r["DNP"] != "", r["Mount"] != "PCB", _natkey(r["Refs"].split()[0])))
         with open(path, "w", newline="", encoding="utf-8") as fh:
             w = csv.DictWriter(fh, fieldnames=list(rows[0].keys()))
             w.writeheader()
@@ -337,16 +363,22 @@ class Netlist:
     def export_markdown(self, path: str, title: str = "") -> str:
         st = self.stats()
         lines = [f"# {title or self.name} — net listing", "",
-                 f"{st['parts']} parts ({st['parts_populated']} populated), {st['pins']} pins, "
-                 f"{st['nets']} nets, {st['nodes']} nodes, {st['power_nets']} power nets.", "",
+                 f"{st['parts']} parts ({st['parts_populated']} populated, {st['parts_offboard']} off-board / "
+                 f"wired — marked with \\*), {st['pins']} pins, {st['nets']} nets, {st['nodes']} nodes, "
+                 f"{st['power_nets']} power nets.", "",
                  "## Nets", "", "| Net | Power | Nodes | Connections |", "|---|---|---|---|"]
+
+        def node_txt(ref: str, pn: str) -> str:
+            star = "\\*" if self.parts[ref].offboard else ""
+            return f"{ref}{star}.{pn} ({self.parts[ref].pins[pn]})"
+
         for n in sorted(self.nets.values(), key=lambda n: (not n.is_power, _natkey(n.name))):
-            conns = ", ".join(f"{ref}.{pn} ({self.parts[ref].pins[pn]})" for ref, pn in n.nodes)
+            conns = ", ".join(node_txt(ref, pn) for ref, pn in n.nodes)
             lines.append(f"| `{n.name}` | {'yes' if n.is_power else ''} | {len(n.nodes)} | {conns} |")
         lines += ["", "## Parts", "", "| Ref | Value | MPN | Footprint | Pins | Sheet |", "|---|---|---|---|---|---|"]
         for p in sorted(self.parts.values(), key=lambda p: _natkey(p.ref)):
-            lines.append(f"| {p.ref}{' (DNP)' if p.dnp else ''} | {p.value} | {p.mpn} | `{p.footprint}` | "
-                         f"{len(p.pins)} | {p.sheet} |")
+            tag = (" (DNP)" if p.dnp else "") + (" \\*off-board" if p.offboard else "")
+            lines.append(f"| {p.ref}{tag} | {p.value} | {p.mpn} | `{p.footprint}` | {len(p.pins)} | {p.sheet} |")
         lines += ["", "## Pin-by-pin", ""]
         for p in sorted(self.parts.values(), key=lambda p: _natkey(p.ref)):
             if len(p.pins) < 3:
@@ -354,7 +386,8 @@ class Netlist:
             lines += [f"### {p.ref} — {p.value}", "", "| Pin | Name | Net |", "|---|---|---|"]
             for pn, name in p.pins.items():
                 nn = self._pin_net.get((p.ref, pn))
-                lines.append(f"| {pn} | {name} | {nn if nn else ('NC' if pn in p.nc_pins else '**open**')} |")
+                state = nn if nn else ("NC" if pn in p.nc_pins else ("spare" if pn in p.spare_pins else "**open**"))
+                lines.append(f"| {pn} | {name} | {state} |")
             lines.append("")
         text = "\n".join(lines) + "\n"
         with open(path, "w", encoding="utf-8") as fh:
@@ -385,7 +418,7 @@ class Netlist:
             lines += [f"| {w} | {why} |" for w, why in explained]
             lines.append("")
         lines += ["## Checks performed", "",
-                  "1. every pin not marked NC is on a net;",
+                  "1. every pin not marked NC or spare is on a net (off-board parts included);",
                   "2. no net has fewer than two nodes;",
                   "3. every pin declared as a power pin sits on a power-named net;",
                   "4. every IC supply pin (non-ground) has at least one populated capacitor on its net;",
@@ -419,15 +452,35 @@ def _selftest() -> None:
     nl.connect("GND", "C1", "2")
     nl.connect("GND", "U1", "4")            # NC pin connected                 -> nc-connected
     # R1.2 and C1.1 left open                                                  -> unconnected
-    kinds = {w.kind for w in nl.erc()}
+    # spare pins and off-board parts: U2.2 spare (no warning), BT1 wired to GND/SIGNAL_X but not exported
+    nl.add(Part("U2", "IC2", "X:Z", pins={"1": "VDD", "2": "IO1", "3": "GND"}, power_pins={"1", "3"},
+                spare_pins={"2"}, is_ic=True))
+    nl.connect("3V3", "U2", "1")
+    nl.connect("GND", "U2", "3")
+    nl.add(Part("BT1", "cell", "offboard:cell", pins={"1": "+", "2": "-"}, offboard=True))
+    nl.connect("SIGNAL_X", "BT1", "1")
+    nl.connect("GND", "BT1", "2")
+    warns = nl.erc()
+    kinds = {w.kind for w in warns}
     expected = {"no-decoupling", "power-pin", "single-node", "nc-connected", "unconnected"}
     assert kinds == expected, f"ERC self-test: got {kinds}, expected {expected}"
+    assert not any("U2.2" in w.message for w in warns), "spare pin reported as unconnected"
     try:
         nl.connect("OTHER", "U1", "3")
         raise AssertionError("double connection not refused")
     except ValueError:
         pass
-    print(f"netlist_model self-test OK: {len(nl.erc())} warnings of kinds {sorted(kinds)}")
+    import os
+    import tempfile
+    with tempfile.TemporaryDirectory() as td:
+        net_text = nl.export_kicad_netlist(os.path.join(td, "t.net"))
+        assert '"BT1"' not in net_text, "off-board part leaked into the KiCad netlist"
+        assert '"U2"' in net_text
+        rows = nl.export_bom_csv(os.path.join(td, "t.csv"))
+        assert any(r["Refs"] == "BT1" and r["Mount"] == "off-board" for r in rows)
+        md = nl.export_markdown(os.path.join(td, "t.md"))
+        assert "BT1\\*" in md and "| 2 | IO1 | spare |" in md
+    print(f"netlist_model self-test OK: {len(warns)} warnings of kinds {sorted(kinds)}; spare/off-board handling OK")
 
 
 if __name__ == "__main__":

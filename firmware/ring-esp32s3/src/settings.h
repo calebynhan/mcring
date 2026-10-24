@@ -8,8 +8,11 @@ struct Settings {
   uint16_t idle_sleep_s;
   uint8_t led_brightness;
   uint8_t haptic_strength;
-  uint8_t morse_wpm;
-  uint8_t feedback_channels;
+  uint8_t morse_wpm;          // legacy (silent pattern mode)
+  uint8_t feedback_channels;  // legacy
+  uint8_t speaker_volume;     // key 9:  0..255 master gain of the on-ring speaker
+  uint8_t cues_mask;          // key 10: MC_CUES_HAPTIC | MC_CUES_LED | MC_CUES_BEEP
+  uint8_t mic_source;         // key 11: MC_MIC_SRC_RING / MC_MIC_SRC_PHONE
 };
 
 Settings &settings();

@@ -86,8 +86,85 @@ void test_adpcm_roundtrip(void) {
   TEST_ASSERT_EQUAL_INT16(pcm[MC_ADPCM_BLOCK_SAMPLES], dec[0]);
 }
 
+// ---- voice-first additions ------------------------------------------------------------------
+
+void test_event_encoding(void) {
+  uint8_t b[MC_EVENT_LEN];
+  TEST_ASSERT_EQUAL_UINT32(6, mc_encode_event(MC_EV_BUTTON_UP, 23, 0x01020304u, b));
+  const uint8_t exp[] = {2, 23, 0x04, 0x03, 0x02, 0x01};   // matches python tests/test_proto.py
+  TEST_ASSERT_EQUAL_UINT8_ARRAY(exp, b, 6);
+  mc_event_t e;
+  TEST_ASSERT_EQUAL_INT(0, mc_decode_event(b, 6, &e));
+  TEST_ASSERT_EQUAL_UINT8(MC_EV_BUTTON_UP, e.event);
+  TEST_ASSERT_EQUAL_UINT8(23, e.arg);
+  TEST_ASSERT_EQUAL_HEX32(0x01020304u, e.t_ms);
+  TEST_ASSERT_EQUAL_INT(-1, mc_decode_event(b, 5, &e));
+  TEST_ASSERT_EQUAL_UINT8(11, MC_EV_AUDIO_DONE);
+}
+
+void test_audio_start_encoding(void) {
+  uint8_t b[MC_AUDIO_START_LEN];
+  TEST_ASSERT_EQUAL_UINT32(5, mc_encode_audio_start(16000, MC_AUDIO_CODEC_ADPCM, 200, b));
+  const uint8_t exp[] = {0x20, 0xA0, 0x00, 0x02, 200};
+  TEST_ASSERT_EQUAL_UINT8_ARRAY(exp, b, 5);
+  mc_audio_start_t st;
+  TEST_ASSERT_EQUAL_INT(0, mc_decode_audio_start(b, 5, &st));
+  TEST_ASSERT_EQUAL_UINT16(160, st.sample_rate_div100);
+  TEST_ASSERT_EQUAL_UINT8(2, st.codec);
+  TEST_ASSERT_EQUAL_UINT8(200, st.volume);
+  const uint8_t end[] = {MC_AO_END, 0, 0, 0, 0};
+  TEST_ASSERT_EQUAL_INT(-1, mc_decode_audio_start(end, 5, &st));   // wrong opcode
+  TEST_ASSERT_EQUAL_INT(-1, mc_decode_audio_start(b, 4, &st));     // too short
+}
+
+void test_audio_data_helpers(void) {
+  uint8_t h[MC_AUDIO_DATA_HDR_LEN];
+  TEST_ASSERT_EQUAL_UINT32(3, mc_encode_audio_data_hdr(0x1234, h));
+  const uint8_t exp[] = {0x21, 0x34, 0x12};
+  TEST_ASSERT_EQUAL_UINT8_ARRAY(exp, h, 3);
+  TEST_ASSERT_EQUAL_UINT32(3, mc_audio_data_blocks(3 + 3 * MC_AUDIO_BLOCK_BYTES));
+  TEST_ASSERT_EQUAL_UINT32(1, mc_audio_data_blocks(135));
+  TEST_ASSERT_EQUAL_UINT32(0, mc_audio_data_blocks(3 + 100));     // partial block
+  TEST_ASSERT_EQUAL_UINT32(0, mc_audio_data_blocks(2));           // too short
+  TEST_ASSERT_EQUAL_UINT32(1, mc_audio_blocks_per_write(182));    // iOS: MTU 185
+  TEST_ASSERT_EQUAL_UINT32(3, mc_audio_blocks_per_write(514));    // Android: MTU 517
+  TEST_ASSERT_EQUAL_UINT32(1, mc_audio_blocks_per_write(20));     // never 0
+  TEST_ASSERT_EQUAL_UINT32(MC_ADPCM_BLOCK_BYTES, MC_AUDIO_BLOCK_BYTES);
+}
+
+void test_new_constants(void) {
+  TEST_ASSERT_EQUAL_HEX8(0x09, MC_OP_RECORD_START);
+  TEST_ASSERT_EQUAL_HEX8(0x0A, MC_OP_RECORD_STOP);
+  TEST_ASSERT_EQUAL_HEX8(0x16, MC_FB_CUE);
+  TEST_ASSERT_EQUAL_HEX8(0x40, MC_FLAG_SPEAKER_OK);
+  TEST_ASSERT_EQUAL_UINT8(9, MC_CFG_SPEAKER_VOLUME);
+  TEST_ASSERT_EQUAL_UINT8(10, MC_CFG_CUES_MASK);
+  TEST_ASSERT_EQUAL_UINT8(11, MC_CFG_MIC_SOURCE_HINT);
+  TEST_ASSERT_EQUAL_STRING("7a3b0007-9c2e-4f3a-b1d4-6d6372696e67", MCRING_UUID_EVENTS);
+  TEST_ASSERT_EQUAL_STRING("7a3b0008-9c2e-4f3a-b1d4-6d6372696e67", MCRING_UUID_AUDIO_OUT);
+}
+
+void test_adpcm_decode_block_roundtrip(void) {
+  // The speaker path decodes blocks the phone encoded: encode → decode must stay close.
+  int16_t pcm[MC_ADPCM_BLOCK_SAMPLES];
+  for (int i = 0; i < MC_ADPCM_BLOCK_SAMPLES; i++) pcm[i] = (int16_t)(6000 * ((i / 16) % 2 ? 1 : -1));
+  uint8_t enc[MC_ADPCM_BLOCK_BYTES];
+  TEST_ASSERT_EQUAL_UINT32(MC_ADPCM_BLOCK_BYTES, mc_adpcm_encode_block(pcm, enc));
+  int16_t dec[MC_ADPCM_BLOCK_SAMPLES];
+  TEST_ASSERT_EQUAL_UINT32(MC_ADPCM_BLOCK_SAMPLES, mc_adpcm_decode_block(enc, dec));
+  TEST_ASSERT_EQUAL_INT16(pcm[0], dec[0]);
+  long err = 0;
+  for (int i = 64; i < MC_ADPCM_BLOCK_SAMPLES; i++) { long d = (long)pcm[i] - dec[i]; err += d < 0 ? -d : d; }
+  TEST_ASSERT_TRUE(err / (MC_ADPCM_BLOCK_SAMPLES - 64) < 1500);   // mean abs error after adaptation
+}
+
 int main(int, char **) {
   UNITY_BEGIN();
+  RUN_TEST(test_event_encoding);
+  RUN_TEST(test_audio_start_encoding);
+  RUN_TEST(test_audio_data_helpers);
+  RUN_TEST(test_new_constants);
+  RUN_TEST(test_adpcm_decode_block_roundtrip);
   RUN_TEST(test_morse_sos);
   RUN_TEST(test_morse_word_gap_and_unknown);
   RUN_TEST(test_morse_truncate_whole_char);

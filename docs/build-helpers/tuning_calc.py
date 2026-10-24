@@ -5,12 +5,19 @@
   python3 docs/build-helpers/tuning_calc.py drv2605 --decode 0x3E 0x8C --freq 235   # what the firmware defaults mean
   python3 docs/build-helpers/tuning_calc.py tap --g 0.75                            # g -> LIS2DW12 TAP_THS (FS = +/-2 g)
   python3 docs/build-helpers/tuning_calc.py tap --ths 9                             # TAP_THS -> g, plus INT_DUR timing
-  python3 docs/build-helpers/tuning_calc.py divider --r1k 100 --r2k 100             # battery-sense divider drain
+  python3 docs/build-helpers/tuning_calc.py divider --r1k 100 --r2k 100             # battery-sense divider drain (stage 0)
+  python3 docs/build-helpers/tuning_calc.py divider --r1k 1000 --r2k 1000           # stage-1 board: R8/R9 = 1 M / 1 M
+  python3 docs/build-helpers/tuning_calc.py sleep                                   # stage-1 deep-sleep budget, firmware as-is
+  python3 docs/build-helpers/tuning_calc.py sleep --imu lp-wakeup --shots-per-day 30 # ... with the IMU low-power wake follow-up
+  python3 docs/build-helpers/tuning_calc.py pads --inner-d 20 --angle 25            # charging-pad / pogo-pin geometry from the CAD
   python3 docs/build-helpers/tuning_calc.py morse --wpm 15 --overall 8              # unit lengths for Farnsworth timing
 
 Formulas: TI DRV2605L datasheet (SLOS854) 8.5.2.1 "Rated voltage programming" and 8.5.2.2
-"Overdrive voltage-clamp programming"; ST LIS2DW12 datasheet (DS12099) TAP_THS_* / INT_DUR.
-Verify against the datasheet revision you have before trusting a register value on hardware.
+"Overdrive voltage-clamp programming"; ST LIS2DW12 datasheet (DS12099) TAP_THS_* / INT_DUR and Table 3
+current consumption (the IMU figures below are datasheet-class numbers, not measurements); sleep floor
+items per hardware/electrical/README.md section 3; pad geometry per hardware/cad/mcring_stage1.py
+default_params() (pad_angle, rib_x, pad_window). Verify against the datasheet revision you have before
+trusting a register value on hardware, and against the PPK2 before trusting a current.
 """
 from __future__ import annotations
 
@@ -77,6 +84,68 @@ def cmd_divider(a: argparse.Namespace) -> None:
     print(f"BATTERY_DIVIDER = {ratio:.3f}  (config.h expects 2.0 for equal resistors)")
 
 
+# LIS2DW12 current by mode (DS12099 Table 3 class values, uA). The firmware's imu_wake() writes CTRL1 = 0x74:
+# ODR 400 Hz, high-performance mode - the only mode in which the double-tap engine is specified (>= 400 Hz),
+# and the one that dominates the stage-1 sleep floor. Low-power modes stop at 200 Hz.
+IMU_MODES = {
+    "hp400":     (90.0, "CTRL1 0x74: 400 Hz high-performance, double-tap armed (firmware as-is)"),
+    "lp1-200":   (10.0, "LP mode 1, 200 Hz: double-tap with INT_DUR rescaled (timing marginal)"),
+    "lp1-100":   (6.5,  "LP mode 1, 100 Hz: wake-up/activity interrupt, re-arm 400 Hz tap after wake"),
+    "lp-wakeup": (1.8,  "LP mode 1, 25 Hz: wake-up/activity interrupt, re-arm 400 Hz tap after wake"),
+    "off":       (0.05, "power-down (no tap wake; button only)"),
+}
+
+# Everything else that stays powered on the mcring v1 board in deep sleep (uA, typical/max class values).
+SLEEP_FIXED = [
+    ("ESP32-S3-MINI-1U deep sleep (RTC + EXT0/EXT1 wake)", 8.0, "research 02: 7-8 uA"),
+    ("DRV2605L standby (EN tied to 3V3, STANDBY bit set)", 4.0, "datasheet max; typ lower"),
+    ("BQ25100 battery leakage, no input", 1.0, "OUT pin, cradle off"),
+    ("TPS62840 quiescent", 0.06, "60 nA"),
+    ("2 x TPS22916 off (camera, LED rails gated)", 0.02, "~10 nA each; rails at 0 V"),
+]
+MIC_SLEEP_UA = 5.0   # TDK T3902 with the PDM clock stopped ("sleep mode" class figure - verify on the datasheet / PPK2)
+SHOT_UAH_DEFAULT = 153.6   # per-shot energy of the ESP32-S3 profile in hardware/power-budget.txt
+
+
+def cmd_sleep(a: argparse.Namespace) -> None:
+    imu_ua, imu_desc = IMU_MODES[a.imu]
+    div_ua = a.vbat / (a.r1k * 1e3 + a.r2k * 1e3) * 1e6
+    rows = [("LIS2DW12: " + imu_desc, imu_ua, "DS12099 Table 3 class")]
+    rows += SLEEP_FIXED
+    rows.append((f"battery divider {a.r1k:.0f}k / {a.r2k:.0f}k at {a.vbat:.1f} V (R8/R9 + C23)", div_ua, "V / (R1 + R2)"))
+    if a.mic:
+        rows.append(("TDK T3902 mic, PDM clock stopped", MIC_SLEEP_UA, "sleep-mode class figure, verify"))
+    total = sum(r[1] for r in rows)
+    w = max(len(r[0]) for r in rows)
+    print(f"stage-1 deep-sleep budget (mcring v1, camera + LED rails gated, BLE off):")
+    for name, ua, note in rows:
+        print(f"  {name:<{w}}  {ua:7.2f} uA   {note}")
+    print(f"  {'TOTAL':<{w}}  {total:7.2f} uA   -> {total * 24 / 1000:.2f} mAh/day")
+    usable = a.battery * a.usable
+    per_day = total * 24 / 1000 + a.shots_per_day * a.shot_uah / 1000
+    print(f"  {a.battery:.0f} mAh cell, {a.usable:.0%} usable = {usable:.1f} mAh; {a.shots_per_day:.0f} shots/day x {a.shot_uah:.1f} uAh"
+          f" -> {per_day:.2f} mAh/day -> {usable / per_day:.1f} days  (standby-only {usable / (total * 24 / 1000):.0f} days)")
+    print("  acceptance: measure in series with the cell (PPK2), lid off, after 'I pwr: deep sleep'; lift INT1 / power the IMU down"
+          " to split the IMU share out")
+
+
+def cmd_pads(a: argparse.Namespace) -> None:
+    R = a.inner_d / 2.0
+    ang = math.radians(a.angle)
+    chord = 2 * R * math.sin(ang)
+    arc = 2 * R * ang
+    y, z = R * math.sin(ang), R * math.cos(ang)
+    print(f"charging pads on the inner band, +/-{a.angle:.0f} deg from the bottom, bore diameter {a.inner_d:.1f} mm (R = {R:.2f}):")
+    print(f"  pad centres {chord:.2f} mm apart across the finger (chord), {arc:.2f} mm along the bore surface (arc)")
+    print(f"  each pad centre: {y:.2f} mm off the ring's vertical mid-plane, {z:.2f} mm below the finger axis;"
+          f" pogo-pin axis tilted {a.angle:.0f} deg from vertical, aimed at the axis")
+    xa, xb = a.rib_x
+    print(f"  along the finger (X from the band mid-plane, negative = toward the antenna end): -Y pad (CHG-, PAD2/CP2) at X {xa:+.1f},"
+          f" +Y pad (CHG+, PAD1/CP1) at X {xb:+.1f} -> pins staggered {abs(xa - xb):.1f} mm")
+    print(f"  windows {a.window:.0f} x {a.window:.0f} mm through the {a.wall:.1f} mm wall; the ENIG contact sits flush with the bore,"
+          f" so the pin tip must reach R = {R:.1f} mm, i.e. {a.wall:.1f} mm inside the band's outer surface at that angle")
+
+
 def cmd_morse(a: argparse.Namespace) -> None:
     unit = 1200.0 / a.wpm
     print(f"char {a.wpm} WPM -> unit {unit:.0f} ms: dot {unit:.0f} ms, dash {3 * unit:.0f} ms, intra-char gap {unit:.0f} ms")
@@ -106,6 +175,18 @@ def main() -> None:
 
     s = sub.add_parser("divider"); s.set_defaults(fn=cmd_divider)
     s.add_argument("--r1k", type=float, default=100.0); s.add_argument("--r2k", type=float, default=100.0)
+
+    s = sub.add_parser("sleep"); s.set_defaults(fn=cmd_sleep)
+    s.add_argument("--imu", choices=sorted(IMU_MODES), default="hp400")
+    s.add_argument("--r1k", type=float, default=1000.0); s.add_argument("--r2k", type=float, default=1000.0)
+    s.add_argument("--vbat", type=float, default=3.8); s.add_argument("--no-mic", dest="mic", action="store_false")
+    s.add_argument("--battery", type=float, default=30.0); s.add_argument("--usable", type=float, default=0.8)
+    s.add_argument("--shots-per-day", type=float, default=30.0); s.add_argument("--shot-uah", type=float, default=SHOT_UAH_DEFAULT)
+
+    s = sub.add_parser("pads"); s.set_defaults(fn=cmd_pads)
+    s.add_argument("--inner-d", type=float, default=20.0); s.add_argument("--angle", type=float, default=25.0)
+    s.add_argument("--rib-x", type=float, nargs=2, default=(-1.5, -3.5)); s.add_argument("--window", type=float, default=3.0)
+    s.add_argument("--wall", type=float, default=1.2)
 
     s = sub.add_parser("morse"); s.set_defaults(fn=cmd_morse)
     s.add_argument("--wpm", type=int, default=15); s.add_argument("--overall", type=int, default=8)

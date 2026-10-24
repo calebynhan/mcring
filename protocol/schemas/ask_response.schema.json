@@ -2,39 +2,66 @@
   "$schema": "https://json-schema.org/draft/2020-12/schema",
   "$id": "https://mcring.dev/schemas/ask_response.schema.json",
   "title": "mcring AskResponse",
+  "description": "JSON body of a successful POST /v1/ask (mirrors backend/app/schemas.py AskResponse; python/mcring_core/tests/test_schemas.py keeps the two in step). Voice-first: `speech_text` is exactly what the phone or ring should say; `speech` / `speech_adpcm` carry server-side TTS when it was requested or is the server default. `short` / `morse` are the optional silent-pattern output and are null unless the request set want_morse=true.",
   "type": "object",
-  "required": ["id", "answer", "short", "confidence", "provider", "model", "latency_ms"],
+  "required": ["id", "session_id", "answer", "speech_text", "confidence", "mode", "had_image", "provider", "model", "latency_ms"],
   "properties": {
-    "id": {"type": "string"},
-    "session_id": {"type": "string"},
-    "answer": {"type": "string", "description": "Spoken / long answer, 1-3 sentences."},
-    "short": {"type": "string", "description": "Morse-friendly answer: <= 32 chars, A-Z 0-9 space ? only."},
+    "id": {"type": "string", "description": "Response id (12 hex chars)."},
+    "session_id": {"type": "string", "description": "Conversation id; send it back as `session_id` so follow-ups see the previous turns and photo (last 8 turns, 30 min TTL)."},
+    "answer": {"type": "string", "description": "The spoken answer: 1-3 short sentences written to be read aloud (no lists, markdown, URLs or emoji)."},
+    "speech_text": {"type": "string", "description": "answer (+ follow_up): exactly what the phone (or the ring speaker) should say."},
+    "follow_up": {"type": ["string", "null"], "default": null, "description": "Optional single short follow-up offer, e.g. 'Want to know if it is edible?'. Already appended to speech_text."},
+    "subject": {"type": "string", "default": "", "description": "Main subject identified, e.g. 'Digitalis purpurea (foxglove)'. Empty if none."},
     "confidence": {"type": "number", "minimum": 0, "maximum": 1},
-    "subject": {"type": "string", "description": "Main subject, e.g. 'Digitalis purpurea (foxglove)'."},
-    "warnings": {"type": "array", "items": {"type": "string"}, "description": "Safety-relevant notes (toxic, allergenic, ...)."},
-    "morse": {
+    "warnings": {"type": "array", "items": {"type": "string"}, "default": [], "description": "Safety-relevant notes (toxic, allergenic, hot, ...)."},
+    "mode": {"type": "string", "enum": ["identify", "describe", "read_text", "translate", "chat", "custom"], "description": "Effective mode: `chat` whenever no photo was involved in the turn."},
+    "had_image": {"type": "boolean", "description": "True when a photo (uploaded now or remembered by the session) was shown to the model."},
+    "transcript": {"type": ["string", "null"], "default": null, "description": "Transcription of the uploaded voice question, if `audio` was sent."},
+    "transcript_error": {"type": ["string", "null"], "default": null, "description": "Set when speech-to-text failed but the turn went ahead on the typed `question`."},
+    "speech": {"anyOf": [{"$ref": "#/$defs/SpeechOut"}, {"type": "null"}], "default": null, "description": "mp3 for the phone / headphones (`speech_format` mp3 or both)."},
+    "speech_adpcm": {"anyOf": [{"$ref": "#/$defs/SpeechOut"}, {"type": "null"}], "default": null, "description": "16 kHz mono mcring-ADPCM for the on-ring speaker (`speech_format` adpcm16k or both): whole 132-byte blocks, ready to split into AUDIO_DATA writes."},
+    "speech_error": {"type": ["string", "null"], "default": null, "description": "Set when TTS was wanted but failed; the text answer is still valid and the phone should speak `speech_text` itself."},
+    "short": {"type": ["string", "null"], "default": null, "description": "Silent-pattern text (== morse.text): <= max_short_chars, A-Z 0-9 space ? only. Null unless want_morse=true."},
+    "morse": {"anyOf": [{"$ref": "#/$defs/MorseOut"}, {"type": "null"}], "default": null, "description": "Legacy / optional silent-pattern output. Null unless want_morse=true."},
+    "provider": {"type": "string", "description": "anthropic | openai"},
+    "model": {"type": "string", "description": "Model id that produced the answer (empty when the model refused)."},
+    "latency_ms": {"type": "integer"},
+    "usage": {"$ref": "#/$defs/Usage", "default": {"input_tokens": 0, "output_tokens": 0}},
+    "fallback_model": {"type": ["string", "null"], "default": null, "description": "Set when the configured model was unavailable and a fallback answered."}
+  },
+  "$defs": {
+    "SpeechOut": {
       "type": "object",
-      "required": ["text", "unit_ms", "units"],
+      "required": ["format", "mime", "audio_b64", "voice"],
+      "properties": {
+        "format": {"type": "string", "enum": ["mp3", "adpcm16k"]},
+        "mime": {"type": "string", "description": "audio/mpeg | audio/x-mcring-adpcm"},
+        "audio_b64": {"type": "string", "description": "Base64 of the audio bytes."},
+        "voice": {"type": "string"},
+        "sample_rate": {"type": ["integer", "null"], "default": null, "description": "adpcm16k only: 16000."},
+        "blocks": {"type": ["integer", "null"], "default": null, "description": "adpcm16k only: number of 132-byte / 256-sample blocks."},
+        "duration_ms": {"type": ["integer", "null"], "default": null, "description": "adpcm16k only: blocks * 16 ms."}
+      }
+    },
+    "MorseOut": {
+      "type": "object",
+      "required": ["text", "unit_ms", "units", "duration_ms", "ring_packet_b64", "char_wpm", "overall_wpm"],
       "properties": {
         "text": {"type": "string"},
         "unit_ms": {"type": "integer"},
         "units": {"type": "array", "items": {"type": "integer", "minimum": 1, "maximum": 255}, "description": "Alternating ON/OFF durations in units, starting with ON."},
         "duration_ms": {"type": "integer"},
-        "ring_packet_b64": {"type": "string", "description": "Ready-to-write Feedback characteristic payload (opcode 0x14 MORSE_UNITS)."}
+        "ring_packet_b64": {"type": "string", "description": "Ready-to-write Feedback characteristic payload (opcode 0x14 MORSE_UNITS)."},
+        "char_wpm": {"type": "integer"},
+        "overall_wpm": {"type": "integer"}
       }
     },
-    "speech": {
+    "Usage": {
       "type": "object",
       "properties": {
-        "mime": {"type": "string"},
-        "audio_b64": {"type": "string"},
-        "voice": {"type": "string"}
+        "input_tokens": {"type": "integer", "default": 0},
+        "output_tokens": {"type": "integer", "default": 0}
       }
-    },
-    "transcript": {"type": "string", "description": "If a voice question was uploaded, its transcription."},
-    "provider": {"type": "string"},
-    "model": {"type": "string"},
-    "latency_ms": {"type": "integer"},
-    "usage": {"type": "object", "properties": {"input_tokens": {"type": "integer"}, "output_tokens": {"type": "integer"}}}
+    }
   }
 }

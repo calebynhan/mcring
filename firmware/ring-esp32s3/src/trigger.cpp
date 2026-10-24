@@ -14,6 +14,7 @@ bool     s_btn_last = false;
 bool     s_btn_stable = false;
 uint32_t s_btn_change_ms = 0;
 uint32_t s_btn_down_ms = 0;
+uint32_t s_btn_held_ms = 0;
 bool     s_long_fired = false;
 
 // Touch
@@ -56,6 +57,7 @@ void trigger_init() {
 }
 
 bool trigger_button_down() { return s_btn_stable; }
+uint32_t trigger_button_held_ms() { return s_btn_held_ms; }
 uint32_t trigger_touch_value() {
 #if PIN_TOUCH >= 0
   return touchRead(PIN_TOUCH);
@@ -77,14 +79,15 @@ TriggerEvent trigger_tick() {
       if (raw) {
         s_btn_down_ms = now;
         s_long_fired = false;
+        return TriggerEvent::ButtonDown;
       } else {
-        if (s_long_fired) return TriggerEvent::VoiceEnd;
-        return TriggerEvent::Capture;       // short press released
+        s_btn_held_ms = now - s_btn_down_ms;
+        return s_long_fired ? TriggerEvent::LongRelease : TriggerEvent::ShortPress;
       }
     }
     if (s_btn_stable && !s_long_fired && now - s_btn_down_ms >= BUTTON_LONG_PRESS_MS) {
       s_long_fired = true;
-      return TriggerEvent::CaptureAndVoice;
+      return TriggerEvent::LongPress;
     }
   }
 
@@ -96,7 +99,7 @@ TriggerEvent trigger_tick() {
       if (now - s_last_tap_ms > 800) {   // ignore a burst of taps
         s_last_tap_ms = now;
         LOGI(TAG, "double tap");
-        return TriggerEvent::Capture;
+        return TriggerEvent::DoubleTap;
       }
     }
   }
@@ -120,7 +123,7 @@ TriggerEvent trigger_tick() {
           s_touch_active = true;
           first_ms = 0;
           LOGI(TAG, "touch (%lu > %lu)", (unsigned long)v, (unsigned long)s_touch_base);
-          return TriggerEvent::Capture;
+          return TriggerEvent::Touch;
         }
       }
     }

@@ -49,13 +49,31 @@ MODULE_X0 = L - MODULE["w"]            # 11.1
 MODULE_CX = MODULE_X0 + MODULE["w"] / 2  # 18.8
 MODULE_CY = W / 2                        # 9.0
 
-ANT_KEEPOUT_X0 = L - 2.0   # last 2.0 mm of the board under the u.FL end: no copper, either layer
-ANT_BEYOND_MM = 5.0        # and 5 mm beyond the back edge: no metal / cell / LRA (enclosure rule)
+# u.FL end of the module = the last 2 mm of the board. The MINI-1U has NO on-module antenna, so Espressif's
+# PCB-antenna copper keep-out does not apply here: the module's own GND/3V3/EN pads (pins 1-3 and 43-48 are the
+# ends of the two side rows, i.e. the pads nearest the u.FL — VERIFY against the Espressif footprint) and a solid
+# GND pour live in this strip. Rules: no DVP/XCLK/PCLK/PDM traces, no part other than U1, and the pigtail leaves
+# the plug over the back edge and runs down the inside of the bay's back wall.
+UFL_END_X0 = L - 2.0
+ANT_CLEARANCE_MM = 5.0     # flex antenna + pigtail >= 5 mm from the cell, the LRA and any other metal (enclosure rule)
 
 # Heights the CAD step has to clear
 UFL_MATED_HEIGHT = 2.9     # module substrate (~0.8) + mated U.FL-R-SMT / U.FL-LP-040 pair (2.0) + 0.1
 TOP_MAX_HEIGHT = max(MODULE["height"], UFL_MATED_HEIGHT)   # 2.9
 BOTTOM_MAX_HEIGHT = 1.15   # VSSOP-10 (U5) and SOT-23 (U3/U4/Q1) are 1.10–1.15 max
+LID_CLEARANCE = 0.30       # tallest top part -> lid underside
+LID_T = 1.2                # lid plate (CAD `lid_t`)
+CELL_POCKET_SLACK = 0.40   # the CAD cuts the cell pocket 3.4 deep for the 3.0 cell (hardware/cad `cell_pocket`)
+BORE_D = 4.6               # lens bore as printed (CAD `lens_d`; reamed to the 4.5 barrel)
+SWITCH_SLOT = (3.4, 1.6)   # side-switch slot through the bay wall, w (along x) × h (z) (CAD `switch_slot`)
+
+# Touch: the lid underside is TOP_MAX_HEIGHT + LID_CLEARANCE = 3.2 mm above the board, so a bare copper pad on the
+# board would sit 4 mm (3.2 air + 0.8 resin) behind the touch surface and never couple to a finger. The electrode
+# is therefore a copper-foil pad stuck to the LID underside (under the 0.8 mm touch dimple); TPAD1 on the board is
+# only the landing for a compliant conductor (conductive-foam block or SMT spring finger) that the lid compresses.
+TOUCH_CONTACT = dict(free_height=3.6, compressed_height=round(TOP_MAX_HEIGHT + LID_CLEARANCE, 2))   # 3.2
+LID_ELECTRODE = dict(w=4.0, h=5.0, dielectric=0.8,
+                     foil="copper foil 0.05-0.07 mm with conductive adhesive (3M 1181 class), cut 4 x 5 mm")
 
 # ----------------------------------------------------------------------------------------------
 # 2. Parts
@@ -98,8 +116,14 @@ def pad(ref, cx, cy, size, side="bottom", label="", note=""):
     return Part(ref, "pad", side, cx, cy, size, size, "pad", 0.0, label or ref, note)
 
 
-def tp(ref, cx, cy, label, note=""):
-    return Part(ref, "TP 1.0 mm", "bottom", cx, cy, 1.0, 1.0, "tp", 0.0, label, note)
+def tp(ref, cx, cy, label, note="", side="top"):
+    return Part(ref, "TP 1.0 mm", side, cx, cy, 1.0, 1.0, "tp", 0.0, label, note)
+
+
+# Test pads: all eight on the TOP side so the board can be flashed, probed and bench-powered while it sits in the
+# bay (the bottom face is 1.5 mm above the sub-board floor and unreachable once the wires are soldered).
+TP_COL_X = 10.15        # column directly in front of the module's front row (x 11.1): 0.45 mm to the module edge
+TP_FRONT_X = 5.2        # beside FPC1, inside the actuator swing zone (pads are 0 mm tall, so that is allowed)
 
 
 SWITCH_OFFSET = 8.0     # centre of SW1 from the front edge
@@ -111,16 +135,28 @@ MIC_XY = (8.1, 15.85)   # mic body centre (bottom side) == port hole == lid hole
 PARTS: list[Part] = [
     # ---------------- TOP ----------------
     Part("U1", "ESP32-S3-MINI-1U-N4R2", "top", MODULE_CX, MODULE_CY, MODULE["w"], MODULE["h"], "module",
-         MODULE["height"], "U1  ESP32-S3-MINI-1U", "u.FL / antenna end flush with the BACK edge; no copper under the last 2 mm"),
+         MODULE["height"], "U1  ESP32-S3-MINI-1U", "u.FL end flush with the BACK edge; GND pour + the module's own pads under the u.FL end are fine (no PCB antenna on the -1U)"),
     Part("FPC1", "24-pin 0.5 mm FPC, bottom contact", "top", 2.5, W / 2, 4.0, 16.0, "connector", 2.0,
          "FPC1  24p 0.5 mm  (OV2640 head)", "FPC enters from the FRONT edge; keep x 4.5–5.5 free of parts > 0.6 mm for the actuator"),
     Part("SW1", "Omron B3U-3000P", "top", SWITCH_OFFSET, SWITCH_CY, 3.0, 2.5, "switch", 1.2, "SW1",
          "side-actuated, plunger out of the LEFT edge"),
-    Part("TPAD1", "touch pad 3×4 mm copper", "top", TPAD["cx"], TPAD["cy"], TPAD["w"], TPAD["h"], "copper", 0.0,
-         "TPAD1", "hatched GND ring 0.5 mm away; NO copper under it on the bottom"),
+    Part("TPAD1", "touch landing 3×4 mm copper + compliant contact", "top", TPAD["cx"], TPAD["cy"], TPAD["w"], TPAD["h"], "copper",
+         TOUCH_CONTACT["compressed_height"], "TPAD1",
+         f"landing for a conductive-foam block / spring finger ({TOUCH_CONTACT['free_height']} free, compressed to "
+         f"{TOUCH_CONTACT['compressed_height']} by the lid) that reaches the {LID_ELECTRODE['w']:.0f}×{LID_ELECTRODE['h']:.0f} copper-foil "
+         f"electrode on the lid underside; hatched GND ring 0.5 mm away; NO copper under it on the bottom"),
     Part("D1", "WS2812B-2020", "top", LED_XY[0], LED_XY[1], 2.0, 2.0, "led", 0.9, "D1", "under the lid window"),
-    r0402("R7", 6.3, LED_XY[1], side="top", label="R7", note="100 Ω WS2812 data series"),
-    Part("C3", "100 µF 1206", "top", 8.1, 13.0, 3.2, 1.6, "passive", 1.8, "C3 100µ", "3V3 bulk for capture/radio peaks"),
+    r0402("R7", 6.3, LED_XY[1], side="top", label="R7", note="1 kΩ WS2812 data series"),
+    Part("C3", "100 µF 1206", "top", 7.8, 13.0, 3.2, 1.6, "passive", 1.8, "C3 100µ", "3V3 bulk for capture/radio peaks"),
+    # test pads (top): flash / debug / bench power with the board seated in the bay
+    tp("TP1", TP_COL_X, 9.0, "IO0", "boot strap; hold to TP5 (GND) for download mode"),
+    tp("TP5", TP_COL_X, 10.5, "GND", "USB GND / bench supply return"),
+    tp("TP3", TP_COL_X, 12.0, "D-", "USB_DM IO19 — module front row (pin 23), short stub"),
+    tp("TP4", TP_COL_X, 13.5, "D+", "USB_DP IO20 — module front row (pin 24), short stub"),
+    tp("TP2", TP_COL_X, 15.0, "EN", "MCU_EN; pulse low to reset"),
+    tp("TP6", TP_COL_X, 16.5, "3V3", "buck output (also at C3)"),
+    tp("TP8", TP_FRONT_X, 1.0, "VBAT", "bench supply 4.0 V in (with TP5) when no cell is fitted"),
+    tp("TP7", TP_FRONT_X, 2.5, "nCHG", "BQ25100 /CHG, low while charging"),
 
     # ---------------- BOTTOM: camera power cluster (front-left, under FPC1 power pins) ----------------
     r0402("C11", 1.8, 1.9, along="y", note="1 µF CAM_2V8 at U3 out"),
@@ -149,7 +185,7 @@ PARTS: list[Part] = [
     Part("MK1", "TDK T3902 PDM mic (bottom port)", "bottom", MIC_XY[0], MIC_XY[1], 2.65, 3.5, "mic", 0.98, "MK1",
          "bottom-port mic mounted on the BOTTOM; its port hole goes THROUGH the board and the lid hole sits above"),
     r0402("C19", 5.8, 15.9, note="100n mic VDD"),
-    Part("U9", "TPS22916C DSBGA-4", "bottom", 10.3, 15.5, 1.2, 0.9, "ic", 0.6, "U9", "WS2812 supply gate VBAT→VLED, ON = IO44"),
+    Part("U9", "TPS22916C DSBGA-4", "bottom", 10.3, 15.5, 1.2, 0.9, "ic", 0.6, "U9", "WS2812 supply gate 3V3→VLED, ON = IO33 (LED_PWR_EN)"),
     r0402("C20", 10.3, 14.3, note="100n VLED"),
     r0402("C21", 10.3, 16.8, note="1 µF VLED"),
 
@@ -161,13 +197,14 @@ PARTS: list[Part] = [
     c0603("C1", 11.6, 3.3, note="10 µF buck input"),
     Part("L1", "2.2 µH 2016 (DFE201610E)", "bottom", 13.7, 3.3, 2.0, 1.6, "inductor", 1.0, "L1", "buck inductor — tight loop with U8/C2"),
     c0603("C2", 15.8, 3.3, note="10 µF buck output"),
-    Part("D2", "PESD5V0S1UB SOD-523", "bottom", 18.4, 2.9, 1.2, 0.8, "diode", 0.6, "D2", "TVS on CHG_IN, < 2 mm from the pad"),
+    Part("D2", "PESD5V0S1BB SOD-523", "bottom", 18.4, 2.9, 1.2, 0.8, "diode", 0.6, "D2", "bidirectional TVS on CHG_PAD, < 2 mm from the pad"),
+    Part("D3", "PMEG2005EB SOD-523", "bottom", 18.4, 4.1, 1.2, 0.8, "diode", 0.6, "D3", "Schottky CHG_PAD → CHG_IN (reversed-cradle protection), right after D2"),
     Part("U8", "TPS62840DLC SOT-583", "bottom", 12.6, 5.6, 2.1, 1.6, "ic", 0.6, "U8 buck", "3V3 buck"),
     r0402("R12", 14.4, 5.3, note="VSET (3.3 V code)"),
     Part("U7", "BQ25100 DSBGA-6", "bottom", 16.6, 5.3, 1.6, 0.9, "ic", 0.6, "U7", "charger 25 mA / 1 mA term"),
     r0402("C7", 18.4, 5.3, note="1 µF charger IN"),
-    r0402("R8", 11.8, 6.9, note="100k divider top (VBAT)"),
-    r0402("R9", 13.0, 6.9, note="100k divider bottom"),
+    r0402("R8", 11.8, 6.9, note="1 M divider top (VBAT)"),
+    r0402("R9", 13.0, 6.9, note="1 M divider bottom"),
     r0402("C23", 14.2, 6.9, note="100n BAT_SENSE"),
     r0402("C8", 15.6, 6.9, note="1 µF charger OUT / VBAT"),
     r0402("R10", 16.9, 6.9, note="9.1k ISET"),
@@ -197,14 +234,6 @@ PARTS: list[Part] = [
     r0402("R2", 21.2, 1.6, note="10k IO0 pull-up"),
     r0402("R1", 21.2, 16.6, note="10k EN pull-up"),
     r0402("C6", 22.6, 16.6, note="1 µF EN delay"),
-    tp("TP1", 22.9, 3.0, "IO0"),
-    tp("TP2", 22.9, 4.5, "EN"),
-    tp("TP3", 22.9, 6.0, "D-", "USB_DM IO19"),
-    tp("TP4", 22.9, 7.5, "D+", "USB_DP IO20"),
-    tp("TP5", 22.9, 9.0, "GND"),
-    tp("TP6", 22.9, 10.5, "3V3"),
-    tp("TP7", 22.9, 12.0, "nCHG"),
-    tp("TP8", 22.9, 13.5, "VBAT"),
 ]
 
 # ----------------------------------------------------------------------------------------------
@@ -216,8 +245,9 @@ TPAD_NOCOPPER = (TPAD["cx"] - TPAD["w"] / 2, TPAD["cy"] - TPAD["h"] / 2, TPAD["c
 
 ZONES = [
     # name, side ('both'|'top'|'bottom'), rect, style, text
-    ("ANT", "both", (ANT_KEEPOUT_X0, 0.0, L, W), "keepout",
-     "antenna / u.FL end: no copper, no vias, either layer (+5 mm beyond the edge: no metal, cell or LRA)"),
+    ("UFL", "both", (UFL_END_X0, 0.0, L, W), "clearance",
+     "u.FL end: module GND/3V3/EN pads + GND pour are fine here (no PCB antenna on the -1U); no DVP/XCLK/PCLK/PDM "
+     "traces, no part other than U1; pigtail exits over the back edge"),
     ("TPAD_NC", "bottom", TPAD_NOCOPPER, "keepout", "no copper under the touch pad"),
     ("FPC_ACT", "top", (4.5, 1.0, 5.5, 17.0), "clearance", "FPC actuator swing: parts ≤ 0.6 mm only"),
     ("DVP", "bottom", (1.0, 8.3, MODULE_X0 + 1.5, 13.8), "corridor",
@@ -296,20 +326,32 @@ def run_checks() -> list[str]:
         back_lim = 0.0 if p.ref == "U1" else lim      # the module's antenna end is flush with the back edge by design
         if p.x0 < lim - 1e-6 or p.y0 < lim - 1e-6 or p.x1 > L - back_lim + 1e-6 or p.y1 > W - lim + 1e-6:
             problems.append(f"{p.ref} ({p.side}) violates the {lim} mm edge clearance: {rect_of(p)}")
-        # antenna keepout: nothing but the module itself
-        if p.ref != "U1" and _overlap(rect_of(p), (ANT_KEEPOUT_X0, 0, L, W)) > 0:
-            problems.append(f"{p.ref} is inside the antenna keepout (x ≥ {ANT_KEEPOUT_X0})")
-        # heights
+        # u.FL end strip: nothing but the module itself (keeps the pigtail exit clear)
+        if p.ref != "U1" and _overlap(rect_of(p), (UFL_END_X0, 0, L, W)) > 0:
+            problems.append(f"{p.ref} is inside the u.FL end strip (x ≥ {UFL_END_X0})")
+        # heights (TPAD1 carries the compliant touch contact, which is meant to reach the lid underside exactly)
         if p.side == "bottom" and p.height > BOTTOM_MAX_HEIGHT + 1e-6:
             problems.append(f"{p.ref} is {p.height} mm tall on the bottom (max {BOTTOM_MAX_HEIGHT})")
-        if p.side == "top" and p.height > TOP_MAX_HEIGHT + 1e-6:
+        if p.side == "top" and p.ref != "TPAD1" and p.height > TOP_MAX_HEIGHT + 1e-6:
             problems.append(f"{p.ref} is {p.height} mm tall on the top (max {TOP_MAX_HEIGHT})")
+        if p.ref == "TPAD1":
+            if abs(p.height - (TOP_MAX_HEIGHT + LID_CLEARANCE)) > 1e-6:
+                problems.append(f"TPAD1 contact height {p.height} must equal the board-top → lid-underside gap "
+                                f"{TOP_MAX_HEIGHT + LID_CLEARANCE:.2f}")
+            if TOUCH_CONTACT["free_height"] <= p.height:
+                problems.append("touch contact free height must exceed the compressed height (needs preload)")
+        # test pads live on the top side (reachable with the board seated in the bay)
+        if p.kind == "tp" and p.side != "top":
+            problems.append(f"{p.ref} test pad is on the {p.side} side — unreachable once the board is seated")
         # no copper under the touch pad
         if p.side == "bottom" and _overlap(rect_of(p), TPAD_NOCOPPER) > 0:
             problems.append(f"{p.ref} sits under the touch pad (no-copper zone)")
-        # FPC actuator clearance
+        # FPC actuator clearance (0 mm test pads are allowed in the swing zone)
         if p.side == "top" and p.ref != "FPC1" and p.height > 0.6 and _overlap(rect_of(p), (4.5, 1.0, 5.5, 17.0)) > 0:
             problems.append(f"{p.ref} is in the FPC actuator clearance zone")
+        # keep the test pads clear of the module's land pattern (probe slip onto the grounded shield)
+        if p.kind == "tp" and p.x1 > MODULE_X0 - 0.4 + 1e-6 and p.y0 < MODULE_CY + MODULE["h"] / 2 and p.y1 > MODULE_CY - MODULE["h"] / 2:
+            problems.append(f"{p.ref} is closer than 0.4 mm to the module's front edge")
     # pairwise overlaps on the same side (0.1 mm courtyard shrink → parts may be 0.1 mm apart at closest)
     for i, a in enumerate(PARTS):
         for b in PARTS[i + 1:]:
@@ -457,7 +499,7 @@ def draw_board(side: str, title: str, path: str) -> None:
         for (x0, y0, x1, y1) in [(u.x0, u.y0, u.x0 + 0.9, u.y1), (u.x0, u.y0, u.x1 - 2.0, u.y0 + 0.9), (u.x0, u.y1 - 0.9, u.x1 - 2.0, u.y1)]:
             draw_rect_mm(svg, view, x0, y0, x1, y1, fill="none", stroke="#2c3e50", sw=0.5, dash="1 1")
         (tx, ty) = view(u.x0 + 2.4, W / 2)
-        svg.text(tx, ty, "I/O pins on the front edge and both sides; none on the u.FL edge", size=8, anchor="middle", fill="#2c3e50")
+        svg.text(tx, ty, "I/O pins on the front edge and both sides; none on the u.FL edge (pin positions: VERIFY vs. the Espressif footprint)", size=8, anchor="middle", fill="#2c3e50")
         # FPC pins
         for n in range(1, 25):
             (px, py) = view(0.9, fpc_pin_y(n))
@@ -476,6 +518,21 @@ def draw_board(side: str, title: str, path: str) -> None:
         (sx, sy) = view(SWITCH_OFFSET, 0.0)
         svg.polygon([(sx - 9, sy), (sx + 9, sy), (sx + 9, sy - 8), (sx - 9, sy - 8)], fill="#6c3483", stroke="none")
         svg.text(sx - 12, sy + 14, "plunger through the LEFT wall", size=8, fill="#6c3483", anchor="end")
+        # touch electrode on the lid (dashed outline of the 4×5 foil above TPAD1)
+        draw_rect_mm(svg, view, TPAD["cx"] - LID_ELECTRODE["w"] / 2, TPAD["cy"] - LID_ELECTRODE["h"] / 2,
+                     TPAD["cx"] + LID_ELECTRODE["w"] / 2, TPAD["cy"] + LID_ELECTRODE["h"] / 2,
+                     fill="none", stroke="#9c640c", sw=0.8, dash="4 2")
+        (ex, ey) = view(TPAD["cx"] - LID_ELECTRODE["w"] / 2, TPAD["cy"] - LID_ELECTRODE["h"] / 2)   # foil's front-left corner
+        svg.line(ex, ey, bx - 8, ey - 4, stroke="#9c640c", sw=0.6)
+        for i, s_ in enumerate([f"touch electrode: {LID_ELECTRODE['w']:.0f}×{LID_ELECTRODE['h']:.0f} Cu foil",
+                                f"on the LID underside ({LID_ELECTRODE['dielectric']} resin)",
+                                f"foam contact on TPAD1 {TOUCH_CONTACT['free_height']}→{TOUCH_CONTACT['compressed_height']}"]):
+            svg.text(bx - 12, ey - 30 + 11 * i, s_, size=8.5, fill="#9c640c", anchor="end")
+        # test-pad column (leader from TP6 to the right margin, below the mic label)
+        (tx_, ty_) = view(TP_COL_X, 16.5 + 0.5)
+        svg.line(tx_, ty_, bx + bw + 10, ty_ + 2, stroke="#7d6608", sw=0.6)
+        svg.text(bx + bw + 12, ty_ - 3, "TP1–TP6 on the top side,", size=8.5, fill="#7d6608")
+        svg.text(bx + bw + 12, ty_ + 8, "0.45 mm before U1's front row", size=8.5, fill="#7d6608")
     # mic hole (both views)
     (mx, my) = view(*MIC_XY)
     svg.circle(mx, my, S * MIC_HOLE_D / 2, fill="#fff", stroke="#1b4f72", sw=1.2)
@@ -511,9 +568,9 @@ def draw_board(side: str, title: str, path: str) -> None:
         svg.line(px0, y - 3, px0 + 16, y - 3, stroke=col, sw=3)
         svg.text(px0 + 22, y - 3, label, size=9); y += 13
     if side == "top":
-        for s_ in ["Top layer: module footprint + fan-out, FPC1 pads, SW1, D1/R7, C3, touch pad + GND hatch; GND pour elsewhere.",
-                   "Bottom layer: all small ICs/passives, wire pads, test pads, DVP corridor, I²C, power cluster; GND pour.",
-                   "Module GND pads → ≥ 9 vias to the bottom pour; keep the last 2 mm (u.FL end) free of copper/vias on both layers."]:
+        for s_ in ["Top layer: module footprint + fan-out, FPC1 pads, SW1, D1/R7, C3, touch landing + GND hatch, 8 test pads; GND pour elsewhere.",
+                   "Bottom layer: all small ICs/passives, wire pads, DVP corridor, I²C, power cluster; GND pour.",
+                   "Module GND pads → ≥ 9 vias to the bottom pour; the u.FL end needs no copper keep-out (no PCB antenna on the -1U)."]:
             svg.text(px0 + 22, y - 3, s_, size=9, fill="#444"); y += 13
     y += 8
 
@@ -540,14 +597,23 @@ STACK = [
     # (name, thickness, colour, note)
     ("band inner wall (resin)", 1.20, "#e5e8e8", "≥ 1.2 mm between skin and cell"),
     ("301012 LiPo cell", 3.00, "#f9e79f", "3 × 10 × 12, flat under the board, leads to J1"),
+    ("cell-pocket slack", CELL_POCKET_SLACK, "#fdf6d8", "CAD pocket 3.4 deep for the 3.0 cell"),
     ("clearance cell → bottom parts", 0.35, "#ffffff", "foam/Kapton on the cell"),
     ("bottom-side parts", BOTTOM_MAX_HEIGHT, "#d5f5e3", "VSSOP-10 / SOT-23 ≤ 1.15; mic 0.98"),
     ("PCB FR-4 2-layer", BOARD["thickness"], "#2ecc71", "0.6 mm, ENIG"),
     ("top-side parts", TOP_MAX_HEIGHT, "#dfe9f3", "module 2.4; mated u.FL ≈ 2.9; FPC1 2.0; C3 1.8"),
-    ("clearance → lid", 0.30, "#ffffff", ""),
-    ("lid (resin)", 1.20, "#e5e8e8", "LED window 1.0–1.5 thin; mic hole Ø0.8"),
+    ("clearance → lid", LID_CLEARANCE, "#ffffff", f"touch contact on TPAD1 bridges parts + gap ({TOUCH_CONTACT['compressed_height']}) to the lid foil"),
+    ("lid (resin)", LID_T, "#e5e8e8", "LED window 1.0–1.5 thin; mic hole Ø0.8; touch dimple leaves 0.8 over the foil"),
 ]
-POD = dict(fpc_loop=2.5, head_thick=1.3, barrel_len=4.5, barrel_d=4.5, head_sq=8.5, wall=1.2, roof_gap=0.3)
+# Camera pod. The enclosure (hardware/cad/mcring_stage1.py) reads floor_relief / head_clear / fpc_fold from board_params.json
+# (pod_mm.floor_relief_above_skin, head_clearance, fpc_fold_above_head) and builds the pod as: floor = band wall on top of
+# the bore relief, head standing on the floor + head_clear, ceiling = head top + fpc_fold, roof = ceiling + wall.
+POD = dict(fpc_loop=2.5, head_thick=1.3, barrel_len=4.5, barrel_d=4.5, head_sq=8.5, wall=1.2,
+           floor_relief=0.5,    # the finger bore is opened by 0.5 under the signet so only the band touches the skin
+           head_clear=0.3,      # OV2640 head -> pod floor / side walls
+           fpc_fold=1.0)        # room above the head for the 180° fold of the camera FPC
+ANT_CAVITY_DEPTH = 2.0    # bay interior extends this far behind the board's back edge (u.FL pigtail turn + flex antenna)
+N_STACK_UNDER_BOARD = 5   # rows of STACK below the PCB
 
 
 def draw_stackup(path: str) -> None:
@@ -577,20 +643,23 @@ def draw_stackup(path: str) -> None:
         if note:
             svg.text(x0 + bw + 96, base - Z * z, note, size=8.5, fill="#555")
     svg.dim_v(base - Z * total, base, x0 - 30, f"signet height {total:.2f} mm above the skin", size=10)
-    svg.text(x0, base - Z * total - 30, f"Signet top = {total:.2f} mm above the skin = {total - 3.2:.2f} mm above a 3.2 mm band wall.",
-             size=11, weight="bold", fill="#922b21")
-    svg.text(x0, base - Z * total - 14, f"Alternative (cell in the palm-side thick zone, as in the old .scad): remove the 3.0 cell layer → "
-             f"{total - 3.0:.2f} mm.", size=10, fill="#444")
+    band_wall = STACK[0][1]
+    svg.text(x0, base - Z * total - 30, f"Signet top = {total:.2f} mm above the skin = {total - band_wall:.2f} mm above the band's outer "
+             f"surface ({band_wall:.1f} mm band wall).", size=11, weight="bold", fill="#922b21")
+    cell_layers = 3.0 + CELL_POCKET_SLACK
+    svg.text(x0, base - Z * total - 14, f"Alternative (cell in the palm-side thick zone, as in the old .scad): remove the cell + pocket "
+             f"({cell_layers:.1f}) → {total - cell_layers:.2f} mm.", size=10, fill="#444")
 
     # ---- camera pod section (side view, cut at y = 9 through the lens axis) ----
     px0 = 830.0
     Xs = 22.0   # px per mm horizontal for the section
     svg.text(px0, 100, "Camera pod — side section along the finger (board front edge at x = 0)", size=13, weight="bold")
     svg.text(px0, 118, "+x → toward the back (antenna); the pod extends in front of the board (negative x).", size=10, fill="#444")
-    z_board_bot = sum(t for _, t, _, _ in STACK[:4])   # 5.70
-    z_board_top = z_board_bot + BOARD["thickness"]     # 6.30
-    z_lid_bot = z_board_top + TOP_MAX_HEIGHT + 0.30     # 9.50
-    z_lid_top = z_lid_bot + 1.2                         # 10.70
+    z_board_bot = sum(t for _, t, _, _ in STACK[:N_STACK_UNDER_BOARD])   # 6.10
+    z_board_top = z_board_bot + BOARD["thickness"]     # 6.70
+    z_lid_bot = z_board_top + TOP_MAX_HEIGHT + LID_CLEARANCE   # 9.90
+    z_lid_top = z_lid_bot + LID_T                       # 11.10
+    assert abs(z_lid_top - total) < 1e-9
     sec_base = 700.0
     sec_x0 = px0 + 225   # picture x of board front edge (board x = 0)
 
@@ -622,17 +691,20 @@ def draw_stackup(path: str) -> None:
     svg.rect(SX(-0.5), SZ(z_lid_top), Xs * 14.0, Z * 1.2, fill="#e5e8e8", stroke="#333", sw=1)
     svg.text(SX(7.0), SZ(z_lid_top - 0.6), f"lid 1.2 (underside z = {z_lid_bot:.2f})", size=9, anchor="middle")
 
-    # camera head: vertical plate in front of the board, optical axis along -x
-    lens_z = 5.5
+    # camera head: vertical plate in front of the board, optical axis along -x; it stands on the pod floor
+    band_wall = STACK[0][1]
+    pod_floor_z = POD["floor_relief"] + band_wall       # 1.70
+    hz0 = pod_floor_z + POD["head_clear"]               # 2.00
+    hz1 = hz0 + POD["head_sq"]                          # 10.50
+    lens_z = hz0 + POD["head_sq"] / 2                   # 6.25
     head_x1 = -POD["fpc_loop"]                      # back face of the head
     head_x0 = head_x1 - POD["head_thick"]           # front face (barrel base)
     barrel_x0 = head_x0 - POD["barrel_len"]         # barrel front
-    hz0, hz1 = lens_z - POD["head_sq"] / 2, lens_z + POD["head_sq"] / 2
     svg.rect(SX(head_x0), SZ(hz1), Xs * POD["head_thick"], Z * POD["head_sq"], fill="#34495e", stroke="#111", sw=1)
     svg.rect(SX(barrel_x0), SZ(lens_z + POD["barrel_d"] / 2), Xs * POD["barrel_len"], Z * POD["barrel_d"], fill="#2c3e50", stroke="#111", sw=1)
     svg.text(SX(barrel_x0 + POD["barrel_len"] / 2), SZ(lens_z), "lens Ø4.5", size=9, anchor="middle", fill="#fff")
     svg.text(SX(head_x0 + POD["head_thick"] / 2), SZ(hz1) - 6, "OV2640 head 8.5 × 8.5 × 1.3 (+4.5 barrel)", size=8.5, anchor="middle", fill="#111")
-    svg.text(SX(head_x1 + 0.2), SZ(hz0) + 12, "cell is only under the bay, not under the pod", size=8, fill="#555")
+    svg.text(SX(head_x1 + 0.2), SZ(hz0 + 1.2), "cell is only under the bay, not under the pod", size=8, fill="#555")
     # FPC loop: from the head's back face to the connector mouth at the board front edge
     svg.path(f"M {SX(head_x1):.1f} {SZ(lens_z + 3):.1f} C {SX(head_x1 + 1.2):.1f} {SZ(lens_z + 3):.1f}, "
              f"{SX(-0.6):.1f} {SZ(z_board_top + 0.9):.1f}, {SX(0.6):.1f} {SZ(z_board_top + 0.6):.1f}",
@@ -640,29 +712,28 @@ def draw_stackup(path: str) -> None:
     svg.text(SX(head_x1 + 0.3), SZ(lens_z + 3.8), "24-pin FPC (exits the head sideways, loops back)", size=8, fill="#e67e22")
     # lens axis
     svg.line(SX(barrel_x0 - 2.5), SZ(lens_z), SX(1.0), SZ(lens_z), stroke="#c0392b", sw=0.8, dash="6 3")
-    svg.text(SX(barrel_x0 - POD["wall"]) - 48, SZ(lens_z) - 8, f"lens axis z = {lens_z:.1f}", size=9, fill="#c0392b", anchor="end")
-    # pod walls
-    pod_front = barrel_x0 - POD["wall"] + POD["barrel_len"] * 0 - 0.0   # barrel front flush with the pod face
-    pod_front = barrel_x0
-    roof_bot = hz1 + POD["roof_gap"]
-    roof_top = roof_bot + POD["wall"]
-    floor_top = hz0 - POD["roof_gap"]
-    svg.rect(SX(pod_front - POD["wall"]), SZ(roof_top), Xs * POD["wall"], Z * (roof_top - 1.2), fill="#e5e8e8", stroke="#333", sw=1)   # front wall
-    svg.rect(SX(pod_front - POD["wall"]), SZ(roof_top), Xs * (-(pod_front - POD["wall"]) + 0.5), Z * POD["wall"], fill="#e5e8e8", stroke="#333", sw=1)  # roof
-    svg.rect(SX(pod_front - POD["wall"]), SZ(1.2), Xs * (-(pod_front - POD["wall"]) + band_c - 6), Z * 1.2, fill="#e5e8e8", stroke="#333", sw=1)  # floor
+    svg.text(SX(barrel_x0 - POD["wall"]) - 48, SZ(lens_z) - 8, f"lens axis z = {lens_z:.2f}", size=9, fill="#c0392b", anchor="end")
+    # pod walls (as the CAD builds them): floor = band wall on the bore relief, ceiling = head top + FPC fold, roof above the lid
+    pod_front = barrel_x0                       # barrel front flush with the pod face
+    roof_bot = hz1 + POD["fpc_fold"]            # pod ceiling 11.50
+    roof_top = roof_bot + POD["wall"]           # 12.70 — the roof lips back over the lid's front edge
+    svg.rect(SX(pod_front - POD["wall"]), SZ(roof_top), Xs * POD["wall"], Z * (roof_top - POD["floor_relief"]), fill="#e5e8e8", stroke="#333", sw=1)   # front wall
+    svg.rect(SX(pod_front - POD["wall"]), SZ(roof_top), Xs * (-(pod_front - POD["wall"]) + 1.0), Z * POD["wall"], fill="#e5e8e8", stroke="#333", sw=1)  # roof (+ lip over the lid edge)
+    svg.rect(SX(pod_front - POD["wall"]), SZ(pod_floor_z), Xs * (-(pod_front - POD["wall"]) + band_c - 6), Z * band_wall, fill="#e5e8e8", stroke="#333", sw=1)  # floor
+    svg.text(SX(pod_front + 0.3), SZ(pod_floor_z) + 10, f"pod floor z {pod_floor_z:.2f} (bore relief {POD['floor_relief']} + wall)", size=8, fill="#555")
     # lens bore through the front wall
-    svg.rect(SX(pod_front - POD["wall"]), SZ(lens_z + POD["barrel_d"] / 2 + 0.1), Xs * POD["wall"], Z * (POD["barrel_d"] + 0.2), fill="#fff", stroke="#333", sw=0.6)
-    svg.text(SX(pod_front - POD["wall"]) - 4, SZ(lens_z + 3.2), "bore Ø4.7", size=8.5, anchor="end")
+    svg.rect(SX(pod_front - POD["wall"]), SZ(lens_z + BORE_D / 2), Xs * POD["wall"], Z * BORE_D, fill="#fff", stroke="#333", sw=0.6)
+    svg.text(SX(pod_front - POD["wall"]) - 4, SZ(lens_z + 3.2), f"bore Ø{BORE_D}", size=8.5, anchor="end")
     # dimensions
     svg.dim_h(SX(pod_front - POD["wall"]), SX(0), SZ(roof_top) - 14, f"pod depth {-(pod_front - POD['wall']):.1f} in front of the board edge", size=9)
     svg.dim_v(SZ(roof_top), SZ(0), SX(pod_front - POD["wall"]) - 30, f"pod height {roof_top:.1f}", size=9)
-    svg.text(px0, 140, f"Lens axis z = {lens_z:.1f}; head spans z {hz0:.2f}–{hz1:.2f}; pod roof underside {roof_bot:.2f}, top {roof_top:.2f} "
-             f"({roof_top - z_lid_top:+.2f} vs the bay lid).", size=10, fill="#444")
+    svg.text(px0, 140, f"Lens axis z = {lens_z:.2f}; head spans z {hz0:.2f}–{hz1:.2f} ({POD['head_clear']} above the pod floor); pod ceiling "
+             f"{roof_bot:.2f} (= head top + {POD['fpc_fold']} FPC fold), roof top {roof_top:.2f} ({roof_top - z_lid_top:+.2f} vs the bay lid).", size=10, fill="#444")
     svg.text(px0, 156, f"Pod interior: {-(pod_front):.1f} deep × ≥ 9.2 wide (head 8.5 + 0.35 per side) — head is centred on y = {W/2:.1f}.", size=10, fill="#444")
     svg.save(path, png_scale=2.0)
     return dict(z_board_bottom=z_board_bot, z_board_top=z_board_top, z_lid_bottom=z_lid_bot, z_lid_top=z_lid_top,
-                signet_height=total, lens_axis_z=lens_z, head_z=[hz0, hz1], pod_roof_top=roof_top,
-                pod_depth_from_board_edge=-(pod_front - POD["wall"]), pod_interior_depth=-pod_front)
+                signet_height=total, lens_axis_z=lens_z, head_z=[hz0, hz1], pod_floor_z=pod_floor_z, pod_ceiling_z=roof_bot,
+                pod_roof_top=roof_top, pod_depth_from_board_edge=-(pod_front - POD["wall"]), pod_interior_depth=-pod_front)
 
 
 # ----------------------------------------------------------------------------------------------
@@ -688,19 +759,26 @@ def write_params(stack_info: dict) -> dict:
         "notes": (
             "Coordinates from the board's FRONT-LEFT corner seen from the top: x along the finger (0 = front/camera "
             "edge, board_length = back/antenna edge), y across the finger (0 = left edge where the switch is). "
-            "Module ESP32-S3-MINI-1U 15.4x15.4x2.4 with its u.FL end flush with the back edge; keep 5 mm behind the "
-            "back edge free of metal, cell and LRA, and route the flex antenna down the back wall. top_max_height "
+            "Module ESP32-S3-MINI-1U 15.4x15.4x2.4 with its u.FL end flush with the back edge; the u.FL pigtail "
+            "leaves over the back edge and runs down the inside of the bay's back wall to the flex antenna, which "
+            "stays >= antenna_keepout_beyond_edge_mm (5) from the cell, the LRA and any other metal (the -1U has no "
+            "on-module antenna, so there is no copper keep-out on the board). top_max_height "
             "is the mated u.FL plug (2.9), the module shield is 2.4 (the lid may be lower over the front strip, "
             "x < 11.1: tallest part there is FPC1 at 2.0). Bottom parts max 1.15 (SOT-23/VSSOP) - allow >= 0.35 "
             "clearance to the cell. Mic MK1 is a bottom-port part mounted on the BOTTOM side at mic_xy; its 0.6 mm "
             "port goes through the board, so the lid needs a ~0.8 mm hole straight above mic_xy. LED D1 is on top "
             "at led_xy under a 1.0-1.5 mm thinned window (~3 mm). Switch SW1 body 3.0x2.5x1.2 on the top side, "
-            "plunger pointing out of the left edge at x = switch_offset; wall slot ~3.2 x 1.5 centred z = board_top+0.6. "
-            "Touch pad 3x4 copper on top at touchpad_xy (needs only a thin, non-conductive lid: <= 1.0 mm there or "
-            "an opening). FPC connector FPC1 on top at x 0.5-4.5 spanning y 1-17, FPC enters from the front edge; the "
+            "plunger pointing out of the left edge at x = switch_offset; wall slot switch_slot_mm (3.4 x 1.6) centred "
+            "z = board_top+0.6. Touch (touch_mm): the electrode is a 4x5 copper-foil pad on the LID UNDERSIDE at "
+            "touchpad_xy under the 0.8 mm dimple; TPAD1 on the board is the landing for a conductive-foam / spring "
+            "contact that the lid compresses from 3.6 to 3.2 mm (= top_parts + lid_clearance). The 8 test pads "
+            "(test_pads_top_mm) are on the TOP side so the board can be flashed and probed while seated in the bay. "
+            "FPC connector FPC1 on top at x 0.5-4.5 spanning y 1-17, FPC enters from the front edge; the "
             "camera head sits in a pod in front of the board (see stackup.svg / pod_mm). Wire pads for the cell "
             "(J1), charging pads (PAD1/2), LRA (M1), piezo (BZ1) and aux (J2) are all on the BOTTOM side, so the "
-            "wire channel into the band should open under the board near x 12-20 (left) and x 15-18 (right)."
+            "wire channel into the band should open under the board near x 12-20 (left) and x 15-18 (right). "
+            "stack_mm and pod_mm carry the enclosure's as-built numbers (cell pocket 3.4 deep, lid top 11.1, pod "
+            "roof flush with the lid, bore 4.6)."
         ),
         # ---- extras for the CAD step ----
         "switch_xy_mm": [sw.cx, sw.cy],
@@ -709,32 +787,52 @@ def write_params(stack_info: dict) -> dict:
         "module_front_edge_x_mm": round(MODULE_X0, 2),
         "ufl_mated_height_mm": UFL_MATED_HEIGHT,
         "front_strip_max_height_mm": 2.0,
-        "antenna_keepout_on_board_mm": round(L - ANT_KEEPOUT_X0, 2),
-        "antenna_keepout_beyond_edge_mm": ANT_BEYOND_MM,
+        "ufl_end_strip_mm": round(L - UFL_END_X0, 2),
+        "ufl_end_rule": "no copper keep-out (MINI-1U has no PCB antenna): module GND/3V3/EN pads + GND pour; no DVP/XCLK/PCLK/PDM traces, no part other than U1; pigtail exits over the back edge",
+        "antenna_keepout_beyond_edge_mm": ANT_CLEARANCE_MM,
+        "antenna_rule": "flex antenna + pigtail >= 5 mm from the cell, the LRA and any other metal; down the inside of the back wall, then along the band",
+        "switch_slot_mm": [SWITCH_SLOT[0], SWITCH_SLOT[1]],
         "fpc_connector_mm": {"x0": 0.5, "x1": 4.5, "y0": 1.0, "y1": 17.0, "height": 2.0, "pin1_y": round(fpc_pin_y(1), 2)},
         "led_window_d_mm": 3.0,
         "mic_hole_d_mm": 0.8,
         "mic_port_board_hole_d_mm": MIC_HOLE_D,
         "touchpad_size_mm": [TPAD["w"], TPAD["h"]],
+        "touch_mm": {
+            "landing_xy": [TPAD["cx"], TPAD["cy"]], "landing_size": [TPAD["w"], TPAD["h"]],
+            "contact": "conductive-foam block (or SMT spring finger) on TPAD1, free height 3.6, compressed to top_parts + lid_clearance",
+            "contact_free_height": TOUCH_CONTACT["free_height"], "contact_compressed_height": TOUCH_CONTACT["compressed_height"],
+            "lid_electrode_size": [LID_ELECTRODE["w"], LID_ELECTRODE["h"]], "lid_electrode_xy": [TPAD["cx"], TPAD["cy"]],
+            "lid_electrode": LID_ELECTRODE["foil"] + " stuck to the lid UNDERSIDE, centred on touchpad_xy",
+            "dielectric_over_electrode_max": LID_ELECTRODE["dielectric"],
+            "dielectric_note": "lid 1.2 minus the 0.4 touch dimple = 0.8 mm resin between the foil and the finger",
+        },
         "stack_mm": {
-            "band_wall": 1.2, "cell": 3.0, "cell_clearance": 0.35, "bottom_parts": BOTTOM_MAX_HEIGHT,
-            "pcb": BOARD["thickness"], "top_parts": TOP_MAX_HEIGHT, "lid_clearance": 0.30, "lid": 1.2,
+            "band_wall": 1.2, "cell": 3.0, "cell_pocket_slack": CELL_POCKET_SLACK, "cell_pocket_depth": round(3.0 + CELL_POCKET_SLACK, 2),
+            "cell_clearance": 0.35, "bottom_parts": BOTTOM_MAX_HEIGHT,
+            "pcb": BOARD["thickness"], "top_parts": TOP_MAX_HEIGHT, "lid_clearance": LID_CLEARANCE, "lid": LID_T,
             "z_board_bottom": round(stack_info["z_board_bottom"], 2), "z_board_top": round(stack_info["z_board_top"], 2),
             "z_lid_bottom": round(stack_info["z_lid_bottom"], 2), "z_lid_top": round(stack_info["z_lid_top"], 2),
             "signet_height_above_skin": round(stack_info["signet_height"], 2),
-            "signet_height_above_skin_cell_in_band": round(stack_info["signet_height"] - 3.0, 2),
+            "signet_height_above_skin_cell_in_band": round(stack_info["signet_height"] - 3.0 - CELL_POCKET_SLACK, 2),
         },
         "pod_mm": {
-            "lens_axis_z": stack_info["lens_axis_z"], "lens_barrel_d": POD["barrel_d"], "bore_d": 4.7,
+            "lens_axis_z": round(stack_info["lens_axis_z"], 2), "lens_barrel_d": POD["barrel_d"], "bore_d": BORE_D,
             "head_square": POD["head_sq"], "head_thickness": POD["head_thick"], "barrel_length": POD["barrel_len"],
             "fpc_loop": POD["fpc_loop"], "wall": POD["wall"],
+            "floor_relief_above_skin": POD["floor_relief"], "head_clearance": POD["head_clear"], "fpc_fold_above_head": POD["fpc_fold"],
             "interior_depth_from_board_edge": round(stack_info["pod_interior_depth"], 2),
             "depth_from_board_edge_incl_wall": round(stack_info["pod_depth_from_board_edge"], 2),
-            "interior_width": 9.2, "roof_top_z": round(stack_info["pod_roof_top"], 2),
-            "head_z": [round(v, 2) for v in stack_info["head_z"]],
+            "interior_width": 9.2,
+            "floor_z": round(stack_info["pod_floor_z"], 2), "head_z": [round(v, 2) for v in stack_info["head_z"]],
+            "ceiling_z": round(stack_info["pod_ceiling_z"], 2), "roof_top_z": round(stack_info["pod_roof_top"], 2),
+            "roof_above_lid": round(stack_info["pod_roof_top"] - stack_info["z_lid_top"], 2),
+        },
+        "antenna_cavity_mm": {
+            "depth_behind_board_edge": ANT_CAVITY_DEPTH,
+            "note": "bay interior extends behind the board's back edge for the u.FL pigtail turn and the flex antenna glued to the back wall",
         },
         "wire_pads_bottom_mm": {p.ref: [p.cx, p.cy] for p in PARTS if p.kind == "pad"},
-        "test_pads_bottom_mm": {p.label: [p.cx, p.cy] for p in PARTS if p.kind == "tp"},
+        "test_pads_top_mm": {p.label: [p.cx, p.cy] for p in PARTS if p.kind == "tp"},
         "parts": [asdict(p) for p in PARTS],
     }
     with open(os.path.join(HERE, "board_params.json"), "w", encoding="utf-8") as f:
@@ -761,7 +859,11 @@ def write_md(params: dict, check_msgs: list[str]) -> None:
         elif sig in ("AGND", "DGND"): g = "GND"
         fpc_rows.append(f"| {n} | {sig} | {g} | {fpc_pin_y(n):.2f} |")
 
-    st = params["stack_mm"]; pod = params["pod_mm"]
+    st = params["stack_mm"]; pod = params["pod_mm"]; tm = params["touch_mm"]
+    n0402 = sum(1 for p in PARTS if p.side == "bottom" and p.name == "0402")
+    n0603 = sum(1 for p in PARTS if p.side == "bottom" and p.name == "0603")
+    n_tp = sum(1 for p in PARTS if p.kind == "tp")
+    tp_list = ", ".join(f"{p.ref} {p.label}" for p in sorted((q for q in PARTS if q.kind == "tp"), key=lambda q: q.ref))
     md = f"""# mcring v1 — stage-1 PCB floorplan
 
 Generated by `floorplan.py` (pure Python → SVG/PNG, no CAD). Drawings: `out/floorplan_top.*`,
@@ -774,9 +876,9 @@ Reference designators and nets follow `hardware/electrical/out/mcring_v1_nets.md
 |---|---|
 | Outline | **{L} × {W} mm**, rounded corners r = {BOARD['corner_r']} mm, 2-layer FR-4 **0.6 mm**, ENIG |
 | Orientation | x along the finger: **front edge = camera / FPC** (x = 0), **back edge = antenna / u.FL** (x = {L}); y across the finger: **left edge = switch** (y = 0) |
-| Module | ESP32-S3-MINI-1U 15.4 × 15.4 × 2.4, centre ({params['module_xy_mm'][0]}, {params['module_xy_mm'][1]}), u.FL end **flush with the back edge** |
-| Top side | U1 module, FPC1 (24-pin 0.5 mm bottom-contact), SW1 side switch, D1 WS2812B-2020 + R7, C3 100 µF 1206, TPAD1 3 × 4 copper touch pad with hatched GND ring |
-| Bottom side (≤ {BOTTOM_MAX_HEIGHT} mm) | everything else: U2–U9, L1, D2, Q1, MK1 mic (bottom-port, port through the board), 37 × 0402, 3 × 0603, wire pads (cell, charge pads, LRA, piezo, aux), 8 test pads |
+| Module | ESP32-S3-MINI-1U 15.4 × 15.4 × 2.4, centre ({params['module_xy_mm'][0]}, {params['module_xy_mm'][1]}), u.FL end **flush with the back edge** (pin positions along the three rows: **verify against the Espressif footprint** — nothing below depends on them except the stub lengths in §6) |
+| Top side | U1 module, FPC1 (24-pin 0.5 mm bottom-contact), SW1 side switch, D1 WS2812B-2020 + R7, C3 100 µF 1206, TPAD1 3 × 4 touch landing with hatched GND ring (the touch **electrode** is a copper foil on the lid underside — §2), **{n_tp} test pads** ({tp_list}) |
+| Bottom side (≤ {BOTTOM_MAX_HEIGHT} mm) | everything else: U2–U9, L1, D2, D3, Q1, MK1 mic (bottom-port, port through the board), {n0402} × 0402, {n0603} × 0603, wire pads (cell, charge pads, LRA, piezo, aux) |
 | Tallest top part | mated u.FL plug on the module ≈ {UFL_MATED_HEIGHT} mm (module shield 2.4; front strip x < {MODULE_X0:.1f}: FPC1 2.0) |
 | Why {L} long | {MODULE_X0:.1f} mm front strip (FPC1 4.0 + 1.0 actuator clearance + 5.6 for SW1/TPAD1/D1/C3/mic port) + 15.4 module |
 | Why {W} wide | FPC1 body 16 mm + 2 × 1.0 edge; module 15.4 + 2 × 1.3 |
@@ -785,9 +887,22 @@ Reference designators and nets follow `hardware/electrical/out/mcring_v1_nets.md
 
 {table('top')}
 
-Touch pad guard ring: hatched top copper {TPAD['ring']} mm wide, {TPAD['gap']} mm from the pad, no copper under the pad on the
-bottom layer. LED window Ø3 in the lid above D1 ({LED_XY[0]}, {LED_XY[1]}). Mic port hole Ø{MIC_HOLE_D} through the board at
-({MIC_XY[0]}, {MIC_XY[1]}) with an Ø0.8 lid hole above it (nothing else on the top side within 0.9 mm).
+**Touch electrode on the lid, not on the board.** The lid underside is {st['top_parts']} + {st['lid_clearance']} = {tm['contact_compressed_height']} mm
+above the board, so a bare copper pad on the board would sit 4 mm (air + 0.8 resin) behind the touch surface — a
+12 mm² electrode that far behind the dielectric has negligible finger coupling and `trigger.cpp`'s +25 % threshold
+would never fire. Instead: a {tm['lid_electrode_size'][0]:.0f} × {tm['lid_electrode_size'][1]:.0f} mm copper-foil pad ({LID_ELECTRODE['foil']}) is stuck to the
+**lid underside** centred on ({TPAD['cx']}, {TPAD['cy']}), under the CAD's 4 × 5 × 0.4 touch dimple, which leaves {tm['dielectric_over_electrode_max']} mm of resin
+between the foil and the thumb. TPAD1 on the board is the 3 × 4 copper landing for a compliant conductor — a conductive-foam
+block 3 × 4 × {tm['contact_free_height']} mm (or an SMT spring finger of similar free height) that the lid compresses to {tm['contact_compressed_height']} mm — so the
+electrode is wired to IO8 through R13 without any flying lead. Guard ring: hatched top copper {TPAD['ring']} mm wide, {TPAD['gap']} mm
+from the landing, no copper under it on the bottom layer. LED window Ø3 in the lid above D1 ({LED_XY[0]}, {LED_XY[1]}). Mic port hole
+Ø{MIC_HOLE_D} through the board at ({MIC_XY[0]}, {MIC_XY[1]}) with an Ø0.8 lid hole above it (nothing else on the top side within 0.9 mm).
+
+**Test pads on the top side.** TP1–TP6 (IO0, GND, D−, D+, EN, 3V3) form a column at x = {TP_COL_X}, 0.45 mm in front of the
+module's front row, 1.5 mm pitch; TP8 (VBAT) and TP7 (nCHG) sit at x = {TP_FRONT_X} beside FPC1 (0 mm tall, so the actuator swing
+zone is fine). All eight are reachable with the board seated on its ledges and the lid off — flashing over USB, holding IO0,
+pulsing EN, bench-powering from VBAT/GND and the cradle/nCHG check no longer need the board lifted or the cell/LRA/pad wires
+unsoldered. Wire pads stay on the bottom (the wires go down into the band).
 
 ## 3. Placement — bottom side
 
@@ -797,7 +912,8 @@ bottom layer. LED window Ø3 in the lid above D1 ({LED_XY[0]}, {LED_XY[1]}). Mic
 
 | Zone | Layers | Rectangle (x0, y0 – x1, y1) | Rule |
 |---|---|---|---|
-| Antenna / u.FL end | both | ({ANT_KEEPOUT_X0:.1f}, 0 – {L}, {W}) | no copper, no vias; **+{ANT_BEYOND_MM} mm beyond the back edge** no metal, cell or LRA (enclosure) |
+| u.FL end | both | ({UFL_END_X0:.1f}, 0 – {L}, {W}) | **no copper keep-out** — the MINI-1U has no PCB antenna, and the module's GND 1–2 / 3V3 (3) and GND 43–44 / EN (45) pads are the ends of the two side rows, nearest the u.FL (verify on the footprint), so copper is *required* here: GND pour on both layers, normal fan-out of those pads; no DVP/XCLK/PCLK/PDM traces, no part other than U1. The pigtail leaves the plug over the back edge and runs down the inside of the bay's back wall |
+| Antenna (enclosure) | — | — | flex dipole + pigtail **≥ {ANT_CLEARANCE_MM} mm from the cell, the LRA and any other metal**, never under the module or across the DVP corridor; cable ≤ 50 mm |
 | Touch pad | bottom | ({TPAD_NOCOPPER[0]:.1f}, {TPAD_NOCOPPER[1]:.1f} – {TPAD_NOCOPPER[2]:.1f}, {TPAD_NOCOPPER[3]:.1f}) | no copper under TPAD1; R13 just outside it |
 | FPC actuator swing | top | (4.5, 1.0 – 5.5, 17.0) | parts ≤ 0.6 mm only (R7 is fine) |
 | DVP corridor | bottom | (1.0, 8.3 – {MODULE_X0 + 1.5:.1f}, 13.8) | Y2–Y9, PCLK, HREF, VSYNC, XCLK only; vias up to U1 in the last 1.5 mm |
@@ -805,9 +921,9 @@ bottom layer. LED window Ø3 in the lid above D1 ({LED_XY[0]}, {LED_XY[1]}). Mic
 
 ## 5. Layer usage
 
-* **Top**: module footprint + fan-out, FPC1, SW1, D1/R7, C3, touch pad + GND hatch, GND pour. The DVP bus leaves
-  FPC1 on the top layer, drops to the bottom corridor, and comes back up at the module's front-left pins.
-* **Bottom**: all small ICs and passives, wire pads, test pads, the DVP corridor, I²C, the power cluster; GND pour
+* **Top**: module footprint + fan-out, FPC1, SW1, D1/R7, C3, touch landing + GND hatch, the 8 test pads, GND pour. The DVP
+  bus leaves FPC1 on the top layer, drops to the bottom corridor, and comes back up at the module's front-left pins.
+* **Bottom**: all small ICs and passives, wire pads, the DVP corridor, I²C, the power cluster; GND pour
   everywhere else, stitched to the top pour with vias every ≤ 3 mm.
 * Design rules per `hardware/electrical/README.md` §5 (0.10/0.10 mm fine, 0.2 mm drill, NSMD DSBGA pads).
 * 2 layers is tight: if the DVP + power fan-out does not close, the fallback is a 4-layer 0.6 mm stack
@@ -821,14 +937,14 @@ bottom layer. LED window Ø3 in the lid above D1 ({LED_XY[0]}, {LED_XY[1]}). Mic
 | SCCB SIOD/SIOC | pull-ups R5/R6 at the connector, to CAM_3V3 (switched rail) |
 | CAM power | 3V3 → U2 → CAM_3V3 → U3 (2.8 V) / U4 (1.2 V) → FPC1 pins 4/10/11; caps C13/C24 within 1 mm of the pins |
 | Buck | C1 – U8 – L1 – C2 in a tight loop, SW_NODE minimal area, VOS sense from C2 |
-| Charge input | CHG+ pad → D2 TVS (< 2 mm) → U7 IN with C7; CHG− straight to the GND pour |
+| Charge input | CHG+ pad → D2 TVS (< 2 mm) → D3 Schottky → U7 IN with C7; CHG− straight to the GND pour |
 | VBAT | J1 → C8 / U7 OUT → U8 VIN → U9 VIN → R8; 0.4 mm trunk |
 | I²C | IO5/IO6 → R3/R4 → U5, U6 — one short daisy chain on the right half |
 | LRA OUT+/OUT− | 0.3 mm pair, U5 → M1 pads (2 mm) |
 | VLED / RGB_DATA | U9 → via → D1 (top); IO43 → R7 → D1 DIN |
 | PDM CLK/DATA | IO42/IO41 → MK1 on the right-front, ≤ 10 mm |
-| USB D−/D+ | IO19/IO20 → TP3/TP4 stubs only (≤ 4 mm), nothing else on the nets |
-| Touch | IO8 → R13 (1 kΩ) → TPAD1; keep the trace short and away from the DVP corridor |
+| USB D−/D+ | IO19/IO20 (module pins 23/24, in the **front row**) → TP3/TP4 directly in front of that row at x = {TP_COL_X}; the stub is the pin-to-pad run, routed as a pair on the top layer, ≤ 10 mm (expect 1–8 mm depending on where pins 23/24 sit along the row — verify on the footprint), nothing else on the nets |
+| Touch | IO8 → R13 (1 kΩ) → TPAD1 landing → foam/spring contact → lid foil electrode; keep the trace short and away from the DVP corridor |
 
 ## 7. Camera FPC pin order (assumed ESP32-CAM / Arducam M0031 — verify on the purchased head)
 
@@ -838,15 +954,19 @@ Pin 1 is at the LEFT end of FPC1 (low y); pitch 0.5 mm; contacts face the board 
 
 ## 8. Stack (see `out/stackup.svg`)
 
-skin → band wall {st['band_wall']} → cell {st['cell']} → clearance {st['cell_clearance']} → bottom parts {st['bottom_parts']} →
-PCB {st['pcb']} → top parts {st['top_parts']} → clearance {st['lid_clearance']} → lid {st['lid']}:
+skin → band wall {st['band_wall']} → cell {st['cell']} → cell-pocket slack {st['cell_pocket_slack']} (CAD pocket {st['cell_pocket_depth']} deep) → clearance {st['cell_clearance']} →
+bottom parts {st['bottom_parts']} → PCB {st['pcb']} → top parts {st['top_parts']} → clearance {st['lid_clearance']} → lid {st['lid']}:
 board bottom at z = {st['z_board_bottom']}, board top z = {st['z_board_top']}, lid underside z = {st['z_lid_bottom']},
 **signet top z = {st['signet_height_above_skin']} mm** above the skin ({st['signet_height_above_skin_cell_in_band']} mm if the cell moves to the
-palm-side thick zone of the band as in the old `.scad`).
+palm-side thick zone of the band as in the old `.scad`). These are the enclosure's as-built numbers
+(`hardware/cad/fit_report.md`: board bottom 6.10, lid top 11.10).
 
-Camera pod: lens axis z = {pod['lens_axis_z']}, head 8.5 × 8.5 × 1.3 + Ø4.5 × 4.5 barrel, FPC loop {pod['fpc_loop']} mm, interior
-depth {pod['interior_depth_from_board_edge']} mm in front of the board edge ({pod['depth_from_board_edge_incl_wall']} incl. the 1.2 wall), interior width ≥ {pod['interior_width']},
-roof top z = {pod['roof_top_z']} ({pod['roof_top_z'] - st['z_lid_top']:+.2f} vs the bay lid — the pod is marginally taller than the lid, or raise the lid clearance by 0.4).
+Camera pod (built by the CAD from `pod_mm`): floor z = {pod['floor_z']} (band wall on the {pod['floor_relief_above_skin']} bore relief), head 8.5 × 8.5 × 1.3
++ Ø4.5 × 4.5 barrel standing {pod['head_clearance']} above the floor → head z {pod['head_z'][0]}–{pod['head_z'][1]}, **lens axis z = {pod['lens_axis_z']}**, ceiling z = {pod['ceiling_z']}
+(head top + {pod['fpc_fold_above_head']} for the FPC fold), roof top z = {pod['roof_top_z']} ({pod['roof_above_lid']:+.2f} vs the bay lid; the roof lips back over the lid's front
+edge). FPC loop {pod['fpc_loop']} mm, interior depth {pod['interior_depth_from_board_edge']} mm in front of the board edge ({pod['depth_from_board_edge_incl_wall']} incl. the 1.2 wall),
+interior width ≥ {pod['interior_width']}, bore Ø{pod['bore_d']} (reamed to the 4.5 barrel). Bay interior extends {params['antenna_cavity_mm']['depth_behind_board_edge']} mm behind the
+board's back edge for the u.FL pigtail and the flex antenna. Side-switch slot through the left wall {params['switch_slot_mm'][0]} × {params['switch_slot_mm'][1]} mm.
 
 ## 9. Deviations from the task text / earlier notes
 
@@ -858,10 +978,26 @@ roof top z = {pod['roof_top_z']} ({pod['roof_top_z'] - st['z_lid_top']:+.2f} vs 
    no room. The netlist's J1 pins 1/2 map to the two pads.
 3. **top_max_height = 2.9 mm**, not 2.4: the mated u.FL plug on the module is taller than the shield can.
 4. **bottom_max_height = 1.15 mm** (task: 1.1): VSSOP-10 and SOT-23 bodies are 1.10–1.15 max.
-5. **8 test pads** (IO0, EN, USB D−, D+, GND, 3V3, nCHG, VBAT) per the electrical netlist, not 4.
-6. **SW2 (optional IO0 boot button, DNP) is not placed** — no top-side room; use TP1 (IO0) + TP2 (EN).
-7. GPIO use follows the post-fix `BOARD_MCRING_V1` (CAM_PWR = IO21, RGB = IO43, LED_PWR_EN = IO44, USB on 19/20).
+5. **8 test pads** (IO0, EN, USB D−, D+, GND, 3V3, nCHG, VBAT) per the electrical netlist, not 4 — and **on the top side**:
+   the bottom face is unreachable once the board sits on its ledges (1.5 mm above the sub-board floor, wires soldered),
+   which contradicted the build guide's in-bay flashing and "checks with the lid off" steps.
+6. **SW2 (optional IO0 boot button, DNP) is not placed** — no top-side room; use TP1 (IO0) + TP5 (GND) / TP2 (EN).
+7. GPIO use follows the post-fix `BOARD_MCRING_V1` (CAM_PWR = IO21, RGB = IO43, LED_PWR_EN = IO33, USB on 19/20).
 8. Board is {L} × {W} instead of the old 26 × 12 bay: the 15.4 mm module and the 16 mm FPC connector set the width.
+9. **Touch electrode on the lid underside** (copper foil under the dimple) with a compliant contact on TPAD1, instead of a
+   bare pad on the board 4 mm behind the touch surface (see §2). `schematic-notes.md`'s "3 × 4 mm copper area on the
+   top face" is now the landing; the BOM/build guide need the foam block and the foil.
+10. **No antenna copper keep-out on the board**: the earlier "no copper in the last 2 mm" rule was the PCB-antenna rule
+    of the MINI-1; the MINI-1U has a u.FL, and its GND/3V3/EN pads sit in exactly that strip. Replaced by the u.FL-end and
+    antenna-placement rules in §4.
+11. **Stack / pod / bore / slot numbers are computed the way the CAD builds them** (`hardware/cad/mcring_stage1.py`, which
+    reads `pod_mm.floor_relief_above_skin / head_clearance / fpc_fold_above_head` and `antenna_cavity_mm` from this JSON):
+    cell pocket 3.4 deep (+0.4 slack) → lid top {st['z_lid_top']} not 10.7; pod floor on the 0.5 bore relief, head 0.3 above
+    it, 1.0 FPC fold above the head → lens axis {pod['lens_axis_z']} not 5.5, roof {pod['roof_top_z']} ({pod['roof_above_lid']:+.2f} vs the lid) not 11.25;
+    bore Ø{pod['bore_d']} not 4.7; switch slot {params['switch_slot_mm'][0]} × {params['switch_slot_mm'][1]} not 3.2 × 1.5. The CAD still hard-codes `cell_pocket`,
+    `lens_d`, `lid_t` and `switch_slot` — it should read `stack_mm.cell_pocket_depth`, `pod_mm.bore_d`, `stack_mm.lid` and
+    `switch_slot_mm` from this JSON so the two cannot drift again. `hardware/cad/fit_report.md` is the as-built check.
+12. **D3** (PMEG2005EB Schottky, CHG_PAD → CHG_IN) added at (18.4, 4.1) — it is in the electrical netlist but was missing here.
 
 ## 10. Checks performed by the script
 

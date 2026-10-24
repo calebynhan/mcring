@@ -6,6 +6,6 @@ qty,part,description,why,approx_price_usd,source,url,notes
 1,Tactile switch 6x6 mm,Momentary button to GND,Primary trigger during bring-up,0.1,any,,
 1,Piezo sounder 9-12 mm,e.g. Murata PKMCS0909E4000-R1 (LTB) or any 12 mm passive piezo,Audible Morse beeps (optional),0.5-2,DigiKey / AliExpress,https://digikey.in/en/products/detail/murata-electronics/PKMCS0909E4000-R1/4878400,
 1,LiPo 100 mAh,Adafruit 1570 (31 x 11.5 x 3.8 mm) for bench battery tests,Realistic power testing,5.95,Adafruit,https://www.adafruit.com/categories/889,"XIAO has an on-board charger (BAT pads)"
-2,10 kΩ resistors,Battery sense divider to A0,Battery % in status,0.02,any,,
+2,100 kΩ resistors (+ 1 x 100 nF),Battery sense divider to A0: BAT+ → 100 k → A0 → 100 k → GND with 100 nF on A0 (hardware/pcb/wiring_stage0.md),Battery % in status; ~20 µA drain (10 k/10 k would be 210 µA),0.02,any,,
 1,Breadboard + jumper wires,,,5,any,,
 ,,,,TOTAL ≈ 40-55,,,

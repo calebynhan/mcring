@@ -15,9 +15,15 @@ UUID_STATUS = UUID_BASE.format(0x0003)
 UUID_XFER_META = UUID_BASE.format(0x0004)
 UUID_XFER_DATA = UUID_BASE.format(0x0005)
 UUID_FEEDBACK = UUID_BASE.format(0x0006)
+UUID_EVENTS = UUID_BASE.format(0x0007)      # notify, ring -> phone
+UUID_AUDIO_OUT = UUID_BASE.format(0x0008)   # write-no-response, phone -> ring speaker
 
 ATT_HDR_LEN = 3
 XFER_CHUNK_HDR_LEN = 4
+EVENT_LEN = 6
+AUDIO_DATA_HDR_LEN = 3          # opcode + u16 seq
+ADPCM_BLOCK_BYTES = 132         # == adpcm.BLOCK_BYTES (256 samples @ 16 kHz = 16 ms)
+AUDIO_PREBUFFER_BLOCKS = 24     # ring starts playing after this many blocks (~400 ms)
 
 
 class Op(IntEnum):
@@ -29,15 +35,64 @@ class Op(IntEnum):
     RECORD_AUDIO = 0x06
     SLEEP = 0x07
     GET_STATUS = 0x08
+    RECORD_START = 0x09   # ring-mic recording until RECORD_STOP / 8 s
+    RECORD_STOP = 0x0A
 
 
 class Fb(IntEnum):
-    MORSE_TEXT = 0x10
+    MORSE_TEXT = 0x10        # legacy / optional "silent pattern" mode
     PATTERN = 0x11
     STOP = 0x12
     RGB = 0x13
-    MORSE_UNITS = 0x14
-    MORSE_UNITS_CONT = 0x15
+    MORSE_UNITS = 0x14       # legacy
+    MORSE_UNITS_CONT = 0x15  # legacy
+    CUE = 0x16               # {u8 cue}: built-in cue honouring CUES_MASK
+
+
+class Cue(IntEnum):
+    LISTENING = 1       # 1 short tick
+    ANSWER_READY = 2    # 2 ticks
+    ERROR = 3           # long buzz
+    OK = 4              # 1 short tick
+
+
+class Cues(IntEnum):
+    """CUES_MASK bits (config key 10)."""
+    HAPTIC = 0x01
+    LED = 0x02
+    BEEP = 0x04
+
+
+class MicSource(IntEnum):
+    """MIC_SOURCE_HINT values (config key 11)."""
+    RING = 0
+    PHONE = 1
+
+
+class Ao(IntEnum):
+    """Audio-out opcodes (phone -> ring, characteristic 0008)."""
+    START = 0x20
+    DATA = 0x21
+    END = 0x22
+    STOP = 0x23
+
+
+AUDIO_CODEC_ADPCM = 2
+
+
+class Event(IntEnum):
+    """Ring -> phone events (characteristic 0007)."""
+    BUTTON_DOWN = 1
+    BUTTON_UP = 2          # arg = held tenths of a second (capped 255)
+    DOUBLE_TAP = 3
+    TOUCH = 4
+    CAPTURE_STARTED = 5
+    CAPTURE_DONE = 6       # arg = queued count (0 = failed)
+    REC_STARTED = 7        # arg = max seconds
+    REC_STOPPED = 8        # arg = recorded tenths of a second (0 = discarded)
+    LOW_BATTERY = 9        # arg = pct
+    AUDIO_UNDERRUN = 10
+    AUDIO_DONE = 11        # arg = 0 drained, 1 stopped
 
 
 class Channel(IntEnum):
@@ -54,8 +109,11 @@ class Cfg(IntEnum):
     IDLE_SLEEP_S = 4
     LED_BRIGHTNESS = 5
     HAPTIC_STRENGTH = 6
-    MORSE_WPM = 7
-    FEEDBACK_CHANNELS = 8
+    MORSE_WPM = 7          # legacy
+    FEEDBACK_CHANNELS = 8  # legacy
+    SPEAKER_VOLUME = 9     # 0..255
+    CUES_MASK = 10         # Cues bits
+    MIC_SOURCE_HINT = 11   # MicSource
 
 
 class State(IntEnum):
@@ -63,8 +121,19 @@ class State(IntEnum):
     CAPTURING = 1
     TRANSFERRING = 2
     RECORDING = 3
-    FEEDBACK = 4
+    FEEDBACK = 4   # playing: cue / pattern / speaker audio
     ERROR = 5
+
+
+class Flag(IntEnum):
+    """Status.flags bits."""
+    CHARGING = 0x01
+    CAMERA_OK = 0x02
+    IMU_OK = 0x04
+    MIC_OK = 0x08
+    HAPTIC_OK = 0x10
+    QUEUED = 0x20
+    SPEAKER_OK = 0x40
 
 
 class XferType(IntEnum):
@@ -128,6 +197,19 @@ def sleep() -> bytes:
     return bytes([Op.SLEEP])
 
 
+def get_status() -> bytes:
+    return bytes([Op.GET_STATUS])
+
+
+def record_start() -> bytes:
+    """Begin a ring-mic recording now; ends on record_stop() or after 8 s."""
+    return bytes([Op.RECORD_START])
+
+
+def record_stop() -> bytes:
+    return bytes([Op.RECORD_STOP])
+
+
 # ---- Feedback (phone -> ring) ------------------------------------------------
 
 def fb_morse_text(text: str, wpm: int = 15, channels: int = Channel.LED | Channel.HAPTIC) -> bytes:
@@ -148,6 +230,11 @@ def fb_rgb(r: int, g: int, b: int, ms: int) -> bytes:
     return struct.pack("<BBBBH", Fb.RGB, r, g, b, ms)
 
 
+def fb_cue(cue: int) -> bytes:
+    """Play one of the ring's built-in cues (Cue.*), honouring the ring's CUES_MASK."""
+    return struct.pack("<BB", Fb.CUE, cue)
+
+
 def fb_morse_units(units: list[int], unit_ms: int, channels: int, max_write: int = 180) -> list[bytes]:
     """Build one or more writes for a MORSE_UNITS pattern that may exceed one ATT write."""
     u = bytes(min(255, max(1, x)) for x in units)
@@ -162,7 +249,117 @@ def fb_morse_units(units: list[int], unit_ms: int, channels: int, max_write: int
     return writes
 
 
+# ---- Audio out (phone -> ring speaker) ---------------------------------------
+
+def audio_start(sample_rate: int = 16000, codec: int = AUDIO_CODEC_ADPCM, volume: int = 255) -> bytes:
+    return struct.pack("<BHBB", Ao.START, (sample_rate // 100) & 0xFFFF, codec & 0xFF, volume & 0xFF)
+
+
+def audio_data(seq: int, blocks: bytes) -> bytes:
+    """One AUDIO_DATA packet carrying one or more whole 132-byte ADPCM blocks."""
+    if not blocks or len(blocks) % ADPCM_BLOCK_BYTES:
+        raise ValueError(f"payload must be a non-empty multiple of {ADPCM_BLOCK_BYTES} bytes")
+    return struct.pack("<BH", Ao.DATA, seq & 0xFFFF) + bytes(blocks)
+
+
+def audio_end() -> bytes:
+    return bytes([Ao.END])
+
+
+def audio_stop() -> bytes:
+    return bytes([Ao.STOP])
+
+
+def max_write_for_mtu(mtu: int) -> int:
+    """Largest write-without-response payload for a negotiated ATT MTU."""
+    return max(20, mtu - ATT_HDR_LEN)
+
+
+def audio_blocks_per_write(max_write: int) -> int:
+    return max(1, (max_write - AUDIO_DATA_HDR_LEN) // ADPCM_BLOCK_BYTES)
+
+
+def audio_data_writes(adpcm: bytes, max_write: int = 182, seq_start: int = 0) -> list[bytes]:
+    """Split an ADPCM byte string into AUDIO_DATA writes of whole blocks that fit max_write.
+
+    max_write defaults to the iOS MTU (185 - 3): one block per write. At MTU 517 pass 514 → 3 blocks.
+    """
+    if len(adpcm) % ADPCM_BLOCK_BYTES:
+        raise ValueError(f"ADPCM length {len(adpcm)} is not a multiple of {ADPCM_BLOCK_BYTES}")
+    step = audio_blocks_per_write(max_write) * ADPCM_BLOCK_BYTES
+    return [audio_data(seq_start + i, adpcm[off : off + step]) for i, off in enumerate(range(0, len(adpcm), step))]
+
+
+def audio_out_sequence(adpcm: bytes, max_write: int = 182, volume: int = 255, sample_rate: int = 16000) -> list[bytes]:
+    """AUDIO_START, the data writes, AUDIO_END — everything needed to play one clip on the ring."""
+    return [audio_start(sample_rate, AUDIO_CODEC_ADPCM, volume), *audio_data_writes(adpcm, max_write), audio_end()]
+
+
+@dataclass
+class AudioStart:
+    sample_rate_div100: int
+    codec: int
+    volume: int
+
+    FMT = "<BHBB"
+    SIZE = 5
+
+    @classmethod
+    def unpack(cls, b: bytes) -> "AudioStart":
+        op, sr, codec, vol = struct.unpack(cls.FMT, bytes(b[: cls.SIZE]))
+        if op != Ao.START:
+            raise ValueError(f"not an AUDIO_START packet (op 0x{op:02x})")
+        return cls(sr, codec, vol)
+
+    @property
+    def sample_rate(self) -> int:
+        return self.sample_rate_div100 * 100
+
+
+def unpack_audio_data(b: bytes) -> tuple[int, list[bytes]]:
+    """(seq, [block, ...]) from an AUDIO_DATA packet; raises on a partial block."""
+    if len(b) < AUDIO_DATA_HDR_LEN or b[0] != Ao.DATA:
+        raise ValueError("not an AUDIO_DATA packet")
+    body = bytes(b[AUDIO_DATA_HDR_LEN:])
+    if not body or len(body) % ADPCM_BLOCK_BYTES:
+        raise ValueError("AUDIO_DATA body is not whole blocks")
+    seq = struct.unpack_from("<H", b, 1)[0]
+    return seq, [body[i : i + ADPCM_BLOCK_BYTES] for i in range(0, len(body), ADPCM_BLOCK_BYTES)]
+
+
 # ---- Ring -> phone -----------------------------------------------------------
+
+@dataclass
+class RingEvent:
+    event: int
+    arg: int
+    t_ms: int
+
+    FMT = "<BBI"
+    SIZE = EVENT_LEN
+
+    @classmethod
+    def unpack(cls, b: bytes) -> "RingEvent":
+        return cls(*struct.unpack(cls.FMT, bytes(b[: cls.SIZE])))
+
+    def pack(self) -> bytes:
+        return struct.pack(self.FMT, self.event & 0xFF, self.arg & 0xFF, self.t_ms & 0xFFFFFFFF)
+
+    @property
+    def name(self) -> str:
+        try:
+            return Event(self.event).name.lower()
+        except ValueError:
+            return f"unknown({self.event})"
+
+
+def pack_event(event: int, arg: int = 0, t_ms: int = 0) -> bytes:
+    return RingEvent(event, arg, t_ms).pack()
+
+
+def unpack_event(b: bytes) -> RingEvent:
+    return RingEvent.unpack(b)
+
 
 @dataclass
 class Status:
@@ -198,6 +395,13 @@ class Status:
     @property
     def error_name(self) -> str:
         return ERROR_NAMES.get(self.last_error, f"unknown({self.last_error})")
+
+    def has(self, flag: int) -> bool:
+        return bool(self.flags & flag)
+
+    @property
+    def speaker_ok(self) -> bool:
+        return self.has(Flag.SPEAKER_OK)
 
 
 @dataclass

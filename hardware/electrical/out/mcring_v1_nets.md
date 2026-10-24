@@ -1,25 +1,27 @@
 # mcring v1 (stage 1) — net listing
 
-75 parts (74 populated), 265 pins, 53 nets, 251 nodes, 8 power nets.
+81 parts (79 populated, 5 off-board / wired — marked with \*), 274 pins, 54 nets, 260 nodes, 9 power nets.
 
 ## Nets
 
 | Net | Power | Nodes | Connections |
 |---|---|---|---|
-| `3V3` | yes | 24 | U1.3 (3V3), C4.1 (1), C5.1 (1), R1.1 (1), R2.1 (1), R3.1 (1), R4.1 (1), TP6.1 (1), R19.1 (1), L1.2 (2), U8.8 (VOS), C2.1 (1), C3.1 (1), U2.A1 (VIN), C9.1 (1), U5.6 (VDD), C15.1 (1), U6.9 (VDD), U6.10 (VDD_IO), U6.2 (CS), C17.1 (1), C18.1 (1), MK1.1 (VDD), C19.1 (1) |
+| `3V3` | yes | 26 | U1.3 (3V3), C4.1 (1), C5.1 (1), R1.1 (1), R2.1 (1), R3.1 (1), R4.1 (1), TP6.1 (1), R19.1 (1), L1.2 (2), U8.8 (VOS), C2.1 (1), C3.1 (1), U2.A1 (VIN), C9.1 (1), U5.6 (VDD), U5.5 (EN), C15.1 (1), U6.9 (VDD), U6.10 (VDD_IO), U6.2 (CS), C17.1 (1), C18.1 (1), MK1.1 (VDD), C19.1 (1), U9.A1 (VIN) |
 | `CAM_1V2` | yes | 3 | U4.2 (VOUT), C12.1 (1), FPC1.10 (DVDD) |
 | `CAM_2V8` | yes | 4 | U3.2 (VOUT), C11.1 (1), C13.1 (1), FPC1.4 (AVDD) |
 | `CAM_3V3` | yes | 9 | U2.A2 (VOUT), C10.1 (1), C24.1 (1), U3.3 (VIN), U4.3 (VIN), FPC1.11 (DOVDD), R5.1 (1), R6.1 (1), R16.1 (1) |
-| `CHG_IN` | yes | 4 | PAD1.1 (PAD), D2.1 (K), U7.A1 (IN), C7.1 (1) |
-| `GND` | yes | 85 | U1.1 (GND), U1.2 (GND), U1.43 (GND), U1.44 (GND), U1.46 (GND), U1.47 (GND), U1.48 (GND), U1.49 (GND), U1.50 (GND), U1.51 (GND), U1.52 (GND), U1.53 (GND), U1.54 (GND), U1.55 (GND), U1.56 (GND), U1.57 (GND), U1.58 (GND), U1.59 (GND), U1.60 (GND), U1.61 (GND), U1.62 (GND), U1.63 (GND), U1.64 (GND), U1.65 (GND), C4.2 (2), C5.2 (2), C6.2 (2), TP5.1 (1), R17.2 (2), R18.2 (2), SW2.2 (2), J1.2 (BAT-), PAD2.1 (PAD), D2.2 (A), U7.C2 (VSS), C7.2 (2), C8.2 (2), R10.2 (2), R11.2 (2), U8.2 (GND), U8.5 (STOP), U8.6 (MODE), C1.2 (2), C2.2 (2), C3.2 (2), R12.2 (2), R9.2 (2), C23.2 (2), U2.B2 (GND), C9.2 (2), C10.2 (2), C24.2 (2), C11.2 (2), C13.2 (2), C12.2 (2), C14.2 (2), U3.1 (VSS), U4.1 (VSS), FPC1.2 (AGND), FPC1.15 (DGND), FPC1.8 (PWDN), U5.7 (GND), U5.4 (IN/TRIG), C15.2 (2), C16.2 (2), U6.5 (RES), U6.6 (GND), U6.7 (GND), U6.8 (GND), U6.3 (SA0/SDO), C17.2 (2), C18.2 (2), MK1.2 (GND), MK1.6 (GND), MK1.5 (SELECT), C19.2 (2), SW1.2 (2), C22.2 (2), U9.B2 (GND), C21.2 (2), C20.2 (2), D1.3 (GND), BZ1.2 (2), Q1.2 (S), R14.2 (2) |
-| `VBAT` | yes | 10 | J1.1 (BAT+), U7.A2 (OUT), C8.1 (1), U8.3 (VIN), U8.4 (EN), C1.1 (1), TP8.1 (1), R8.1 (1), U9.A1 (VIN), J2.1 (VBAT) |
+| `CHG_IN` | yes | 3 | D3.1 (K), U7.A1 (IN), C7.1 (1) |
+| `CHG_PAD` | yes | 4 | PAD1.1 (PAD), CP1\*.1 (PAD), D2.1 (1), D3.2 (A) |
+| `GND` | yes | 88 | U1.1 (GND), U1.2 (GND), U1.43 (GND), U1.44 (GND), U1.46 (GND), U1.47 (GND), U1.48 (GND), U1.49 (GND), U1.50 (GND), U1.51 (GND), U1.52 (GND), U1.53 (GND), U1.54 (GND), U1.55 (GND), U1.56 (GND), U1.57 (GND), U1.58 (GND), U1.59 (GND), U1.60 (GND), U1.61 (GND), U1.62 (GND), U1.63 (GND), U1.64 (GND), U1.65 (GND), C4.2 (2), C5.2 (2), C6.2 (2), TP5.1 (1), R17.2 (2), R18.2 (2), SW2.2 (2), J1.2 (BAT-), BT1\*.2 (-), PAD2.1 (PAD), CP2\*.1 (PAD), D2.2 (2), U7.C2 (VSS), C7.2 (2), C8.2 (2), R10.2 (2), R11.2 (2), U8.2 (GND), U8.5 (STOP), U8.6 (MODE), C1.2 (2), C2.2 (2), C3.2 (2), R12.2 (2), R9.2 (2), C23.2 (2), U2.B2 (GND), C9.2 (2), C10.2 (2), C24.2 (2), C11.2 (2), C13.2 (2), C12.2 (2), C14.2 (2), U3.1 (VSS), U4.1 (VSS), FPC1.2 (AGND), FPC1.15 (DGND), FPC1.8 (PWDN), U5.7 (GND), U5.4 (IN/TRIG), C15.2 (2), C16.2 (2), U6.5 (RES), U6.6 (GND), U6.7 (GND), U6.8 (GND), U6.3 (SA0/SDO), C17.2 (2), C18.2 (2), MK1.2 (GND), MK1.6 (GND), MK1.5 (SELECT), C19.2 (2), SW1.2 (2), C22.2 (2), U9.B2 (GND), C21.2 (2), C20.2 (2), D1.3 (GND), BZ1.2 (GND), PZ1\*.2 (-), Q1.2 (S), R14.2 (2) |
+| `VBAT` | yes | 10 | J1.1 (BAT+), BT1\*.1 (+), U7.A2 (OUT), C8.1 (1), U8.3 (VIN), U8.4 (EN), C1.1 (1), TP8.1 (1), R8.1 (1), J2.1 (VBAT) |
 | `VLED` | yes | 4 | U9.A2 (VOUT), C21.1 (1), C20.1 (1), D1.1 (VDD) |
+| `ANT_RF` |  | 1 | ANT1\*.1 (RF) |
 | `AUX_DRAIN` |  | 2 | Q1.3 (D), J2.2 (DRAIN) |
 | `AUX_EN` |  | 3 | U1.13 (IO9), Q1.1 (G), R14.1 (1) |
 | `BAT_SENSE` |  | 4 | R8.2 (2), R9.1 (1), C23.1 (1), U1.5 (IO1) |
 | `BUTTON` |  | 3 | SW1.1 (1), C22.1 (1), U1.6 (IO2) |
 | `BUZZER` |  | 2 | U1.8 (IO4), R15.1 (1) |
-| `BUZZ_DRV` |  | 2 | R15.2 (2), BZ1.1 (1) |
+| `BUZZ_DRV` |  | 3 | R15.2 (2), BZ1.1 (DRV), PZ1\*.1 (+) |
 | `CAM_HREF` |  | 2 | FPC1.9 (HREF), U1.41 (IO47) |
 | `CAM_PCLK` |  | 2 | FPC1.17 (PCLK), U1.17 (IO13) |
 | `CAM_PWR_EN` |  | 3 | U1.25 (IO21), R17.1 (1), U2.B1 (ON) |
@@ -37,11 +39,10 @@
 | `CAM_Y8` |  | 2 | FPC1.14 (Y8), U1.15 (IO11) |
 | `CAM_Y9` |  | 2 | FPC1.12 (Y9), U1.42 (IO48) |
 | `DRV_REG` |  | 2 | U5.1 (REG), C16.1 (1) |
-| `HAPTIC_EN` |  | 2 | U5.5 (EN), U1.7 (IO3) |
 | `IMU_INT1` |  | 2 | U6.12 (INT1), U1.11 (IO7) |
 | `IO0` |  | 4 | U1.4 (IO0), R2.2 (2), TP1.1 (1), SW2.1 (1) |
 | `ISET` |  | 2 | U7.C1 (ISET), R10.1 (1) |
-| `LED_PWR_EN` |  | 3 | U1.38 (RXD0/IO44), R18.1 (1), U9.B1 (ON) |
+| `LED_PWR_EN` |  | 3 | U1.27 (IO33), R18.1 (1), U9.B1 (ON) |
 | `LRA_N` |  | 2 | U5.8 (OUT-), M1.2 (-) |
 | `LRA_P` |  | 2 | U5.9 (OUT+), M1.1 (+) |
 | `MCU_EN` |  | 4 | U1.45 (EN), R1.2 (2), C6.1 (1), TP2.1 (1) |
@@ -58,13 +59,15 @@
 | `USB_DM` |  | 2 | U1.23 (IO19), TP3.1 (1) |
 | `USB_DP` |  | 2 | U1.24 (IO20), TP4.1 (1) |
 | `VSET` |  | 2 | U8.7 (VSET), R12.1 (1) |
-| `nCHG` |  | 3 | U7.B1 (nCHG), R19.2 (2), TP7.1 (1) |
+| `nCHG` |  | 4 | U7.B1 (nCHG), R19.2 (2), TP7.1 (1), U1.7 (IO3) |
 
 ## Parts
 
 | Ref | Value | MPN | Footprint | Pins | Sheet |
 |---|---|---|---|---|---|
-| BZ1 | PKMCS0909E4000-R1 | PKMCS0909E4000-R1 | `mcring:Murata_PKMCS0909_9x9mm` | 2 | Outputs |
+| ANT1 \*off-board | 2.4 GHz flex antenna, MHF1 | 146153-0050 | `offboard:Antenna_Flex_34.9x9mm_MHF1` | 1 | MCU |
+| BT1 \*off-board | 301012 LiPo 30 mAh | 301012 (30 mAh, with PCM) | `offboard:Cell_301012_3x10x12mm` | 2 | Power |
+| BZ1 | PIEZO pads |  | `mcring:PAD_Wire_2x1.2mm_P2.0mm` | 2 | Outputs |
 | C1 | 10u | GRM188R60J106ME47 | `Capacitor_SMD:C_0603_1608Metric` | 2 | Power |
 | C2 | 10u | GRM188R60J106ME47 | `Capacitor_SMD:C_0603_1608Metric` | 2 | Power |
 | C3 | 100u | GRM31CR60J107ME39 | `Capacitor_SMD:C_1206_3216Metric` | 2 | Power |
@@ -89,16 +92,20 @@
 | C22 | 100n | GRM155R71C104KA88 | `Capacitor_SMD:C_0402_1005Metric` | 2 | Sensors |
 | C23 | 100n | GRM155R71C104KA88 | `Capacitor_SMD:C_0402_1005Metric` | 2 | Power |
 | C24 | 100n | GRM155R71C104KA88 | `Capacitor_SMD:C_0402_1005Metric` | 2 | Camera |
+| CP1 \*off-board | charging contact 3x2 mm ENIG |  | `offboard:Pad_ENIG_3x2mm` | 1 | Power |
+| CP2 \*off-board | charging contact 3x2 mm ENIG |  | `offboard:Pad_ENIG_3x2mm` | 1 | Power |
 | D1 | WS2812B-2020 | WS2812B-2020 | `LED_SMD:LED_WS2812B-2020_PLCC4_2.0x2.0mm` | 4 | Outputs |
-| D2 | PESD5V0S1UB | PESD5V0S1UB,115 | `Diode_SMD:D_SOD-523` | 2 | Power |
-| FPC1 | FPC-24-0.5mm | FH12-24S-0.5SH(55) / F32R-1A7H1-11024 | `Connector_FFC-FPC:Hirose_FH12-24S-0.5SH_1x24-1MP_P0.50mm_Horizontal` | 24 | Camera |
-| J1 | BM02B-SRSS-TB | BM02B-SRSS-TB(LF)(SN) | `Connector_JST:JST_SH_BM02B-SRSS-TB_1x02-1MP_P1.00mm_Vertical` | 2 | Power |
+| D2 | PESD5V0S1BB | PESD5V0S1BB,115 | `Diode_SMD:D_SOD-523` | 2 | Power |
+| D3 | PMEG2005EB | PMEG2005EB,115 | `Diode_SMD:D_SOD-523` | 2 | Power |
+| FPC1 | FPC-24-0.5mm-bottom | F32R-1A7H1-11024 | `Connector_FFC-FPC:Hirose_FH12-24S-0.5SH_1x24-1MP_P0.50mm_Horizontal` | 24 | Camera |
+| J1 | BAT pads |  | `mcring:PAD_Wire_2x1.5mm_P2.0mm` | 2 | Power |
 | J2 | AUX |  | `mcring:PAD_Aux_1x2` | 2 | Outputs |
 | L1 | 2.2uH | DFE201610E-2R2M=P2 | `Inductor_SMD:L_0806_2016Metric` | 2 | Power |
 | M1 | LRA0825BC-0167F | LRA0825BC-0167F | `mcring:LRA_8mm_2pad` | 2 | Sensors |
 | MK1 | T3902 | T3902 | `mcring:MIC_TDK_T3902_3.5x2.65mm` | 6 | Sensors |
-| PAD1 | CHG+ |  | `mcring:PAD_Charge_3.0x2.0mm` | 1 | Power |
-| PAD2 | CHG- |  | `mcring:PAD_Charge_3.0x2.0mm` | 1 | Power |
+| PAD1 | CHG+ pad |  | `mcring:PAD_Wire_1x1.5mm` | 1 | Power |
+| PAD2 | CHG- pad |  | `mcring:PAD_Wire_1x1.5mm` | 1 | Power |
+| PZ1 (DNP) \*off-board | PKMCS0909E4000-R1 | PKMCS0909E4000-R1 | `offboard:Piezo_9x9x1.9mm` | 2 | Outputs |
 | Q1 | AO3400A | AO3400A | `Package_TO_SOT_SMD:SOT-23` | 3 | Outputs |
 | R1 | 10k | RC0402FR-0710KL | `Resistor_SMD:R_0402_1005Metric` | 2 | MCU |
 | R2 | 10k | RC0402FR-0710KL | `Resistor_SMD:R_0402_1005Metric` | 2 | MCU |
@@ -106,12 +113,12 @@
 | R4 | 4.7k | RC0402FR-074K7L | `Resistor_SMD:R_0402_1005Metric` | 2 | MCU |
 | R5 | 4.7k | RC0402FR-074K7L | `Resistor_SMD:R_0402_1005Metric` | 2 | Camera |
 | R6 | 4.7k | RC0402FR-074K7L | `Resistor_SMD:R_0402_1005Metric` | 2 | Camera |
-| R7 | 100 | RC0402FR-07100RL | `Resistor_SMD:R_0402_1005Metric` | 2 | Outputs |
-| R8 | 100k | RC0402FR-07100KL | `Resistor_SMD:R_0402_1005Metric` | 2 | Power |
-| R9 | 100k | RC0402FR-07100KL | `Resistor_SMD:R_0402_1005Metric` | 2 | Power |
+| R7 | 1k | RC0402FR-071KL | `Resistor_SMD:R_0402_1005Metric` | 2 | Outputs |
+| R8 | 1M | RC0402FR-071ML | `Resistor_SMD:R_0402_1005Metric` | 2 | Power |
+| R9 | 1M | RC0402FR-071ML | `Resistor_SMD:R_0402_1005Metric` | 2 | Power |
 | R10 | 9.1k | RC0402FR-079K1L | `Resistor_SMD:R_0402_1005Metric` | 2 | Power |
 | R11 | 11.5k | RC0402FR-0711K5L | `Resistor_SMD:R_0402_1005Metric` | 2 | Power |
-| R12 | VSET-3V3 | RC0402FR-07xxxL | `Resistor_SMD:R_0402_1005Metric` | 2 | Power |
+| R12 | 267k | RC0402FR-07267KL | `Resistor_SMD:R_0402_1005Metric` | 2 | Power |
 | R13 | 1k | RC0402FR-071KL | `Resistor_SMD:R_0402_1005Metric` | 2 | Sensors |
 | R14 | 100k | RC0402FR-07100KL | `Resistor_SMD:R_0402_1005Metric` | 2 | Outputs |
 | R15 | 100 | RC0402FR-07100RL | `Resistor_SMD:R_0402_1005Metric` | 2 | Outputs |
@@ -151,7 +158,7 @@
 | 3 | GND | GND |
 | 4 | DIN | RGB_DIN |
 
-### FPC1 — FPC-24-0.5mm
+### FPC1 — FPC-24-0.5mm-bottom
 
 | Pin | Name | Net |
 |---|---|---|
@@ -209,7 +216,7 @@
 | 4 | IO0 | IO0 |
 | 5 | IO1 | BAT_SENSE |
 | 6 | IO2 | BUTTON |
-| 7 | IO3 | HAPTIC_EN |
+| 7 | IO3 | nCHG |
 | 8 | IO4 | BUZZER |
 | 9 | IO5 | SDA |
 | 10 | IO6 | SCL |
@@ -229,18 +236,18 @@
 | 24 | IO20 | USB_DP |
 | 25 | IO21 | CAM_PWR_EN |
 | 26 | IO26 | NC |
-| 27 | IO33 | NC |
-| 28 | IO34 | NC |
-| 29 | IO35 | NC |
-| 30 | IO36 | NC |
-| 31 | IO37 | NC |
+| 27 | IO33 | LED_PWR_EN |
+| 28 | IO34 | spare |
+| 29 | IO35 | spare |
+| 30 | IO36 | spare |
+| 31 | IO37 | spare |
 | 32 | IO38 | CAM_VSYNC |
 | 33 | IO39 | CAM_SIOC |
 | 34 | IO40 | CAM_SIOD |
 | 35 | IO41 | PDM_DATA |
 | 36 | IO42 | PDM_CLK |
 | 37 | TXD0/IO43 | RGB_DATA |
-| 38 | RXD0/IO44 | LED_PWR_EN |
+| 38 | RXD0/IO44 | spare |
 | 39 | IO45 | NC |
 | 40 | IO46 | NC |
 | 41 | IO47 | CAM_HREF |
@@ -302,7 +309,7 @@
 | 2 | SCL | SCL |
 | 3 | SDA | SDA |
 | 4 | IN/TRIG | GND |
-| 5 | EN | HAPTIC_EN |
+| 5 | EN | 3V3 |
 | 6 | VDD | 3V3 |
 | 7 | GND | GND |
 | 8 | OUT- | LRA_N |
@@ -354,7 +361,7 @@
 
 | Pin | Name | Net |
 |---|---|---|
-| A1 | VIN | VBAT |
+| A1 | VIN | 3V3 |
 | A2 | VOUT | VLED |
 | B1 | ON | LED_PWR_EN |
 | B2 | GND | GND |

@@ -1,44 +1,85 @@
 # 5. Roadmap
 
+mcring is **voice-first**: hold the ring, ask, hear Claude in your headphones (or from the ring's
+own speaker on the oversized ring). The camera is context, haptics are cues, Morse is an optional
+silent mode. Projection is a v2 idea (last section).
+
 ## Stage 0 — bench proof (now → 2 weeks)
 
 - [x] Protocol spec, shared codecs (C / Python / TS) with cross-tests
-- [x] ESP32-S3 firmware for XIAO ESP32S3 Sense (capture, transfer, triggers, Morse player, audio, sleep)
-- [x] Backend (Claude vision + structured output + Morse + optional TTS + sessions)
-- [x] Desktop companion (bleak) incl. no-hardware `ask` mode
-- [x] Phone companion (Expo dev client, BLE, TTS)
-- [ ] **Order the stage-0 BOM** (`hardware/bom/stage0-devkit.csv`)
-- [ ] Flash, pair with the CLI, first photo over BLE; record throughput in `docs/benchmarks.md`
-- [ ] Measure current with a shunt/PPK2 during capture + transfer; update `hardware/power_budget.py`
+- [x] **Voice-first pivot of the protocol**: `EVENTS` (0007) and `AUDIO_OUT` (0008) characteristics, `RECORD_START/STOP`, `SET_CONFIG` 9–11, `SPEAKER_OK`, `CUE`
+- [x] ESP32-S3 firmware for XIAO ESP32S3 Sense: button events, ring-mic push-to-talk (≤ 8 s), capture, transfer, cues, I2S speaker playback, deep sleep (legacy pattern player kept)
+- [x] Backend: image-optional `/v1/ask` with speech-to-text (OpenAI / local whisper), read-aloud Claude answers, `/v1/transcribe`, `/v1/speech` (mp3 + 16 kHz ring ADPCM), sessions; Morse opt-in only
+- [x] Desktop companion (bleak): `mcring talk` push-to-talk (keyboard or ring button, laptop or ring mic, OS/server voice, `--ring-speaker`), `say`, `events`, `config`; no-hardware `ask --audio`
+- [x] Phone companion (Expo dev client): events, ring-mic / phone-mic push-to-talk, transcript UI, phone TTS or server mp3 → headphones, ring-speaker streaming, settings → `SET_CONFIG`
+- [x] `docs/08-projection-v2.md` feasibility note (v2 scoping only)
+- [ ] **Order the stage-0 BOM** (`hardware/bom/stage0-devkit.csv`) + a MAX98357A breakout and an 8 Ω 10 mm speaker for the `AUDIO_OUT` bench test
+- [ ] Flash (`pio run -e xiao_esp32s3_sense -t upload`); first `mcring talk` turn with the ring button; record round-trip and BLE throughput in `docs/benchmarks.md`
+- [ ] Pair Bluetooth headphones to the laptop/phone and confirm the answer routes there with nothing configured on the ring (F4)
+- [ ] Phone-mic mode: measure `BUTTON_DOWN` → recording-started latency on iOS and Android (app foreground and background)
+- [ ] Ring-mic clip quality at arm's length: transcription accuracy 4/5 (F6); tune mic gain / clip trimming
+- [ ] Speaker bench: `mcring say "…" --ring-speaker` on the XIAO + MAX98357A; count `AUDIO_UNDERRUN` at MTU 185 vs 517; verify the I2S mono-duplication choice on real hardware; measure loudness at 30 cm and 1 m
+- [ ] Measure current with a shunt/PPK2 during ask (capture + record + transfer) and during speaker playback; update `hardware/power_budget.py`
 - [ ] Tune JPEG quality/size vs. answer quality (QVGA q12 vs VGA q15)
-- [ ] Tune Morse WPM/Farnsworth and haptic strength on a real LRA
-- [ ] Prebuild the app on a phone; confirm iOS MTU/PHY behaviour
+- [ ] Tune cue timing/strength on a real LRA (listening tick must not be mistaken for answer-ready)
+- [ ] Prebuild the app on a phone; confirm iOS MTU/PHY behaviour and background audio recording limits
 
 ## Stage 1 — oversized wearable ring (1–3 months)
 
 - [ ] Decide ESP32-S3-MINI-1U (keep firmware) vs. nRF52840 (future-proof) for the ring board
-- [ ] Schematic + layout from `hardware/schematic-notes.md` (KiCad), order 2-layer boards + assembly of the fine-pitch parts
-- [ ] Print `hardware/enclosure/mcring_stage1.scad`; fit check with the OV2640 head and a 301012 cell
-- [ ] Load-switched camera rail; verify <30 µA sleep
-- [ ] Double-tap threshold tuning on-finger; false-positive log
-- [ ] Optional: Murata microblower signet experiment on the aux channel
-- [ ] One day of real use on 40 mAh
+- [ ] Hardware pass: assign `PIN_I2S_BCLK/LRCLK/DOUT` (+ optional `SPEAKER_EN`) for `mcring_v1` in `config_audio.h` / `hardware/pinmap.md`; place the MAX98357A and a 10 mm speaker with a sound port in the shell; decide whether the speaker ships at all on stage 1
+- [ ] Schematic + layout from `hardware/schematic-notes.md` / `hardware/electrical` (KiCad), order 2-layer boards + assembly of the fine-pitch parts
+- [ ] Speaker port in the CadQuery enclosure model `hardware/cad/mcring_stage1.py` (the mic port is already modelled; see `hardware/cad/README.md`); re-run its fit check with the OV2640 head and a 301012 cell
+- [ ] Load-switched camera rail; verify < 30 µA sleep; speaker amp shut down (`SD`) between answers
+- [ ] Double-tap threshold tuning on-finger (double tap = hands-free ask, so false positives start a recording); false-positive log
+- [ ] One day of real use on 40 mAh: ≥ 30 questions with answers in headphones; separately measure how many speaker answers the cell affords
+- [ ] Optional: Murata microblower signet experiment on the aux channel (parked on the dev kit, where D10 became I2S DIN)
 
 ## Stage 2 — Oura-size (3–9 months, multi-spin)
 
+- [ ] Port `EVENTS` / `RECORD_START/STOP` / cues to `firmware/ring-nrf52840` (no `AUDIO_OUT`: stage 2 has no speaker — answers are phone/headphones only)
 - [ ] Finish `firmware/ring-nrf52840/src/camera_hal.c`: OV7670/OVM7692 bit-bang + baseline JPEG encoder; benchmark capture time on XIAO nRF52840 Sense
+- [ ] PDM mic → ADPCM on nRF52840 (nrfx PDM) with the same 132-byte block format
 - [ ] Try HM01B0 1-bit mode through SPIS + PPI (lowest power path)
 - [ ] Sample Grepow curved cells; BQ25100 charger board
-- [ ] Rigid-flex layout (0.22/0.48 mm) around ISP1807 or nRF52840 WLCSP; printed antenna; OVM7692 pod
-- [ ] Haptic: VG0640001D vs PowerHap + BOS1901 on-finger comparison
+- [ ] Rigid-flex layout (0.22/0.48 mm) around ISP1807 or nRF52840 WLCSP; printed antenna; OVM7692 pod; mic port
+- [ ] Haptic for cues: VG0640001D vs PowerHap + BOS1901 on-finger comparison
 - [ ] Potting + shell; charging cradle
 - [ ] Battery-life validation against `hardware/power-budget.txt`
 
 ## Software backlog (any stage)
 
+- [ ] Voice activity detection to end ring-mic recordings early (currently button release or 8 s)
+- [ ] Phone-side on-device transcription (iOS Speech / Android SpeechRecognizer) so a deployment needs only `ANTHROPIC_API_KEY`
+- [ ] Streaming answers: start TTS on the first sentence; stream `AUDIO_DATA` while the rest is synthesised
+- [ ] Barge-in polish: cancel server TTS and ring playback on `BUTTON_DOWN` without a click
+- [ ] Wake-word-free "continue" gesture: double tap during the follow-up offer = "yes"
+- [ ] Ring speaker: server-side mp3 encoder so `speech_format=both` does not call TTS twice; loudness normalisation
 - [ ] OTA firmware update over BLE
-- [ ] Voice activity detection to end recordings early
-- [ ] Phone-side on-device transcription (iOS Speech / Android SpeechRecognizer) to avoid a second cloud provider
-- [ ] Morse "yes/no/digits" ultra-short mode and a per-user abbreviation dictionary
 - [ ] Backend: rate limiting, per-device tokens, request logging opt-in
-- [ ] Simulated ring (software peripheral) for CI of the companion apps
+- [ ] Simulated ring (software peripheral emitting events and accepting `AUDIO_OUT`) for CI of the companion apps
+- [ ] Silent-pattern mode (optional): "yes/no/digits" ultra-short Morse and a per-user abbreviation dictionary, if anyone asks for it
+
+## v2 — projection from the ring (not scheduled)
+
+The idea: Claude projects visuals through the ring onto a wall or your palm. There is no concrete
+use case yet, so this is deliberately **v2**, after the voice loop has been worn daily. The
+feasibility note [`docs/08-projection-v2.md`](08-projection-v2.md) sets the frame:
+
+- **Full raster projection is not plausible at ring size** — the smallest real engines are
+  watch-sized, draw 1.5–7 W, need a dim room, and a 30–40 mAh cell (≈ 0.11 Wh) would hit the
+  skin-contact thermal limit in about a minute. Humane's AI Pin was the closest shipped device
+  and was criticised for exactly these reasons.
+- **An aimed Class-1 laser *pointer* is plausible, cheap and already wired**: a Ø3.3–6 mm module
+  on the existing aux channel (`PIN_AUX` → Q1 → J2 on the stage-1 board), aimed along the camera
+  axis, ~$2–5 of parts plus a laser power meter.
+- **Vector glyphs** (arrow, circle, digit) via a 1–2 mm MEMS mirror are the research-grade
+  stretch; full images, if ever, belong to a companion clip/pendant, not the ring.
+
+v2 items, in order (details and interlocks in `08-projection-v2.md` §4–§5):
+
+- [ ] Meet the decision checklist in `08-projection-v2.md` §5.2 first: v1 used daily by ≥ 3 people for ≥ 2 weeks, framing failures measured, a weekly pointing use case named by testers
+- [ ] Pointer experiment on the stage-1 aux pads: Class-1 (≤ 0.39 mW, preferably 520 nm green) module, button-held-only, 3 s cap, IMU pitch/motion cut-off, phone-side face-detector gate
+- [ ] Backend returns a bounding box / direction for "which one?" answers; phone-side visual servoing on low-res frames before any 6-axis IMU spin
+- [ ] Protocol delta as a v2 extension (`POINTER` control, `POINTER_ENABLE` config, `POINTER_ON` status, `POINTER_BLOCKED` event) — proposals only, kept out of the v1 GATT spec until then
+- [ ] Re-check annually for a ≤ 1 cc / ≤ 0.3 W / Class-1 image engine; otherwise raster projection stays parked

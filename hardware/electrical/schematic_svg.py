@@ -16,7 +16,7 @@ import sys
 from typing import Dict, List, Optional, Tuple
 
 sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
-from mcring_v1 import GPIO, R_ISET, R_PRETERM, build  # noqa: E402
+from mcring_v1 import GPIO, R_ISET, R_PRETERM, R_VSET, build  # noqa: E402
 from netlist_model import Netlist, Part  # noqa: E402
 
 HERE = os.path.dirname(os.path.abspath(__file__))
@@ -45,22 +45,30 @@ SHEETS = [("Power", "Power: cell, charger, pads, buck, battery sense"),
 
 SHEET_NOTES = {
     "Power": [f"BQ25100: R_ISET {R_ISET} -> ~25 mA (K_ISET 230 A*ohm, VERIFY); R_PRETERM {R_PRETERM} -> 1 mA (K 11.5, VERIFY).",
-              "BQ25100 has PRE_TERM, no TS pin (TS variant = BQ25101). nCHG goes to a test pad only.",
-              "TPS62840: VSET resistor selects the 3.3 V code (SLVSE12 table, VERIFY); MODE/STOP low; EN tied to VBAT.",
+              f"BQ25100 has PRE_TERM, no TS pin (TS variant = BQ25101). nCHG -> IO{GPIO['nCHG']} (PIN_CHG, active low) + TP7, 100k pull-up.",
+              f"TPS62840: R12 {R_VSET} from VSET to GND = 3.3 V code (SLVSE12 Table 1); MODE/STOP low; EN tied to VBAT.",
+              "Charging input: CP1/CP2 band contacts (off-board, dashed) -> PAD1/PAD2 wire pads -> D2 bidirectional TVS -> D3 series",
+              "Schottky -> CHG_IN. D3 blocks a ring seated the wrong way round in the 2-pin cradle. PAD1 doubles as the bring-up VBUS entry.",
+              "Cell BT1 (off-board) on the J1 wire pads. Battery divider 1 M / 1 M + 100 nF: 2.1 uA permanent drain (was 21 uA).",
               "100 uF 1206 bulk on 3V3 near the module absorbs the 300-370 mA capture/radio peaks."],
     "MCU": [f"IO{GPIO['CAM_PWR_EN']} CAM_PWR_EN (was IO19), IO{GPIO['RGB_DATA']} RGB data (was IO20); IO19/IO20 = native USB test pads.",
-            f"IO{GPIO['LED_PWR_EN']} (RXD0) LED_PWR_EN with 4.7k pull-down: WS2812 rail off at reset and in deep sleep.",
-            "IO26, IO33-IO37: in-package flash/PSRAM -> NC. IO45/IO46 straps left floating. Pin table VERIFY.",
-            "I2C 4.7k pull-ups on SDA/SCL (DRV2605L 0x5A, LIS2DW12 0x18). EN: 10k + 1 uF. IO0: 10k + pad + DNP button."],
+            f"IO{GPIO['LED_PWR_EN']} LED_PWR_EN (PIN_RGB_PWR) with 4.7k pull-down: WS2812 rail off at reset and in deep sleep (was IO44/RXD0).",
+            "IO26 = SPICS1 of the in-package quad PSRAM -> NC. IO33-IO37 are free on the N4R2 (octal PSRAM parts only use them):",
+            "IO34-IO37 and IO44 (RXD0) are spare (grey 'spare'). IO45/IO46 straps left floating. Pin table VERIFY.",
+            "I2C 4.7k pull-ups on SDA/SCL (DRV2605L 0x5A, LIS2DW12 0x18). EN: 10k + 1 uF. IO0: 10k + pad + DNP button.",
+            "ANT1 (off-board): 2.4 GHz flex antenna on the module's u.FL receptacle (not a pad) — see README §5."],
     "Camera": ["FPC pin order = ESP32-CAM / Arducam M0031 OV2640 (pin 1 NC ... 24 Y0) — VERIFY on the purchased head.",
+               "FPC1 is a BOTTOM-contact back-flip connector (F32R-1A7H1-11024; alt Hirose FH12-24S-0.5SH, confirm contact side).",
                "CAM_3V3 (DOVDD) switched by U2 from IO21; AVDD 2.8 V (U3) and DVDD 1.2 V (U4, DNP if self-regulated) hang off it.",
                "SCCB pull-ups and RESET RC go to the switched rail so the unpowered sensor is never back-fed. PWDN tied low.",
                "Y0/Y1 unused (8-bit bus Y2..Y9 = D0..D7). XCLK 20 MHz from IO10 (LEDC)."],
-    "Sensors": ["DRV2605L: IN/TRIG to GND (I2C RTP mode), EN from IO3, REG 1 uF. LRA on OUT+/OUT-.",
+    "Sensors": ["DRV2605L: IN/TRIG to GND (I2C RTP mode), EN tied to 3V3 (shutdown via EN would block I2C; idle = register STANDBY),",
+                "REG 1 uF. LRA M1 on OUT+/OUT-: INEED LRA0825BC-0167F, 240 Hz, 1.25 Vrms max.",
                 "LIS2DW12: SA0 = GND (0x18), CS = VDD_IO (I2C), INT1 -> IO7 (RTC wake), INT2 NC.",
                 "T3902: SELECT = GND, CLK IO42, DATA IO41 (I2S0 PDM RX). Button to GND with 100 nF; touch pad via 1k."],
-    "Outputs": ["WS2812B-2020 powered from VBAT through U9 (TPS22916, ON = IO44): ~0.6-1 mA idle otherwise.",
-                "Data from IO43 through 100 Ohm; 100 nF + 1 uF at the LED. Piezo from IO4 through 100 Ohm.",
+    "Outputs": [f"WS2812B-2020 powered from 3V3 through U9 (TPS22916, ON = IO{GPIO['LED_PWR_EN']}): ~0.6-1 mA idle otherwise.",
+                "Data from IO43 through 1 kOhm (limits the boot-chatter back-feed while VLED is off); 100 nF + 1 uF at the LED.",
+                "Piezo: IO4 -> 100 Ohm -> BZ1 wire pads; the 9x9 element PZ1 is off-board and optional (DNP until the enclosure has a pocket).",
                 "Q1 AO3400 low-side switch from IO9 (100k pull-down): aux pads = VBAT + open drain."],
 }
 
@@ -68,6 +76,7 @@ POWER_COLORS = {"GND": "#1b7f3a"}
 COL_POWER = "#a3261a"
 COL_SIGNAL = "#1f4fa3"
 COL_NC = "#8a8a8a"
+SPARE = "spare"      # pseudo-net label for intentionally free pins
 
 
 def tw(text: str, fs: int = FS_PIN) -> float:
@@ -92,6 +101,7 @@ def sides(part: Part, nl: Netlist) -> Tuple[List[str], List[str]]:
     if ref == "U1":
         left = ["3", "45"] + [pn for pn, n in names.items() if n.startswith("IO") and int(n[2:]) <= 21]
         right = [pn for pn, n in names.items() if (n.startswith("IO") and int(n[2:]) > 21) or n.startswith(("TXD", "RXD"))]
+        right += [pn for pn, n in names.items() if n == "GND"]   # collapsed into one "GND 1-2,43-44,46-65" row
         return left, right
     if ref == "FPC1":
         left = pick("NC", "AGND", "AVDD", "DVDD", "DOVDD", "DGND", "SIOD", "SIOC", "RESET", "PWDN")
@@ -109,7 +119,7 @@ def sides(part: Part, nl: Netlist) -> Tuple[List[str], List[str]]:
         "MK1": (("VDD", "GND"), ("CLK", "DATA", "SELECT")),
         "D1": (("VDD", "DIN"), ("DOUT", "GND")),
         "Q1": (("G",), ("D", "S")),
-        "D2": (("K",), ("A",)),
+        "D3": (("A",), ("K",)),      # series Schottky: CHG_PAD (anode) on the left, CHG_IN (cathode) on the right
     }
     if ref in table:
         l, r = table[ref]
@@ -124,10 +134,13 @@ def sides(part: Part, nl: Netlist) -> Tuple[List[str], List[str]]:
 
 
 def collapse_rows(part: Part, pins: List[str], nl: Netlist) -> List[Tuple[str, str, Optional[str]]]:
-    """Group same-net GND pins into one row. Returns [(pin_number_label, pin_name, net)]."""
+    """Group same-net GND pins into one row. Returns [(pin_number_label, pin_name, net)];
+    net is None for NC pins and the SPARE sentinel for intentionally free pins."""
     rows, gnd = [], []
     for pn in pins:
         net = nl.net_of(part.ref, pn)
+        if net is None and pn in part.spare_pins:
+            net = SPARE
         if part.pins[pn] == "GND" and net == "GND" and len(part.pins) > 4:
             gnd.append(pn)
         else:
@@ -190,10 +203,11 @@ class Cell:
         p = self.part
         bx = self.x + self.left_w
         by = self.y
-        dnp = " (DNP)" if p.dnp else ""
+        dnp = (" (DNP)" if p.dnp else "") + (" *" if p.offboard else "")
+        cls = (" dnp" if p.dnp else "") + (" offboard" if p.offboard else "")
         if self.two_pin or self.one_pin:
             o.append(f'<rect x="{bx:.1f}" y="{by:.1f}" width="{self.box_w:.1f}" height="{self.box_h}" '
-                     f'rx="3" class="box{" dnp" if p.dnp else ""}"/>')
+                     f'rx="3" class="box{cls}"/>')
             o.append(f'<text x="{bx + self.box_w / 2:.1f}" y="{by + 19:.1f}" class="ref" text-anchor="middle">{esc(p.ref)}</text>')
             o.append(f'<text x="{bx + self.box_w / 2:.1f}" y="{by + self.box_h + 14:.1f}" class="val" '
                      f'text-anchor="middle">{esc(p.value + dnp)}</text>')
@@ -206,7 +220,7 @@ class Cell:
                 o += pin_stub(bx + self.box_w, ym, "R", pn, None, net)
             return o
         o.append(f'<rect x="{bx:.1f}" y="{by:.1f}" width="{self.box_w:.1f}" height="{self.box_h:.1f}" '
-                 f'rx="4" class="box{" dnp" if p.dnp else ""}"/>')
+                 f'rx="4" class="box{cls}"/>')
         o.append(f'<text x="{bx + PAD:.1f}" y="{by + 14:.1f}" class="ref">{esc(p.ref)}</text>')
         o.append(f'<text x="{bx + PAD:.1f}" y="{by + 28:.1f}" class="val">{esc(p.value + dnp)}</text>')
         o.append(f'<line x1="{bx:.1f}" y1="{by + self.hdr - 2:.1f}" x2="{bx + self.box_w:.1f}" y2="{by + self.hdr - 2:.1f}" class="sep"/>')
@@ -220,7 +234,7 @@ class Cell:
 
 
 def net_color(net: Optional[str]) -> str:
-    if net is None:
+    if net is None or net == SPARE:
         return COL_NC
     if net in POWER_COLORS:
         return POWER_COLORS[net]
@@ -235,7 +249,13 @@ def pin_stub(x: float, y: float, side: str, pn: str, name: Optional[str], net: O
     x2 = x + d * STUB
     label = net or "NC"
     col = net_color(net)
-    if net is None:
+    if net == SPARE:
+        # intentionally free pin: short grey stub, no cross
+        o.append(f'<line x1="{x:.1f}" y1="{y:.1f}" x2="{x + d * 14:.1f}" y2="{y:.1f}" class="wire nc"/>')
+        tx = x + d * (STUB + 4)
+        anchor = "end" if side == "L" else "start"
+        o.append(f'<text x="{tx:.1f}" y="{y + 4:.1f}" class="net spare" fill="{col}" text-anchor="{anchor}">spare</text>')
+    elif net is None:
         # no-connect cross
         o.append(f'<line x1="{x:.1f}" y1="{y:.1f}" x2="{x + d * 10:.1f}" y2="{y:.1f}" class="wire nc"/>')
         cx = x + d * 14
@@ -321,13 +341,15 @@ def render_sheet(nl: Netlist, sheet: str, title: str, idx: int, total: int) -> s
     notes_h = 16 * len(notes) + 14 + MARGIN if notes else 0
     sub1 = (f"net-label schematic generated by hardware/electrical/schematic_svg.py from mcring_v1.py — "
             f"{len(parts)} parts on this sheet")
-    sub2 = "grey pin numbers are to be VERIFIED against the datasheets; red = power net, green = GND, blue = signal, x = NC"
+    sub2 = ("grey pin numbers are to be VERIFIED against the datasheets; red = power net, green = GND, blue = signal, "
+            "x = NC, grey 'spare' = free GPIO; dashed grey box + * = off-board part wired to the board")
     W = max(W, max([tw(n, FS_PIN) for n in notes + [sub1, sub2]] + [0]) + 2 * MARGIN + 12, 900)
     H_total = H + notes_h
     o = [f'<svg xmlns="http://www.w3.org/2000/svg" width="{W:.0f}" height="{H_total:.0f}" '
          f'viewBox="0 0 {W:.0f} {H_total:.0f}" font-family="{FONT}">',
          '<style>'
          f'.box{{fill:#fffdf5;stroke:#222;stroke-width:1.2}} .box.dnp{{stroke-dasharray:4 3;fill:#f4f4f4}}'
+         f'.box.offboard{{stroke-dasharray:7 3;stroke:#666;fill:#f7f7fb}} .net.spare{{font-weight:normal;font-style:italic}}'
          f'.sep{{stroke:#999;stroke-width:0.8}} .wire{{stroke:#222;stroke-width:1.2}} .wire.nc{{stroke:{COL_NC}}}'
          f'.ref{{font-size:{FS_REF}px;font-weight:bold;fill:#111}} .val{{font-size:{FS_REF}px;fill:#333}}'
          f'.pin{{font-size:{FS_PIN}px;fill:#111}} .num{{font-size:{FS_NUM}px;fill:#777}}'

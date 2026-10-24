@@ -1,14 +1,20 @@
 # mcring v1 (stage 1) — ERC
 
-Checked 75 parts / 265 pins / 53 nets / 251 nodes.
+Checked 81 parts / 274 pins / 54 nets / 260 nodes.
 
-* 0 warning(s) total, 0 unexplained, 0 explained.
+* 1 warning(s) total, 0 unexplained, 1 explained.
 
 **Result: CLEAN**
 
+## Explained (intentional) warnings
+
+| Warning | Why it is intentional |
+|---|---|
+| [single-node] net ANT_RF has 1 node(s): [('ANT1', '1')] | ANT1's RF lead mates with the u.FL receptacle on the ESP32-S3-MINI-1U module, which is not one of the module's 65 pads, so the net has no second node |
+
 ## Checks performed
 
-1. every pin not marked NC is on a net;
+1. every pin not marked NC or spare is on a net (off-board parts included);
 2. no net has fewer than two nodes;
 3. every pin declared as a power pin sits on a power-named net;
 4. every IC supply pin (non-ground) has at least one populated capacitor on its net;

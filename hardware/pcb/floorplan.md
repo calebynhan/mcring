@@ -10,9 +10,9 @@ Reference designators and nets follow `hardware/electrical/out/mcring_v1_nets.md
 |---|---|
 | Outline | **26.5 × 18.0 mm**, rounded corners r = 1.5 mm, 2-layer FR-4 **0.6 mm**, ENIG |
 | Orientation | x along the finger: **front edge = camera / FPC** (x = 0), **back edge = antenna / u.FL** (x = 26.5); y across the finger: **left edge = switch** (y = 0) |
-| Module | ESP32-S3-MINI-1U 15.4 × 15.4 × 2.4, centre (18.8, 9.0), u.FL end **flush with the back edge** |
-| Top side | U1 module, FPC1 (24-pin 0.5 mm bottom-contact), SW1 side switch, D1 WS2812B-2020 + R7, C3 100 µF 1206, TPAD1 3 × 4 copper touch pad with hatched GND ring |
-| Bottom side (≤ 1.15 mm) | everything else: U2–U9, L1, D2, Q1, MK1 mic (bottom-port, port through the board), 37 × 0402, 3 × 0603, wire pads (cell, charge pads, LRA, piezo, aux), 8 test pads |
+| Module | ESP32-S3-MINI-1U 15.4 × 15.4 × 2.4, centre (18.8, 9.0), u.FL end **flush with the back edge** (pin positions along the three rows: **verify against the Espressif footprint** — nothing below depends on them except the stub lengths in §6) |
+| Top side | U1 module, FPC1 (24-pin 0.5 mm bottom-contact), SW1 side switch, D1 WS2812B-2020 + R7, C3 100 µF 1206, TPAD1 3 × 4 touch landing with hatched GND ring (the touch **electrode** is a copper foil on the lid underside — §2), **8 test pads** (TP1 IO0, TP2 EN, TP3 D-, TP4 D+, TP5 GND, TP6 3V3, TP7 nCHG, TP8 VBAT) |
+| Bottom side (≤ 1.15 mm) | everything else: U2–U9, L1, D2, D3, Q1, MK1 mic (bottom-port, port through the board), 38 × 0402, 3 × 0603, wire pads (cell, charge pads, LRA, piezo, aux) |
 | Tallest top part | mated u.FL plug on the module ≈ 2.9 mm (module shield 2.4; front strip x < 11.1: FPC1 2.0) |
 | Why 26.5 long | 11.1 mm front strip (FPC1 4.0 + 1.0 actuator clearance + 5.6 for SW1/TPAD1/D1/C3/mic port) + 15.4 module |
 | Why 18.0 wide | FPC1 body 16 mm + 2 × 1.0 edge; module 15.4 + 2 × 1.3 |
@@ -21,17 +21,38 @@ Reference designators and nets follow `hardware/electrical/out/mcring_v1_nets.md
 
 | Ref | Part | Centre x, y (mm) | w × h (mm) | Height | Note |
 |---|---|---|---|---|---|
-| U1 | ESP32-S3-MINI-1U-N4R2 | 18.80, 9.00 | 15.4 × 15.4 | 2.4 | u.FL / antenna end flush with the BACK edge; no copper under the last 2 mm |
+| U1 | ESP32-S3-MINI-1U-N4R2 | 18.80, 9.00 | 15.4 × 15.4 | 2.4 | u.FL end flush with the BACK edge; GND pour + the module's own pads under the u.FL end are fine (no PCB antenna on the -1U) |
 | FPC1 | 24-pin 0.5 mm FPC, bottom contact | 2.50, 9.00 | 4.0 × 16.0 | 2.0 | FPC enters from the FRONT edge; keep x 4.5–5.5 free of parts > 0.6 mm for the actuator |
 | SW1 | Omron B3U-3000P | 8.00, 1.45 | 3.0 × 2.5 | 1.2 | side-actuated, plunger out of the LEFT edge |
-| TPAD1 | touch pad 3×4 mm copper | 8.10, 5.60 | 3.0 × 4.0 | 0.0 | hatched GND ring 0.5 mm away; NO copper under it on the bottom |
+| TPAD1 | touch landing 3×4 mm copper + compliant contact | 8.10, 5.60 | 3.0 × 4.0 | 3.2 | landing for a conductive-foam block / spring finger (3.6 free, compressed to 3.2 by the lid) that reaches the 4×5 copper-foil electrode on the lid underside; hatched GND ring 0.5 mm away; NO copper under it on the bottom |
 | D1 | WS2812B-2020 | 8.10, 10.00 | 2.0 × 2.0 | 0.9 | under the lid window |
-| R7 | 0402 | 6.30, 10.00 | 1.0 × 0.5 | 0.35 | 100 Ω WS2812 data series |
-| C3 | 100 µF 1206 | 8.10, 13.00 | 3.2 × 1.6 | 1.8 | 3V3 bulk for capture/radio peaks |
+| R7 | 0402 | 6.30, 10.00 | 1.0 × 0.5 | 0.35 | 1 kΩ WS2812 data series |
+| C3 | 100 µF 1206 | 7.80, 13.00 | 3.2 × 1.6 | 1.8 | 3V3 bulk for capture/radio peaks |
+| TP1 | TP 1.0 mm | 10.15, 9.00 | 1.0 × 1.0 | 0.0 | boot strap; hold to TP5 (GND) for download mode |
+| TP5 | TP 1.0 mm | 10.15, 10.50 | 1.0 × 1.0 | 0.0 | USB GND / bench supply return |
+| TP3 | TP 1.0 mm | 10.15, 12.00 | 1.0 × 1.0 | 0.0 | USB_DM IO19 — module front row (pin 23), short stub |
+| TP4 | TP 1.0 mm | 10.15, 13.50 | 1.0 × 1.0 | 0.0 | USB_DP IO20 — module front row (pin 24), short stub |
+| TP2 | TP 1.0 mm | 10.15, 15.00 | 1.0 × 1.0 | 0.0 | MCU_EN; pulse low to reset |
+| TP6 | TP 1.0 mm | 10.15, 16.50 | 1.0 × 1.0 | 0.0 | buck output (also at C3) |
+| TP8 | TP 1.0 mm | 5.20, 1.00 | 1.0 × 1.0 | 0.0 | bench supply 4.0 V in (with TP5) when no cell is fitted |
+| TP7 | TP 1.0 mm | 5.20, 2.50 | 1.0 × 1.0 | 0.0 | BQ25100 /CHG, low while charging |
 
-Touch pad guard ring: hatched top copper 0.3 mm wide, 0.5 mm from the pad, no copper under the pad on the
-bottom layer. LED window Ø3 in the lid above D1 (8.1, 10.0). Mic port hole Ø0.6 through the board at
-(8.1, 15.85) with an Ø0.8 lid hole above it (nothing else on the top side within 0.9 mm).
+**Touch electrode on the lid, not on the board.** The lid underside is 2.9 + 0.3 = 3.2 mm
+above the board, so a bare copper pad on the board would sit 4 mm (air + 0.8 resin) behind the touch surface — a
+12 mm² electrode that far behind the dielectric has negligible finger coupling and `trigger.cpp`'s +25 % threshold
+would never fire. Instead: a 4 × 5 mm copper-foil pad (copper foil 0.05-0.07 mm with conductive adhesive (3M 1181 class), cut 4 x 5 mm) is stuck to the
+**lid underside** centred on (8.1, 5.6), under the CAD's 4 × 5 × 0.4 touch dimple, which leaves 0.8 mm of resin
+between the foil and the thumb. TPAD1 on the board is the 3 × 4 copper landing for a compliant conductor — a conductive-foam
+block 3 × 4 × 3.6 mm (or an SMT spring finger of similar free height) that the lid compresses to 3.2 mm — so the
+electrode is wired to IO8 through R13 without any flying lead. Guard ring: hatched top copper 0.3 mm wide, 0.5 mm
+from the landing, no copper under it on the bottom layer. LED window Ø3 in the lid above D1 (8.1, 10.0). Mic port hole
+Ø0.6 through the board at (8.1, 15.85) with an Ø0.8 lid hole above it (nothing else on the top side within 0.9 mm).
+
+**Test pads on the top side.** TP1–TP6 (IO0, GND, D−, D+, EN, 3V3) form a column at x = 10.15, 0.45 mm in front of the
+module's front row, 1.5 mm pitch; TP8 (VBAT) and TP7 (nCHG) sit at x = 5.2 beside FPC1 (0 mm tall, so the actuator swing
+zone is fine). All eight are reachable with the board seated on its ledges and the lid off — flashing over USB, holding IO0,
+pulsing EN, bench-powering from VBAT/GND and the cradle/nCHG check no longer need the board lifted or the cell/LRA/pad wires
+unsoldered. Wire pads stay on the bottom (the wires go down into the band).
 
 ## 3. Placement — bottom side
 
@@ -58,7 +79,7 @@ bottom layer. LED window Ø3 in the lid above D1 (8.1, 10.0). Mic port hole Ø0.
 | R13 | 0402 | 10.30, 5.60 | 0.5 × 1.0 | 0.35 | 1k touch series — just outside the pad |
 | MK1 | TDK T3902 PDM mic (bottom port) | 8.10, 15.85 | 2.65 × 3.5 | 0.98 | bottom-port mic mounted on the BOTTOM; its port hole goes THROUGH the board and the lid hole sits above |
 | C19 | 0402 | 5.80, 15.90 | 1.0 × 0.5 | 0.35 | 100n mic VDD |
-| U9 | TPS22916C DSBGA-4 | 10.30, 15.50 | 1.2 × 0.9 | 0.6 | WS2812 supply gate VBAT→VLED, ON = IO44 |
+| U9 | TPS22916C DSBGA-4 | 10.30, 15.50 | 1.2 × 0.9 | 0.6 | WS2812 supply gate 3V3→VLED, ON = IO33 (LED_PWR_EN) |
 | C20 | 0402 | 10.30, 14.30 | 1.0 × 0.5 | 0.35 | 100n VLED |
 | C21 | 0402 | 10.30, 16.80 | 1.0 × 0.5 | 0.35 | 1 µF VLED |
 | J1a | pad | 12.40, 1.30 | 1.5 × 1.5 | 0.0 | 301012 cell lead (VBAT) |
@@ -68,13 +89,14 @@ bottom layer. LED window Ø3 in the lid above D1 (8.1, 10.0). Mic port hole Ø0.
 | C1 | 0603 | 11.60, 3.30 | 1.6 × 0.8 | 0.95 | 10 µF buck input |
 | L1 | 2.2 µH 2016 (DFE201610E) | 13.70, 3.30 | 2.0 × 1.6 | 1.0 | buck inductor — tight loop with U8/C2 |
 | C2 | 0603 | 15.80, 3.30 | 1.6 × 0.8 | 0.95 | 10 µF buck output |
-| D2 | PESD5V0S1UB SOD-523 | 18.40, 2.90 | 1.2 × 0.8 | 0.6 | TVS on CHG_IN, < 2 mm from the pad |
+| D2 | PESD5V0S1BB SOD-523 | 18.40, 2.90 | 1.2 × 0.8 | 0.6 | bidirectional TVS on CHG_PAD, < 2 mm from the pad |
+| D3 | PMEG2005EB SOD-523 | 18.40, 4.10 | 1.2 × 0.8 | 0.6 | Schottky CHG_PAD → CHG_IN (reversed-cradle protection), right after D2 |
 | U8 | TPS62840DLC SOT-583 | 12.60, 5.60 | 2.1 × 1.6 | 0.6 | 3V3 buck |
 | R12 | 0402 | 14.40, 5.30 | 1.0 × 0.5 | 0.35 | VSET (3.3 V code) |
 | U7 | BQ25100 DSBGA-6 | 16.60, 5.30 | 1.6 × 0.9 | 0.6 | charger 25 mA / 1 mA term |
 | C7 | 0402 | 18.40, 5.30 | 1.0 × 0.5 | 0.35 | 1 µF charger IN |
-| R8 | 0402 | 11.80, 6.90 | 1.0 × 0.5 | 0.35 | 100k divider top (VBAT) |
-| R9 | 0402 | 13.00, 6.90 | 1.0 × 0.5 | 0.35 | 100k divider bottom |
+| R8 | 0402 | 11.80, 6.90 | 1.0 × 0.5 | 0.35 | 1 M divider top (VBAT) |
+| R9 | 0402 | 13.00, 6.90 | 1.0 × 0.5 | 0.35 | 1 M divider bottom |
 | C23 | 0402 | 14.20, 6.90 | 1.0 × 0.5 | 0.35 | 100n BAT_SENSE |
 | C8 | 0402 | 15.60, 6.90 | 1.0 × 0.5 | 0.35 | 1 µF charger OUT / VBAT |
 | R10 | 0402 | 16.90, 6.90 | 1.0 × 0.5 | 0.35 | 9.1k ISET |
@@ -100,20 +122,13 @@ bottom layer. LED window Ø3 in the lid above D1 (8.1, 10.0). Mic port hole Ø0.
 | R2 | 0402 | 21.20, 1.60 | 1.0 × 0.5 | 0.35 | 10k IO0 pull-up |
 | R1 | 0402 | 21.20, 16.60 | 1.0 × 0.5 | 0.35 | 10k EN pull-up |
 | C6 | 0402 | 22.60, 16.60 | 1.0 × 0.5 | 0.35 | 1 µF EN delay |
-| TP1 | TP 1.0 mm | 22.90, 3.00 | 1.0 × 1.0 | 0.0 |  |
-| TP2 | TP 1.0 mm | 22.90, 4.50 | 1.0 × 1.0 | 0.0 |  |
-| TP3 | TP 1.0 mm | 22.90, 6.00 | 1.0 × 1.0 | 0.0 | USB_DM IO19 |
-| TP4 | TP 1.0 mm | 22.90, 7.50 | 1.0 × 1.0 | 0.0 | USB_DP IO20 |
-| TP5 | TP 1.0 mm | 22.90, 9.00 | 1.0 × 1.0 | 0.0 |  |
-| TP6 | TP 1.0 mm | 22.90, 10.50 | 1.0 × 1.0 | 0.0 |  |
-| TP7 | TP 1.0 mm | 22.90, 12.00 | 1.0 × 1.0 | 0.0 |  |
-| TP8 | TP 1.0 mm | 22.90, 13.50 | 1.0 × 1.0 | 0.0 |  |
 
 ## 4. Keep-outs and zones
 
 | Zone | Layers | Rectangle (x0, y0 – x1, y1) | Rule |
 |---|---|---|---|
-| Antenna / u.FL end | both | (24.5, 0 – 26.5, 18.0) | no copper, no vias; **+5.0 mm beyond the back edge** no metal, cell or LRA (enclosure) |
+| u.FL end | both | (24.5, 0 – 26.5, 18.0) | **no copper keep-out** — the MINI-1U has no PCB antenna, and the module's GND 1–2 / 3V3 (3) and GND 43–44 / EN (45) pads are the ends of the two side rows, nearest the u.FL (verify on the footprint), so copper is *required* here: GND pour on both layers, normal fan-out of those pads; no DVP/XCLK/PCLK/PDM traces, no part other than U1. The pigtail leaves the plug over the back edge and runs down the inside of the bay's back wall |
+| Antenna (enclosure) | — | — | flex dipole + pigtail **≥ 5.0 mm from the cell, the LRA and any other metal**, never under the module or across the DVP corridor; cable ≤ 50 mm |
 | Touch pad | bottom | (6.6, 3.6 – 9.6, 7.6) | no copper under TPAD1; R13 just outside it |
 | FPC actuator swing | top | (4.5, 1.0 – 5.5, 17.0) | parts ≤ 0.6 mm only (R7 is fine) |
 | DVP corridor | bottom | (1.0, 8.3 – 12.6, 13.8) | Y2–Y9, PCLK, HREF, VSYNC, XCLK only; vias up to U1 in the last 1.5 mm |
@@ -121,9 +136,9 @@ bottom layer. LED window Ø3 in the lid above D1 (8.1, 10.0). Mic port hole Ø0.
 
 ## 5. Layer usage
 
-* **Top**: module footprint + fan-out, FPC1, SW1, D1/R7, C3, touch pad + GND hatch, GND pour. The DVP bus leaves
-  FPC1 on the top layer, drops to the bottom corridor, and comes back up at the module's front-left pins.
-* **Bottom**: all small ICs and passives, wire pads, test pads, the DVP corridor, I²C, the power cluster; GND pour
+* **Top**: module footprint + fan-out, FPC1, SW1, D1/R7, C3, touch landing + GND hatch, the 8 test pads, GND pour. The DVP
+  bus leaves FPC1 on the top layer, drops to the bottom corridor, and comes back up at the module's front-left pins.
+* **Bottom**: all small ICs and passives, wire pads, the DVP corridor, I²C, the power cluster; GND pour
   everywhere else, stitched to the top pour with vias every ≤ 3 mm.
 * Design rules per `hardware/electrical/README.md` §5 (0.10/0.10 mm fine, 0.2 mm drill, NSMD DSBGA pads).
 * 2 layers is tight: if the DVP + power fan-out does not close, the fallback is a 4-layer 0.6 mm stack
@@ -137,14 +152,14 @@ bottom layer. LED window Ø3 in the lid above D1 (8.1, 10.0). Mic port hole Ø0.
 | SCCB SIOD/SIOC | pull-ups R5/R6 at the connector, to CAM_3V3 (switched rail) |
 | CAM power | 3V3 → U2 → CAM_3V3 → U3 (2.8 V) / U4 (1.2 V) → FPC1 pins 4/10/11; caps C13/C24 within 1 mm of the pins |
 | Buck | C1 – U8 – L1 – C2 in a tight loop, SW_NODE minimal area, VOS sense from C2 |
-| Charge input | CHG+ pad → D2 TVS (< 2 mm) → U7 IN with C7; CHG− straight to the GND pour |
+| Charge input | CHG+ pad → D2 TVS (< 2 mm) → D3 Schottky → U7 IN with C7; CHG− straight to the GND pour |
 | VBAT | J1 → C8 / U7 OUT → U8 VIN → U9 VIN → R8; 0.4 mm trunk |
 | I²C | IO5/IO6 → R3/R4 → U5, U6 — one short daisy chain on the right half |
 | LRA OUT+/OUT− | 0.3 mm pair, U5 → M1 pads (2 mm) |
 | VLED / RGB_DATA | U9 → via → D1 (top); IO43 → R7 → D1 DIN |
 | PDM CLK/DATA | IO42/IO41 → MK1 on the right-front, ≤ 10 mm |
-| USB D−/D+ | IO19/IO20 → TP3/TP4 stubs only (≤ 4 mm), nothing else on the nets |
-| Touch | IO8 → R13 (1 kΩ) → TPAD1; keep the trace short and away from the DVP corridor |
+| USB D−/D+ | IO19/IO20 (module pins 23/24, in the **front row**) → TP3/TP4 directly in front of that row at x = 10.15; the stub is the pin-to-pad run, routed as a pair on the top layer, ≤ 10 mm (expect 1–8 mm depending on where pins 23/24 sit along the row — verify on the footprint), nothing else on the nets |
+| Touch | IO8 → R13 (1 kΩ) → TPAD1 landing → foam/spring contact → lid foil electrode; keep the trace short and away from the DVP corridor |
 
 ## 7. Camera FPC pin order (assumed ESP32-CAM / Arducam M0031 — verify on the purchased head)
 
@@ -179,15 +194,19 @@ Pin 1 is at the LEFT end of FPC1 (low y); pitch 0.5 mm; contacts face the board 
 
 ## 8. Stack (see `out/stackup.svg`)
 
-skin → band wall 1.2 → cell 3.0 → clearance 0.35 → bottom parts 1.15 →
-PCB 0.6 → top parts 2.9 → clearance 0.3 → lid 1.2:
-board bottom at z = 5.7, board top z = 6.3, lid underside z = 9.5,
-**signet top z = 10.7 mm** above the skin (7.7 mm if the cell moves to the
-palm-side thick zone of the band as in the old `.scad`).
+skin → band wall 1.2 → cell 3.0 → cell-pocket slack 0.4 (CAD pocket 3.4 deep) → clearance 0.35 →
+bottom parts 1.15 → PCB 0.6 → top parts 2.9 → clearance 0.3 → lid 1.2:
+board bottom at z = 6.1, board top z = 6.7, lid underside z = 9.9,
+**signet top z = 11.1 mm** above the skin (7.7 mm if the cell moves to the
+palm-side thick zone of the band as in the old `.scad`). These are the enclosure's as-built numbers
+(`hardware/cad/fit_report.md`: board bottom 6.10, lid top 11.10).
 
-Camera pod: lens axis z = 5.5, head 8.5 × 8.5 × 1.3 + Ø4.5 × 4.5 barrel, FPC loop 2.5 mm, interior
-depth 8.3 mm in front of the board edge (9.5 incl. the 1.2 wall), interior width ≥ 9.2,
-roof top z = 11.25 (+0.55 vs the bay lid — the pod is marginally taller than the lid, or raise the lid clearance by 0.4).
+Camera pod (built by the CAD from `pod_mm`): floor z = 1.7 (band wall on the 0.5 bore relief), head 8.5 × 8.5 × 1.3
++ Ø4.5 × 4.5 barrel standing 0.3 above the floor → head z 2.0–10.5, **lens axis z = 6.25**, ceiling z = 11.5
+(head top + 1.0 for the FPC fold), roof top z = 12.7 (+1.60 vs the bay lid; the roof lips back over the lid's front
+edge). FPC loop 2.5 mm, interior depth 8.3 mm in front of the board edge (9.5 incl. the 1.2 wall),
+interior width ≥ 9.2, bore Ø4.6 (reamed to the 4.5 barrel). Bay interior extends 2.0 mm behind the
+board's back edge for the u.FL pigtail and the flex antenna. Side-switch slot through the left wall 3.4 × 1.6 mm.
 
 ## 9. Deviations from the task text / earlier notes
 
@@ -199,10 +218,26 @@ roof top z = 11.25 (+0.55 vs the bay lid — the pod is marginally taller than t
    no room. The netlist's J1 pins 1/2 map to the two pads.
 3. **top_max_height = 2.9 mm**, not 2.4: the mated u.FL plug on the module is taller than the shield can.
 4. **bottom_max_height = 1.15 mm** (task: 1.1): VSSOP-10 and SOT-23 bodies are 1.10–1.15 max.
-5. **8 test pads** (IO0, EN, USB D−, D+, GND, 3V3, nCHG, VBAT) per the electrical netlist, not 4.
-6. **SW2 (optional IO0 boot button, DNP) is not placed** — no top-side room; use TP1 (IO0) + TP2 (EN).
-7. GPIO use follows the post-fix `BOARD_MCRING_V1` (CAM_PWR = IO21, RGB = IO43, LED_PWR_EN = IO44, USB on 19/20).
+5. **8 test pads** (IO0, EN, USB D−, D+, GND, 3V3, nCHG, VBAT) per the electrical netlist, not 4 — and **on the top side**:
+   the bottom face is unreachable once the board sits on its ledges (1.5 mm above the sub-board floor, wires soldered),
+   which contradicted the build guide's in-bay flashing and "checks with the lid off" steps.
+6. **SW2 (optional IO0 boot button, DNP) is not placed** — no top-side room; use TP1 (IO0) + TP5 (GND) / TP2 (EN).
+7. GPIO use follows the post-fix `BOARD_MCRING_V1` (CAM_PWR = IO21, RGB = IO43, LED_PWR_EN = IO33, USB on 19/20).
 8. Board is 26.5 × 18.0 instead of the old 26 × 12 bay: the 15.4 mm module and the 16 mm FPC connector set the width.
+9. **Touch electrode on the lid underside** (copper foil under the dimple) with a compliant contact on TPAD1, instead of a
+   bare pad on the board 4 mm behind the touch surface (see §2). `schematic-notes.md`'s "3 × 4 mm copper area on the
+   top face" is now the landing; the BOM/build guide need the foam block and the foil.
+10. **No antenna copper keep-out on the board**: the earlier "no copper in the last 2 mm" rule was the PCB-antenna rule
+    of the MINI-1; the MINI-1U has a u.FL, and its GND/3V3/EN pads sit in exactly that strip. Replaced by the u.FL-end and
+    antenna-placement rules in §4.
+11. **Stack / pod / bore / slot numbers are computed the way the CAD builds them** (`hardware/cad/mcring_stage1.py`, which
+    reads `pod_mm.floor_relief_above_skin / head_clearance / fpc_fold_above_head` and `antenna_cavity_mm` from this JSON):
+    cell pocket 3.4 deep (+0.4 slack) → lid top 11.1 not 10.7; pod floor on the 0.5 bore relief, head 0.3 above
+    it, 1.0 FPC fold above the head → lens axis 6.25 not 5.5, roof 12.7 (+1.60 vs the lid) not 11.25;
+    bore Ø4.6 not 4.7; switch slot 3.4 × 1.6 not 3.2 × 1.5. The CAD still hard-codes `cell_pocket`,
+    `lens_d`, `lid_t` and `switch_slot` — it should read `stack_mm.cell_pocket_depth`, `pod_mm.bore_d`, `stack_mm.lid` and
+    `switch_slot_mm` from this JSON so the two cannot drift again. `hardware/cad/fit_report.md` is the as-built check.
+12. **D3** (PMEG2005EB Schottky, CHG_PAD → CHG_IN) added at (18.4, 4.1) — it is in the electrical netlist but was missing here.
 
 ## 10. Checks performed by the script
 

@@ -25,7 +25,7 @@
     8.1,
     5.6
   ],
-  "notes": "Coordinates from the board's FRONT-LEFT corner seen from the top: x along the finger (0 = front/camera edge, board_length = back/antenna edge), y across the finger (0 = left edge where the switch is). Module ESP32-S3-MINI-1U 15.4x15.4x2.4 with its u.FL end flush with the back edge; keep 5 mm behind the back edge free of metal, cell and LRA, and route the flex antenna down the back wall. top_max_height is the mated u.FL plug (2.9), the module shield is 2.4 (the lid may be lower over the front strip, x < 11.1: tallest part there is FPC1 at 2.0). Bottom parts max 1.15 (SOT-23/VSSOP) - allow >= 0.35 clearance to the cell. Mic MK1 is a bottom-port part mounted on the BOTTOM side at mic_xy; its 0.6 mm port goes through the board, so the lid needs a ~0.8 mm hole straight above mic_xy. LED D1 is on top at led_xy under a 1.0-1.5 mm thinned window (~3 mm). Switch SW1 body 3.0x2.5x1.2 on the top side, plunger pointing out of the left edge at x = switch_offset; wall slot ~3.2 x 1.5 centred z = board_top+0.6. Touch pad 3x4 copper on top at touchpad_xy (needs only a thin, non-conductive lid: <= 1.0 mm there or an opening). FPC connector FPC1 on top at x 0.5-4.5 spanning y 1-17, FPC enters from the front edge; the camera head sits in a pod in front of the board (see stackup.svg / pod_mm). Wire pads for the cell (J1), charging pads (PAD1/2), LRA (M1), piezo (BZ1) and aux (J2) are all on the BOTTOM side, so the wire channel into the band should open under the board near x 12-20 (left) and x 15-18 (right).",
+  "notes": "Coordinates from the board's FRONT-LEFT corner seen from the top: x along the finger (0 = front/camera edge, board_length = back/antenna edge), y across the finger (0 = left edge where the switch is). Module ESP32-S3-MINI-1U 15.4x15.4x2.4 with its u.FL end flush with the back edge; the u.FL pigtail leaves over the back edge and runs down the inside of the bay's back wall to the flex antenna, which stays >= antenna_keepout_beyond_edge_mm (5) from the cell, the LRA and any other metal (the -1U has no on-module antenna, so there is no copper keep-out on the board). top_max_height is the mated u.FL plug (2.9), the module shield is 2.4 (the lid may be lower over the front strip, x < 11.1: tallest part there is FPC1 at 2.0). Bottom parts max 1.15 (SOT-23/VSSOP) - allow >= 0.35 clearance to the cell. Mic MK1 is a bottom-port part mounted on the BOTTOM side at mic_xy; its 0.6 mm port goes through the board, so the lid needs a ~0.8 mm hole straight above mic_xy. LED D1 is on top at led_xy under a 1.0-1.5 mm thinned window (~3 mm). Switch SW1 body 3.0x2.5x1.2 on the top side, plunger pointing out of the left edge at x = switch_offset; wall slot switch_slot_mm (3.4 x 1.6) centred z = board_top+0.6. Touch (touch_mm): the electrode is a 4x5 copper-foil pad on the LID UNDERSIDE at touchpad_xy under the 0.8 mm dimple; TPAD1 on the board is the landing for a conductive-foam / spring contact that the lid compresses from 3.6 to 3.2 mm (= top_parts + lid_clearance). The 8 test pads (test_pads_top_mm) are on the TOP side so the board can be flashed and probed while seated in the bay. FPC connector FPC1 on top at x 0.5-4.5 spanning y 1-17, FPC enters from the front edge; the camera head sits in a pod in front of the board (see stackup.svg / pod_mm). Wire pads for the cell (J1), charging pads (PAD1/2), LRA (M1), piezo (BZ1) and aux (J2) are all on the BOTTOM side, so the wire channel into the band should open under the board near x 12-20 (left) and x 15-18 (right). stack_mm and pod_mm carry the enclosure's as-built numbers (cell pocket 3.4 deep, lid top 11.1, pod roof flush with the lid, bore 4.6).",
   "switch_xy_mm": [
     8.0,
     1.45
@@ -43,8 +43,14 @@
   "module_front_edge_x_mm": 11.1,
   "ufl_mated_height_mm": 2.9,
   "front_strip_max_height_mm": 2.0,
-  "antenna_keepout_on_board_mm": 2.0,
+  "ufl_end_strip_mm": 2.0,
+  "ufl_end_rule": "no copper keep-out (MINI-1U has no PCB antenna): module GND/3V3/EN pads + GND pour; no DVP/XCLK/PCLK/PDM traces, no part other than U1; pigtail exits over the back edge",
   "antenna_keepout_beyond_edge_mm": 5.0,
+  "antenna_rule": "flex antenna + pigtail >= 5 mm from the cell, the LRA and any other metal; down the inside of the back wall, then along the band",
+  "switch_slot_mm": [
+    3.4,
+    1.6
+  ],
   "fpc_connector_mm": {
     "x0": 0.5,
     "x1": 4.5,
@@ -60,39 +66,75 @@
     3.0,
     4.0
   ],
+  "touch_mm": {
+    "landing_xy": [
+      8.1,
+      5.6
+    ],
+    "landing_size": [
+      3.0,
+      4.0
+    ],
+    "contact": "conductive-foam block (or SMT spring finger) on TPAD1, free height 3.6, compressed to top_parts + lid_clearance",
+    "contact_free_height": 3.6,
+    "contact_compressed_height": 3.2,
+    "lid_electrode_size": [
+      4.0,
+      5.0
+    ],
+    "lid_electrode_xy": [
+      8.1,
+      5.6
+    ],
+    "lid_electrode": "copper foil 0.05-0.07 mm with conductive adhesive (3M 1181 class), cut 4 x 5 mm stuck to the lid UNDERSIDE, centred on touchpad_xy",
+    "dielectric_over_electrode_max": 0.8,
+    "dielectric_note": "lid 1.2 minus the 0.4 touch dimple = 0.8 mm resin between the foil and the finger"
+  },
   "stack_mm": {
     "band_wall": 1.2,
     "cell": 3.0,
+    "cell_pocket_slack": 0.4,
+    "cell_pocket_depth": 3.4,
     "cell_clearance": 0.35,
     "bottom_parts": 1.15,
     "pcb": 0.6,
     "top_parts": 2.9,
     "lid_clearance": 0.3,
     "lid": 1.2,
-    "z_board_bottom": 5.7,
-    "z_board_top": 6.3,
-    "z_lid_bottom": 9.5,
-    "z_lid_top": 10.7,
-    "signet_height_above_skin": 10.7,
+    "z_board_bottom": 6.1,
+    "z_board_top": 6.7,
+    "z_lid_bottom": 9.9,
+    "z_lid_top": 11.1,
+    "signet_height_above_skin": 11.1,
     "signet_height_above_skin_cell_in_band": 7.7
   },
   "pod_mm": {
-    "lens_axis_z": 5.5,
+    "lens_axis_z": 6.25,
     "lens_barrel_d": 4.5,
-    "bore_d": 4.7,
+    "bore_d": 4.6,
     "head_square": 8.5,
     "head_thickness": 1.3,
     "barrel_length": 4.5,
     "fpc_loop": 2.5,
     "wall": 1.2,
+    "floor_relief_above_skin": 0.5,
+    "head_clearance": 0.3,
+    "fpc_fold_above_head": 1.0,
     "interior_depth_from_board_edge": 8.3,
     "depth_from_board_edge_incl_wall": 9.5,
     "interior_width": 9.2,
-    "roof_top_z": 11.25,
+    "floor_z": 1.7,
     "head_z": [
-      1.25,
-      9.75
-    ]
+      2.0,
+      10.5
+    ],
+    "ceiling_z": 11.5,
+    "roof_top_z": 12.7,
+    "roof_above_lid": 1.6
+  },
+  "antenna_cavity_mm": {
+    "depth_behind_board_edge": 2.0,
+    "note": "bay interior extends behind the board's back edge for the u.FL pigtail turn and the flex antenna glued to the back wall"
   },
   "wire_pads_bottom_mm": {
     "BZ1a": [
@@ -136,38 +178,38 @@
       16.7
     ]
   },
-  "test_pads_bottom_mm": {
+  "test_pads_top_mm": {
     "IO0": [
-      22.9,
-      3.0
-    ],
-    "EN": [
-      22.9,
-      4.5
-    ],
-    "D-": [
-      22.9,
-      6.0
-    ],
-    "D+": [
-      22.9,
-      7.5
-    ],
-    "GND": [
-      22.9,
+      10.15,
       9.0
     ],
-    "3V3": [
-      22.9,
+    "GND": [
+      10.15,
       10.5
     ],
-    "nCHG": [
-      22.9,
+    "D-": [
+      10.15,
       12.0
     ],
-    "VBAT": [
-      22.9,
+    "D+": [
+      10.15,
       13.5
+    ],
+    "EN": [
+      10.15,
+      15.0
+    ],
+    "3V3": [
+      10.15,
+      16.5
+    ],
+    "VBAT": [
+      5.2,
+      1.0
+    ],
+    "nCHG": [
+      5.2,
+      2.5
     ]
   },
   "parts": [
@@ -182,7 +224,7 @@
       "kind": "module",
       "height": 2.4,
       "label": "U1  ESP32-S3-MINI-1U",
-      "note": "u.FL / antenna end flush with the BACK edge; no copper under the last 2 mm"
+      "note": "u.FL end flush with the BACK edge; GND pour + the module's own pads under the u.FL end are fine (no PCB antenna on the -1U)"
     },
     {
       "ref": "FPC1",
@@ -212,16 +254,16 @@
     },
     {
       "ref": "TPAD1",
-      "name": "touch pad 3×4 mm copper",
+      "name": "touch landing 3×4 mm copper + compliant contact",
       "side": "top",
       "cx": 8.1,
       "cy": 5.6,
       "w": 3.0,
       "h": 4.0,
       "kind": "copper",
-      "height": 0.0,
+      "height": 3.2,
       "label": "TPAD1",
-      "note": "hatched GND ring 0.5 mm away; NO copper under it on the bottom"
+      "note": "landing for a conductive-foam block / spring finger (3.6 free, compressed to 3.2 by the lid) that reaches the 4×5 copper-foil electrode on the lid underside; hatched GND ring 0.5 mm away; NO copper under it on the bottom"
     },
     {
       "ref": "D1",
@@ -247,13 +289,13 @@
       "kind": "passive",
       "height": 0.35,
       "label": "R7",
-      "note": "100 Ω WS2812 data series"
+      "note": "1 kΩ WS2812 data series"
     },
     {
       "ref": "C3",
       "name": "100 µF 1206",
       "side": "top",
-      "cx": 8.1,
+      "cx": 7.8,
       "cy": 13.0,
       "w": 3.2,
       "h": 1.6,
@@ -261,6 +303,110 @@
       "height": 1.8,
       "label": "C3 100µ",
       "note": "3V3 bulk for capture/radio peaks"
+    },
+    {
+      "ref": "TP1",
+      "name": "TP 1.0 mm",
+      "side": "top",
+      "cx": 10.15,
+      "cy": 9.0,
+      "w": 1.0,
+      "h": 1.0,
+      "kind": "tp",
+      "height": 0.0,
+      "label": "IO0",
+      "note": "boot strap; hold to TP5 (GND) for download mode"
+    },
+    {
+      "ref": "TP5",
+      "name": "TP 1.0 mm",
+      "side": "top",
+      "cx": 10.15,
+      "cy": 10.5,
+      "w": 1.0,
+      "h": 1.0,
+      "kind": "tp",
+      "height": 0.0,
+      "label": "GND",
+      "note": "USB GND / bench supply return"
+    },
+    {
+      "ref": "TP3",
+      "name": "TP 1.0 mm",
+      "side": "top",
+      "cx": 10.15,
+      "cy": 12.0,
+      "w": 1.0,
+      "h": 1.0,
+      "kind": "tp",
+      "height": 0.0,
+      "label": "D-",
+      "note": "USB_DM IO19 — module front row (pin 23), short stub"
+    },
+    {
+      "ref": "TP4",
+      "name": "TP 1.0 mm",
+      "side": "top",
+      "cx": 10.15,
+      "cy": 13.5,
+      "w": 1.0,
+      "h": 1.0,
+      "kind": "tp",
+      "height": 0.0,
+      "label": "D+",
+      "note": "USB_DP IO20 — module front row (pin 24), short stub"
+    },
+    {
+      "ref": "TP2",
+      "name": "TP 1.0 mm",
+      "side": "top",
+      "cx": 10.15,
+      "cy": 15.0,
+      "w": 1.0,
+      "h": 1.0,
+      "kind": "tp",
+      "height": 0.0,
+      "label": "EN",
+      "note": "MCU_EN; pulse low to reset"
+    },
+    {
+      "ref": "TP6",
+      "name": "TP 1.0 mm",
+      "side": "top",
+      "cx": 10.15,
+      "cy": 16.5,
+      "w": 1.0,
+      "h": 1.0,
+      "kind": "tp",
+      "height": 0.0,
+      "label": "3V3",
+      "note": "buck output (also at C3)"
+    },
+    {
+      "ref": "TP8",
+      "name": "TP 1.0 mm",
+      "side": "top",
+      "cx": 5.2,
+      "cy": 1.0,
+      "w": 1.0,
+      "h": 1.0,
+      "kind": "tp",
+      "height": 0.0,
+      "label": "VBAT",
+      "note": "bench supply 4.0 V in (with TP5) when no cell is fitted"
+    },
+    {
+      "ref": "TP7",
+      "name": "TP 1.0 mm",
+      "side": "top",
+      "cx": 5.2,
+      "cy": 2.5,
+      "w": 1.0,
+      "h": 1.0,
+      "kind": "tp",
+      "height": 0.0,
+      "label": "nCHG",
+      "note": "BQ25100 /CHG, low while charging"
     },
     {
       "ref": "C11",
@@ -546,7 +692,7 @@
       "kind": "ic",
       "height": 0.6,
       "label": "U9",
-      "note": "WS2812 supply gate VBAT→VLED, ON = IO44"
+      "note": "WS2812 supply gate 3V3→VLED, ON = IO33 (LED_PWR_EN)"
     },
     {
       "ref": "C20",
@@ -667,7 +813,7 @@
     },
     {
       "ref": "D2",
-      "name": "PESD5V0S1UB SOD-523",
+      "name": "PESD5V0S1BB SOD-523",
       "side": "bottom",
       "cx": 18.4,
       "cy": 2.9,
@@ -676,7 +822,20 @@
       "kind": "diode",
       "height": 0.6,
       "label": "D2",
-      "note": "TVS on CHG_IN, < 2 mm from the pad"
+      "note": "bidirectional TVS on CHG_PAD, < 2 mm from the pad"
+    },
+    {
+      "ref": "D3",
+      "name": "PMEG2005EB SOD-523",
+      "side": "bottom",
+      "cx": 18.4,
+      "cy": 4.1,
+      "w": 1.2,
+      "h": 0.8,
+      "kind": "diode",
+      "height": 0.6,
+      "label": "D3",
+      "note": "Schottky CHG_PAD → CHG_IN (reversed-cradle protection), right after D2"
     },
     {
       "ref": "U8",
@@ -741,7 +900,7 @@
       "kind": "passive",
       "height": 0.35,
       "label": "R8",
-      "note": "100k divider top (VBAT)"
+      "note": "1 M divider top (VBAT)"
     },
     {
       "ref": "R9",
@@ -754,7 +913,7 @@
       "kind": "passive",
       "height": 0.35,
       "label": "R9",
-      "note": "100k divider bottom"
+      "note": "1 M divider bottom"
     },
     {
       "ref": "C23",
@@ -1080,110 +1239,6 @@
       "height": 0.35,
       "label": "C6",
       "note": "1 µF EN delay"
-    },
-    {
-      "ref": "TP1",
-      "name": "TP 1.0 mm",
-      "side": "bottom",
-      "cx": 22.9,
-      "cy": 3.0,
-      "w": 1.0,
-      "h": 1.0,
-      "kind": "tp",
-      "height": 0.0,
-      "label": "IO0",
-      "note": ""
-    },
-    {
-      "ref": "TP2",
-      "name": "TP 1.0 mm",
-      "side": "bottom",
-      "cx": 22.9,
-      "cy": 4.5,
-      "w": 1.0,
-      "h": 1.0,
-      "kind": "tp",
-      "height": 0.0,
-      "label": "EN",
-      "note": ""
-    },
-    {
-      "ref": "TP3",
-      "name": "TP 1.0 mm",
-      "side": "bottom",
-      "cx": 22.9,
-      "cy": 6.0,
-      "w": 1.0,
-      "h": 1.0,
-      "kind": "tp",
-      "height": 0.0,
-      "label": "D-",
-      "note": "USB_DM IO19"
-    },
-    {
-      "ref": "TP4",
-      "name": "TP 1.0 mm",
-      "side": "bottom",
-      "cx": 22.9,
-      "cy": 7.5,
-      "w": 1.0,
-      "h": 1.0,
-      "kind": "tp",
-      "height": 0.0,
-      "label": "D+",
-      "note": "USB_DP IO20"
-    },
-    {
-      "ref": "TP5",
-      "name": "TP 1.0 mm",
-      "side": "bottom",
-      "cx": 22.9,
-      "cy": 9.0,
-      "w": 1.0,
-      "h": 1.0,
-      "kind": "tp",
-      "height": 0.0,
-      "label": "GND",
-      "note": ""
-    },
-    {
-      "ref": "TP6",
-      "name": "TP 1.0 mm",
-      "side": "bottom",
-      "cx": 22.9,
-      "cy": 10.5,
-      "w": 1.0,
-      "h": 1.0,
-      "kind": "tp",
-      "height": 0.0,
-      "label": "3V3",
-      "note": ""
-    },
-    {
-      "ref": "TP7",
-      "name": "TP 1.0 mm",
-      "side": "bottom",
-      "cx": 22.9,
-      "cy": 12.0,
-      "w": 1.0,
-      "h": 1.0,
-      "kind": "tp",
-      "height": 0.0,
-      "label": "nCHG",
-      "note": ""
-    },
-    {
-      "ref": "TP8",
-      "name": "TP 1.0 mm",
-      "side": "bottom",
-      "cx": 22.9,
-      "cy": 13.5,
-      "w": 1.0,
-      "h": 1.0,
-      "kind": "tp",
-      "height": 0.0,
-      "label": "VBAT",
-      "note": ""
     }
   ]
 }

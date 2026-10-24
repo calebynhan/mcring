@@ -1,11 +1,28 @@
-"""Turn an LLM short answer into a Morse pattern + ready-to-send ring packet."""
+"""Optional 'silent pattern' output: turn an answer into a Morse unit pattern + ring Feedback packet.
+
+Off by default since the voice-first pivot (want_morse=false). Kept for the silent-cue use case and
+for /v1/morse; the codec itself lives in mcring_core.morse (cross-tested against the C library).
+"""
 from __future__ import annotations
 
 import base64
 
 from mcring_core import morse, proto
 
-from .schemas import MorseOut
+from .schemas import LLMAnswer, MorseOut
+
+
+def morse_text_for(answer: LLMAnswer, max_chars: int = 32) -> str:
+    """Pattern text for an answer: the subject if there is one, else the start of the spoken answer.
+
+    Normalised with morse.shorten_for_morse (A-Z 0-9 space ?, <= max_chars, whole words). Low-confidence
+    answers (< 0.6) are prefixed with "? " the way the old prompt did it.
+    """
+    base = answer.subject.strip() or answer.answer
+    text = morse.shorten_for_morse(base, max_chars)
+    if answer.confidence < 0.6 and not text.startswith("?"):
+        text = morse.shorten_for_morse(f"? {text}", max_chars)
+    return text or "?"
 
 
 def build_morse(text: str, char_wpm: int = 15, overall_wpm: int = 8, channels: int = 3,

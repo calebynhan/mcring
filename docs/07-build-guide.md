@@ -18,7 +18,8 @@ exist yet, that step has not been run and the guide tells you what to fall back 
 | `hardware/pcb/out/wiring_stage0.png` | PCB/wiring step | §1.2 |
 | `hardware/pcb/floorplan.md`, `hardware/pcb/board_params.json` | PCB floorplan step | §2.1, §2.6 |
 | `hardware/electrical/out/mcring_v1.net`, `out/sch_*.png`, `out/erc.md` | electrical step (present) | §2.1, §2.3 |
-| `hardware/cad/out/*.stl` | enclosure CAD step (generated from `board_params.json`) | §2.5 |
+| `hardware/cad/out/mcring_stage1_{shell,lid,key}.stl`, `hardware/cad/fit_report.md`, `hardware/cad/README.md` | enclosure CAD step (CadQuery, generated from `board_params.json`; the old OpenSCAD file is gone) | §2.5–2.8 |
+| `docs/build-helpers/tuning_calc.py` | this guide (`sleep`, `pads`, `divider`, `drv2605`, `tap`, `morse` calculators) | §1.8, §1.9, §2.4, §2.8 |
 
 ---
 
@@ -281,13 +282,16 @@ Numbers to record in `docs/benchmarks.md` (setup/date column included):
 | Capture peak / average over 1.5 s | PPK2 or shunt + scope | 300–370 mA / ~150 mA |
 | Morse reply, 10 s, haptic+LED | meter during `mcring send` | 40–80 mA average |
 | Deep sleep, Sense board attached | meter after `idle_sleep_s` elapses or `SLEEP` | ~3 mA |
-| Deep sleep, Sense board removed | same | 60–100 µA (incl. divider + IMU) |
+| Deep sleep, Sense board removed | same | 150–250 µA as the firmware stands: XIAO ~64 µA bare + 21 µA divider + **LIS2DW12 ~90 µA** in the 400 Hz high-performance tap-wake mode that `power_deep_sleep_now()` leaves it in (+ breakout regulators/LEDs); 80–100 µA with INT1 lifted and the IMU unplugged |
 | Shots on one 100 mAh charge, 30 shots/day pattern | count until `batt` < 3300 mV | model says ~500 (`hardware/power-budget.txt`) |
 | Double-tap false positives per hour | §1.9 | < 1 |
 
-**If not:** deep sleep > 200 µA with the Sense board removed → the divider is 10 k (210 µA), a
-breakout has an LED/regulator, or the IMU is left in 400 Hz high-performance mode for tap-to-wake
-(`imu_wake()` in `power_deep_sleep_now()`); measure with INT1 disconnected to split it out.
+**If not:** deep sleep > 300 µA with the Sense board removed → the divider is 10 k (210 µA) or a
+breakout has an LED/regulator. The IMU's ~90 µA is expected: `power_deep_sleep_now()` calls `imu_wake()`
+(CTRL1 `0x74` = 400 Hz, high-performance — the mode the double-tap engine is specified for), not the
+~1 µA low-power ODR the firmware comment and `hardware/power-budget.txt` assume; measure with INT1
+disconnected and the IMU unplugged to split it out. The fix is a firmware follow-up (§2.1 item 4), the
+same one that decides the stage-1 sleep figure in §2.4.
 
 ---
 
@@ -300,18 +304,37 @@ connectivity in `hardware/electrical/out/mcring_v1.net` (ERC clean: `out/erc.md`
 
 ### 2.1 Before ordering anything
 
-1. Read `hardware/electrical/README.md` §6: thirteen datasheet assumptions that could not be
-   verified from the sandbox (module pin table, FPC pin order, BQ25100 ball map, TPS62840 VSET
-   code, TPS22916 ball map, WS2812B at VBAT...). Tick each against the datasheet you download.
+1. Read `hardware/electrical/README.md` §6: the datasheet assumptions (16 items) that could not be
+   verified from the sandbox (module pin table, IO33 free on the N4R2, FPC pin order, BQ25100 ball map,
+   TPS62840 VSET code, TPS22916 ball map, WS2812B at 3.3 V, antenna outline...). Tick each against the
+   datasheet you download.
 2. Buy the OV2640 24-pin head **first** and buzz its pin order against §6 item 2 — a
    one-position-shifted variant exists. Confirm whether the head regulates DVDD itself (then
    U4, the 1.2 V LDO, is DNP).
 3. Confirm your fab offers 0.1/0.1 mm track/space and 0.2 mm drills on 2-layer 0.6 mm. If not,
    swap both TPS22916 (0.4 mm DSBGA) for TPS22917DBV (SOT-23-5) in `hardware/electrical/mcring_v1.py`,
    regenerate, and use standard rules.
-4. Known firmware gap: the WS2812 supply switch (U9, `LED_PWR_EN` on IO44) has **no**
-   `PIN_RGB_PWR` define yet. Either add `#define PIN_RGB_PWR 44` and drive it high before
-   `neopixelWrite()` / low before sleep, or bridge U9's VIN–VOUT on the first board.
+4. Known firmware gaps on `BOARD_MCRING_V1` (stage 0 is unaffected; `hardware/electrical/README.md` §7):
+   * **LED rail**: `PIN_RGB_PWR` (IO33, net `LED_PWR_EN`, U9 TPS22916) is defined in `config.h` but
+     `feedback.cpp` never drives it, so the WS2812 is unpowered. Patch `feedback_init()` to set it as an
+     output and HIGH ≥ 1 ms before the first `neopixelWrite()`, and `power_deep_sleep_now()` to drive it
+     LOW — or bridge U9's VIN–VOUT on the first board (costs 0.6–1 mA in sleep).
+   * **Charging flag**: `PIN_CHG` (IO3, net `nCHG`, also TP7) is defined but `battery_charging()` returns
+     `false`; `MC_FLAG_CHARGING` stays 0 until it reads the pin (active low).
+   * **Deep-sleep current**: `power_deep_sleep_now()` calls `imu_wake()` = CTRL1 `0x74` (400 Hz,
+     high-performance) so a double tap can wake the ring. That mode costs ~90 µA and puts the stage-1
+     sleep floor at ~110 µA (`python3 docs/build-helpers/tuning_calc.py sleep`), not the 25 µA standby
+     that `hardware/power-budget.txt` assumes ("IMU 1 uA"). The low-power modes of the LIS2DW12 stop at
+     200 Hz, so the realistic follow-up is a wake-up/activity interrupt at 25 Hz LP1 (~2 µA) that wakes
+     the ESP32-S3, which then re-arms the 400 Hz double-tap for a few seconds and goes back to sleep if
+     none comes (`--imu lp-wakeup` → ~22 µA); LP1 at 200 Hz with `INT_DUR` rescaled (`--imu lp1-200`,
+     ~30 µA, marginal tap timing) is the other option. §2.4 and §5 quote both figures.
+5. Order with the board (now in `hardware/bom/stage1-ring.csv`): the Molex 146153-0050 flex antenna
+   (34.9 × 9 mm, MHF1/u.FL pigtail — the stock 50 mm cable must be shortened or coiled, the cavity is
+   2 mm deep, `hardware/cad/README.md` "Antenna"); copper foil with conductive adhesive (3M 1181 class)
+   for the 4 × 5 mm lid electrode and a 3 × 4 × 3.6 mm conductive-foam block (or SMT spring finger) for
+   TPAD1; two 3 × 2 mm ENIG contacts for the band (a scrap of ENIG board); 30 AWG PTFE / wire-wrap wire
+   (≤ 0.7 mm OD for the Ø0.9 channels); UV-cure glue; a 0.3 mm foam or adhesive ring for the mic tube.
 
 ### 2.2 PCB order settings
 
@@ -323,53 +346,82 @@ connectivity in `hardware/electrical/out/mcring_v1.net` (ERC clean: `out/erc.md`
 | Surface finish | **ENIG** (DSBGA/LGA co-planarity, charging pads) |
 | Solder mask | green or black; expansion 0.05 mm (0.03 on DSBGA pads, NSMD) |
 | Silkscreen | none under the module |
-| Stencil | yes, **0.10 mm (4 mil) stainless**, top side, frameless; ask for 1:1 apertures on the DSBGA pads (the fab may want to shrink them — say no) |
-| Quantity | 5–10; order 2 spare stencils' worth of parts |
-| Fiducials | 2 on the top side if the board has room (helps if you send it to a P&P house later) |
+| Stencil | **two**, 0.10 mm (4 mil) stainless, frameless — one per side: the **bottom** carries every IC except the module, both DSBGAs, the BQ25100, the mic and all passives (64 of the 79 placed parts in `board_params.json`); the **top** only U1, FPC1, SW1, D1, R7, C3. Ask for 1:1 apertures on the DSBGA pads (the fab may want to shrink them — say no) |
+| Quantity | 5–10; order 2 spare boards' worth of parts |
+| Fiducials | 2 per side if there is room (the bottom is the dense side) |
 
-Also order with the board: low-temperature SnBi58 paste (138 °C) **or** SAC305 paste, a hot
-plate (PCB preheater) and a hot-air station, flux gel, a USB microscope.
+Also order with the board: low-temperature SnBi58 paste (138 °C) **and/or** SAC305 paste (both if
+you want the two-alloy build of §2.3), a hot plate (PCB preheater) and a hot-air station, flux gel,
+Kapton tape, a USB microscope.
 
 ### 2.3 Assembly order
 
-Two passes on the first board, so the power tree is proven before the module goes on.
+The board is double-sided and bottom-heavy (`hardware/pcb/floorplan.md` §2–3): the **bottom** carries
+every IC except the module (U7 BQ25100, U8 TPS62840 + L1, U2/U9 TPS22916, U3/U4 XC6206, U5 DRV2605L,
+U6 LIS2DW12, Q1, D2/D3, MK1 mic), all passives and all wire pads (J1 cell, PAD1w/PAD2w charging,
+M1 LRA, BZ1 piezo, J2 aux); the **top** carries U1 (the module), FPC1, SW1, D1 + R7, C3, the TPAD1
+copper landing and the eight test pads TP1–TP8. So: bottom first on the hot plate, prove the power
+tree, then the top. Two ways to keep the bottom joints solid during the top reflow:
 
-**Pass 1 — power and fine pitch (stencil + hot plate):**
+* **(A) one alloy** — top side by hot air with the board on the preheater at ≤ 120 °C (SnBi) / ≤ 150 °C
+  (SAC305); the bottom parts hang on surface tension, which is fine for 0402s, SOT-23s and DSBGAs but
+  needs a steady hand over the module.
+* **(B) two alloys** — bottom in SAC305 (liquidus 217 °C), top in SnBi58 (138 °C) on the hot plate at
+  165–175 °C: the bottom never re-melts. Easier for the 15.4 mm module; SnBi on the module's pads is
+  fine for a prototype.
 
-1. Stencil paste. Place with tweezers under the microscope: BQ25100 (U3, DSBGA-6), both
-   TPS22916 (U2, U9, DSBGA-4), TPS62840 (SOT-583), XC6206 LDOs, PESD5V0 TVS, inductor, all
-   0402/0603 passives, DRV2605L (VSSOP-10), LIS2DW12 (LGA-12), WS2812B-2020, the 24-pin FPC
-   connector, the TDK T3902 mic (Kapton tape over its port hole), and the JST SH battery
-   connector if used.
-2. Reflow on the hot plate: SnBi peak 165–175 °C for 30 s; SAC305 peak 235–245 °C. The 0.6 mm
-   board heats fast — do not exceed 60 s above liquidus (the WS2812 is the heat-sensitive part).
-3. Inspect: every DSBGA sits flat with no bridging visible at the perimeter balls; continuity
-   between adjacent balls must be open.
-4. Power check with 4.0 V on the battery pads through a 100 mA current-limited supply: `3V3` =
-   3.30 ± 0.05 V, `CAM_3V3` **off** (IO21 is floating; R17 keeps it low), `VLED` off; idle current
-   < 100 µA. Tie TP for IO21 to 3V3: `CAM_3V3` = 3.3 V, `CAM_2V8` = 2.8 V, `CAM_1V2` = 1.2 V
-   (if U4 fitted). Apply 5 V to the charging pads: `TP_nCHG` goes low, battery current ≈ 25 mA.
+**Pass 1 — bottom side (stencil + hot plate):**
 
-**Pass 2 — module (hot air or second hot-plate pass):**
+1. Kapton over the Ø0.6 mic port hole from the **top** (paste must not enter it), stencil the bottom.
+   Place under the microscope: U7 BQ25100 (DSBGA-6), U2 and U9 TPS22916 (DSBGA-4), U8 TPS62840 (SOT-583)
+   + L1 (2016 inductor), U3 (2.8 V) and U4 (1.2 V — DNP if the purchased head regulates DVDD itself)
+   XC6206, D2 PESD5V0S1BB (bidirectional, no polarity) and D3 PMEG2005EB (cathode toward U7 / `CHG_IN`),
+   Q1 AO3400A, U5 DRV2605L (VSSOP-10), U6 LIS2DW12 (LGA-12), MK1 T3902 with its port over the board hole,
+   and all 0402/0603 passives. Check the reel labels for the values that set the power tree: R8/R9 1 M
+   (divider), R10 9.1 k (25 mA charge), R11 11.5 k (1 mA termination), R12 267 k (3.3 V), R17/R19 100 k,
+   R18 4.7 k. Nothing goes on the ten wire pads.
+2. Reflow on the hot plate: SnBi peak 165–175 °C for 30 s; SAC305 peak 235–245 °C. The 0.6 mm board
+   heats fast — do not exceed 60 s above liquidus.
+3. Inspect: every DSBGA sits flat with no bridging visible at the perimeter balls; continuity between
+   adjacent balls must be open; the mic sits flat (its port is the acoustic path).
+4. Power check — every pad you need is on the still-empty top side. 4.0 V, 100 mA current limit, on
+   TP8 (`VBAT`) / TP5 (`GND`): TP6 `3V3` = 3.30 ± 0.05 V (R12 = 267 k), `CAM_3V3` (at C10) and `VLED`
+   (at C21) 0 V — R17/R18 hold the two load-switch enables low with no module fitted — idle current
+   < 20 µA (buck IQ + divider; DRV2605L and LIS2DW12 power up in standby / power-down). Jumper R17's
+   upper pad (`CAM_PWR_EN`, U2.B1) to TP6: `CAM_3V3` 3.3 V, `CAM_2V8` 2.8 V at C11, `CAM_1V2` 1.2 V at
+   C12 (if U4 fitted); jumper R18's upper pad (`LED_PWR_EN`) to TP6: `VLED` 3.3 V. Charger: replace the
+   bench supply by a 3.7 V cell on J1a (BAT+) / J1b (GND), put 5 V on the PAD1w pad (`CHG_PAD`) and GND
+   on PAD2w: TP7 `nCHG` goes low, ≈ 25 mA flows into the cell, U7.A1 sits ~0.25 V below the pad (D3).
+   Swap the 5 V: nothing conducts (D2 bidirectional + D3) — that is the reversed-cradle case.
 
-5. Paste the module footprint (thin layer, including the thermal pads), place the
-   ESP32-S3-MINI-1U with the antenna/u.FL end pointing toward the band's back, away from the
-   FPC connector. Reflow from below on the hot plate (0.6 mm board, the module heats through) or
-   hot air at 300 °C/low flow in a slow spiral; the shield can is the thermal mass — give it time.
-   A gentle push after the paste melts seats the edge pads.
-6. Inspect the perimeter pads; continuity from `3V3`, `GND`, `EN`, `IO0` to the test pads.
+**Pass 2 — top side:**
 
-**Hand solder (after both passes):** Omron B3U-3000P switch (tacky flux, fine tip; it is also
-reflowable if your floorplan puts it on the board edge), LRA leads to its two pads (strain
-relief with a dab of UV glue), piezo if fitted, the two charging-pad wires, battery pigtail
-(last, with the cell taped away from the iron), u.FL flex antenna snapped on.
+5. Leave the Kapton over the mic hole, stencil the top. Place U1 ESP32-S3-MINI-1U with the **u.FL end
+   flush with the back edge** (x = 26.5, away from FPC1 — the antenna end points toward the back of the
+   hand), FPC1 (mouth toward the front edge; bottom-contact), SW1 (plunger out of the left edge, y = 0;
+   it reflows fine), D1 (DIN toward R7), R7, C3. Leave TPAD1 bare — the foam contact goes on at final
+   assembly (§2.6).
+6. Reflow: (B) hot plate 165–175 °C with SnBi; (A) hot air 300 °C / low flow in a slow spiral over the
+   module with the board on the preheater — the shield can is the thermal mass, give it time. A gentle
+   push after the paste melts seats the edge pads. Keep the FPC1 actuator open and paste-free.
+7. Inspect the module perimeter; continuity U1 pads 3 / 45 / 4 → TP6 / TP2 / TP1; FPC1 pins 3 / 5 / 13
+   (SIOD / SIOC / XCLK) → R5 / R6 / U1 (buzz against `floorplan.md` §7). Remove the Kapton.
+
+**Wires (before the board goes into the bay — every wire pad is on the bottom and the wires go down
+into the band):** LRA leads to M1a/M1b (≈ 15 mm, strain relief with a dab of UV glue), the two 30 AWG
+charging-pad wires to PAD1w (CHG+) / PAD2w (CHG−) (≈ 25 mm, trimmed later in the rib grooves), piezo
+to BZ1a/BZ1b if fitted, J2 only for the air-puff experiment. The cell leads go on **last**, in §2.6
+step 4, with the cell already in its pocket. Snap the antenna's u.FL plug onto the module for the §2.4
+BLE checks (press straight down until it clicks; the mated plug is the 2.9 mm tallest part).
 
 ### 2.4 Firmware on the stage-1 board
 
-USB is on the test pads: wire a sacrificed USB cable — D- → `TP_USB_DM` (IO19), D+ → `TP_USB_DP`
-(IO20), GND → `TP_GND`; VBUS goes to the **charging pads** (5 V → charger), not to 3V3. Enter
-download mode by holding `TP1` (IO0) to GND while power-cycling (or pulsing EN low if a pad is
-provided), then:
+USB is on the test pads, all on the **top** side so they stay reachable with the board seated in the
+bay and the lid off: a sacrificed USB cable — D− → TP3 (IO19), D+ → TP4 (IO20), GND → TP5. **Do not
+connect VBUS**: the board runs from the cell on J1 or from 4.0 V on TP8/TP5; the BQ25100 cannot power
+the ESP32-S3 (its output is the 25 mA charge current, `hardware/electrical/README.md` §4), and 5 V
+belongs only on the charging pads. Download mode: hold TP1 (IO0) to TP5 (GND), pulse TP2 (EN) to GND,
+release TP1; then:
 
 ```bash
 cd firmware/ring-esp32s3
@@ -381,8 +433,8 @@ pio device monitor -b 115200
 DRV2605L ready (LRA)` + `autocal ok`, `I cam: sensor PID=0x2640 detected`, `advertising as
 mcring-XXXX`. `PIN_CAM_PWR` (IO21) behaviour: high for ~0.3 s during `camera_probe()` at boot,
 then low; high again for 0.2–0.5 s per capture, low between shots — scope `CAM_3V3` while
-pressing the button. There is no LED yet unless you did §2.1 item 4; the haptic tick confirms
-boot instead.
+pressing the button. There is no LED until the §2.1 item 4 patch (`PIN_RGB_PWR` is defined but not
+driven); the haptic tick confirms boot instead.
 
 **Serial checks before closing the enclosure:**
 
@@ -390,73 +442,125 @@ boot instead.
 |---|---|
 | `camera_probe` | `PID=0x2640`; if `esp_camera_init failed: 0x105`, re-check FPC pin order and `CAM_3V3`/`CAM_2V8` during the probe |
 | capture | `captured 320x240 JPEG` 8–15 KB; `CAM_3V3` returns to 0 V after |
-| battery | `batt=` within 50 mV of the meter (100 k/100 k, `BATTERY_DIVIDER 2.0`) |
+| battery | `batt=` within 50 mV of the meter (R8/R9 **1 M/1 M**, `BATTERY_DIVIDER 2.0`; C23 100 nF holds the node for the 8-sample burst) |
 | button | short press → capture; long press → `recording up to 5 s` |
 | double tap | tap the board twice → `double tap` |
-| sleep | `mcring config idle_sleep_s 20`, disconnect, wait → `I pwr: deep sleep`; battery current < 30 µA (camera and LED rails gated); press the button → `woke from deep sleep, cause 2`, `wake trigger -> capture`; tap → `cause 3` |
-| charging | 5 V on the pads: `TP_nCHG` low; note the firmware cannot see it (`battery_charging()` is `false` — no spare GPIO) |
+| sleep | `mcring config idle_sleep_s 20`, disconnect, wait → `I pwr: deep sleep`; battery current (PPK2 in series with the cell): **≤ 130 µA as the firmware stands** — ESP32-S3 7–8 µA + LIS2DW12 ~90 µA (400 Hz high-performance tap-wake, see §2.1 item 4) + divider 2 µA + DRV2605L standby ≤ 4 µA + mic/charger/buck/switch leakage ~6 µA ≈ 110 µA (`python3 docs/build-helpers/tuning_calc.py sleep`); **≤ 30 µA** only after the IMU low-power wake follow-up (`tuning_calc.py sleep --imu lp-wakeup` → ~22 µA). `CAM_3V3` and `VLED` read 0 V in sleep; ~3 mA means the camera rail is on (IO21 high / R17 missing). Press the button → `woke from deep sleep, cause 2`, `wake trigger -> capture`; tap → `cause 3` |
+| charging | 5 V on the pads: TP7 `nCHG` low (IO3 low); `battery_charging()` still returns `false` until the §2.1 item 4 follow-up, so `MC_FLAG_CHARGING` does not change yet |
 
 ### 2.5 Enclosure print and post-processing
 
-Files: `hardware/cad/out/*.stl` (band + bay + camera pod, lid, optional cradle), generated from
-`hardware/pcb/board_params.json` so the bay matches the board. If `hardware/cad/out/` is empty,
-the only fallback is the older `hardware/enclosure/mcring_stage1.scad` — note its 26 × 12 mm bay
-**does not** fit the MINI-1U board; use it for finger-size tests only.
+Files: `hardware/cad/` — `python3 hardware/cad/mcring_stage1.py` generates them from
+`hardware/pcb/board_params.json` (CadQuery 2.8, ~1 min; `--no-step --no-views` for a 12 s fit check;
+`--inner-d 18.3` for US 8, default 20.0 = US 10 — size table in `hardware/cad/README.md`). Three print
+files: `out/mcring_stage1_shell.stl` (band + signet bay + camera pod, one part), `out/mcring_stage1_lid.stl`
+(rebated lid with the detent beads, the mic tube, the LED mark and the touch dimple),
+`out/mcring_stage1_key.stl` (the side-switch button); `out/mcring_stage1_assembly.step` carries every
+placeholder for a viewer and `out/view_*.png` are the sanity views. `hardware/cad/fit_report.md` is the
+as-built check (all intersections 0, clearances and wall probes listed). There is **no cradle model**, and
+the old OpenSCAD concept with the 26 × 12 bay no longer exists — if `out/` is empty, run the script.
 
-SLA (recommended): white or translucent resin, 0.05 mm layers; print the band with the bay
-opening up and light supports under the camera pod; wash 2 × 5 min in IPA (the second bath
-clean), dry, remove supports before curing, cure 10–15 min and **not longer** — over-curing
-yellows the resin and kills the LED window. The LED window is a 1.0–1.5 mm wall with the LED
-≥ 1 mm behind it; if it is opaque, sand the inside to 1.0 mm. Ream the lens bore to a snug fit
-on the 4.5 mm barrel (print 4.6 mm, finish by hand). Drill the mic port 0.5 mm; drill the
-side-switch slot clean (3.2 × 2.7 mm). FDM: 0.4 mm nozzle, 0.12 mm layers, PETG; the LED window
-then needs a separate clear insert.
+Numbers you will touch (`default_params()` in the script): band Ø20.0 ID × 22.4 OD × 12 wide, wall 1.2;
+signet 31.5 × 21.0 mm, lid top 11.1 mm above the skin, pod roof 12.7; lens bore Ø4.6 (OV2640 barrel 4.5),
+lens axis 6.25 mm above the skin; mic port Ø0.8 in the lid above a Ø1.8 tube that ends 0.3 mm above the
+board; switch slot 3.4 × 1.6 through the left wall with a 4.6 × 2.8 × 0.5 counterbore inside for the key's
+flange; cell pocket 10.4 × 12.4 × 3.4 and LRA pocket Ø8.4 × 2.9, both recessed into the bay floor under the
+board; charging-pad windows 3 × 3 at ±25° from the bottom of the band, fed by two Ø0.9 wire channels from
+the grooves on the −Y rib; lid 1.2 thick in a 0.5 rebate with 0.15 clearance, Ø0.5 detent beads, 1.0 mm
+pod-roof lip over its front edge; LED: the lid stays 1.2 mm thick over D1 (an engraved Ø3 ring marks the
+spot, the LED top is 2.3 mm below the lid) — no thinned window; touch dimple 4 × 5 × 0.4 (0.8 mm resin
+over the lid electrode).
 
-Fit-check before assembly: board drops into the bay with 0.2–0.3 mm play; the camera head
-(8.5 × 8.5 mm, 5.8 mm tall incl. barrel) seats in the pod with the lens centred in the bore;
-the 301012 cell (3 × 10 × 12 mm) slides into the band pocket; the LRA (Ø8 × 2.5) sits under the
-bay floor with its face toward the finger.
+SLA (recommended): white or translucent **tough** resin (the detent rims and the 0.7 mm wall around the
+switch counterbore do not survive a brittle one), 0.05 mm layers. **Shell**: bay opening up, finger axis
+horizontal, supports under the camera pod and the signet shoulders, none in the bay, on the lid rebate or
+under the pod-roof lip. **Lid**: beads up, mic tube up, light supports or flat on the plate — then sand
+the elephant foot off the rebate faces, 0.15 mm is all the clearance there is. **Key**: cap down, no
+supports. Wash 2 × 5 min in IPA (the second bath clean), dry, remove supports before curing, cure
+10–15 min and **not longer** — over-curing yellows the resin and dims the LED through the lid. FDM
+(0.4 mm nozzle, 0.12 mm layers, PETG) works for the shell only: drill the Ø0.8 mic hole, glue the lid,
+and the key will not print — glue a 3.2 × 1.4 mm pin on a flange instead.
+
+Post-processing: ream the lens bore with a 4.5 mm drill shank (print 4.6, finish to a snug fit on the
+barrel); clear the Ø0.8 mic hole down through the tube with a 0.8 mm drill; slide the key through the
+3.4 × 1.6 slot (0.3 mm travel at the cap); open the two 3 × 3 pad windows and pass a 0.9 mm drill through
+the two wire channels (they start in the open grooves on the −Y rib and surface in the bay floor beside
+the −Y wall); clear the 3 × 0.8 mm cell-lead channel. Fill the grooves with resin only after the wires are
+in (§2.6).
+
+Fit-check before assembly, against `fit_report.md`: the board drops onto its ledges with 0.3 mm play per
+side (front ledges 1.0 mm wide in the gaps between the bottom parts, back ledge 3.2 mm under the test
+pads; board top 0.6 mm above the ledge); the 301012 cell (3 × 10 × 12 mm) drops into the floor pocket
+with 0.2 mm per side — a cell **with PCM** is longer at the tab end, check yours before the final print;
+the LRA (Ø8 × 2.5) drops into its Ø8.4 pocket and ends 0.2 mm below floor level; the camera head
+(8.5 × 8.5 mm, 5.8 mm tall incl. barrel) slides from the bay into the pod through the 9.2 × 9.8 opening
+until the barrel sits 0.4 mm into the bore, with 0.3 mm to the floor, 0.35 to each wall and 1.0 mm above
+it for the FPC fold; the lid's front edge slides under the pod-roof lip and its beads click into the
+grooves. Worn with the band against the knuckle the pod front sits ~17 mm toward the PIP joint — try
+the bare shell on the finger before printing in volume.
 
 ### 2.6 Mechanical assembly sequence
 
-1. **Cell** into the band pocket, leads routed up into the bay through the channel; tape the
-   leads to the pocket wall. Do not connect yet.
-2. **Board** into the bay, antenna end toward the back of the hand, FPC connector toward the pod.
-   Check the side switch lines up with its slot and the LED with its window.
-3. **Camera head** into the pod: fold the FPC once (radius ≥ 1 mm, never crease the conductor
-   area), latch the connector, seat the head, a dab of UV glue on the head's sides (not the lens).
-   Check: lens flush or 0.2 mm recessed in the bore, aimed along the finger.
-4. **LRA** bonded to the underside of the bay floor (3M VHB or cyanoacrylate, face toward the
-   finger) — the LRA must be rigidly coupled to the shell, not floating in foam. Route its leads
-   to the pads and solder.
-5. **Switch**: already on the board; verify the slot lets the B3U actuate (160 gf, 0.2 mm travel).
-6. **Charging pads**: two 3 × 2 mm ENIG pads (or brass inserts) set flush into the inner band,
-   per `floorplan.md`; wires up the channel to `PAD1`/`PAD2`. Keep the two pads ≥ 3 mm apart and
-   identical in height so pogo pins both make contact.
-7. **Wires**: battery pigtail to the connector/pads last; tidy with Kapton; make sure nothing
-   lies under the module's antenna end or against the LRA face.
-8. **Antenna**: the u.FL flex dipole along the band, as far from cell and LRA as the band allows.
-9. **Lid**: dry-fit, run §2.4 checks again through the lid, then close (snap or 2 × M1.4).
+Pockets first, then the board, then the lid — the LRA and the cell sit **under** the board in the bay
+floor and cannot go in afterwards (`hardware/cad/README.md`, "After printing — check").
+
+1. **Key**: drop the printed key into the switch slot from inside the bay (flange in the counterbore,
+   cap outside). It is loose until the board holds it.
+2. **Charging wires**: thread the two 30 AWG wires already soldered to PAD1w/PAD2w (§2.3) down through the
+   Ø0.9 channels that open in the bay floor beside the −Y wall — the X −1.5 channel leads to the −Y window
+   (CHG−, PAD2w), the X −3.5 channel round the bottom to the +Y window (CHG+, PAD1w) — out into the rib
+   grooves and to the windows. Tin each end to a 3 × 2 mm ENIG contact, press the contact into its 3 × 3
+   window flush with the bore (UV glue around the edge, nothing on the face), fill the grooves with resin
+   or epoxy. Both contacts flush, ≈ 8.5 mm apart (§2.8).
+3. **LRA** into its pocket, face toward the finger, bonded to the pocket floor with 3M VHB or
+   cyanoacrylate — rigidly coupled to the shell, never floating in foam. Its leads already run to M1a/M1b.
+4. **Cell** into the floor pocket, tabs toward the −Y side in the 3 × 0.8 mm channel toward the J1 pads;
+   tape it down. Now solder the leads, with the board held above the bay: J1a BAT+, J1b GND (polarity!).
+5. **Camera head** from the bay into the pod until the barrel sits 0.4 mm into the bore, lens along the
+   finger; its flex comes back out of the pod opening toward the bay.
+6. **Board**: with the board above the bay insert the flex into FPC1 (contacts facing the board — it is
+   a bottom-contact connector), close the actuator, then lower the board onto the ledges, u.FL end toward
+   the back wall, FPC1 toward the pod — the flex folds 180° behind the head as the board goes down
+   (≈ 11 mm of flex from the head's top edge to the contacts; measure the purchased head). Check: switch
+   plunger on the key's flange, D1 under the lid's LED mark, mic port where the lid tube lands, nothing
+   under the board but the cell, the LRA and the wires.
+7. **Antenna**: glue the flex antenna to the inside of the back wall in the 2 mm cavity (no metal, cell
+   or LRA there); the pigtail turns down behind the board edge; cable ≤ 30 mm or the excess coiled along
+   the back wall — never over the module or across the FPC.
+8. **Touch contact**: stick the 4 × 5 mm copper foil to the lid underside under the dimple (board
+   coordinates (8.1, 5.6)); set the 3 × 4 × 3.6 mm conductive-foam block (or spring finger) on TPAD1.
+   The lid compresses it to 3.2 mm.
+9. **Mic seal**: a 0.3 mm foam or adhesive ring on the board around the Ø0.6 port hole at (8.1, 15.85),
+   where the lid's Ø1.8 tube lands.
+10. **Lid**: run the §2.4 checks once more (the test pads stay reachable), then slide the lid's front edge
+    under the pod-roof lip and press the back down until the beads click into the grooves — 0.1 mm of
+    engagement, a light locating click. A drop of UV glue or a strip of tape on the back edge is the real
+    retention; there are no screws or bosses.
 
 ### 2.7 Sealing options
 
 | Option | When | How |
 |---|---|---|
 | None | bench and indoor tests | keep it off when washing hands |
-| Conformal coat | daily wear | acrylic spray on the board only; mask pads, switch, FPC connector, mic port, u.FL |
-| Lid gasket | daily wear | 0.5 mm silicone sheet cut to the lid, or a bead of neutral-cure silicone in the lid groove |
-| Potting | long-term prototype | neutral-cure silicone (e.g. Sylgard 184) poured into the bay with the cell, switch, mic and LRA masked; **never pot the LRA** (it must move) or the mic port; potting is permanent |
+| Conformal coat | daily wear | acrylic spray on the board only; mask the test pads, the wire pads, SW1, FPC1, the mic port hole, the u.FL and TPAD1 |
+| Lid seal | daily wear | a thin bead of neutral-cure silicone on the rebate faces before closing — the 0.15 mm rebate clearance leaves no room for a gasket sheet |
+| Potting | long-term prototype | neutral-cure silicone (e.g. Sylgard 184) into the bay with the key/switch counterbore, the mic tube landing, the FPC fold and the LRA pocket masked; **never pot the LRA** (it must move), the switch or the mic port; potting is permanent and buries the test pads |
 
 ### 2.8 Charging via the pogo pads
 
-Cradle: a printed block with a saddle the ring drops into, two spring pogo pins (P50-B1 or
-P75-E2 class, 0.68–1.0 mm tip) at the pad spacing from `floorplan.md`, keyed so the ring only
-fits one way (the signet bay indexes it), a 2-pin cable to a USB breakout: VBUS → `PAD1`, GND →
-`PAD2`. Nothing else is in the cradle; the BQ25100 does the regulation (25 mA, 1 mA termination,
-~1.5 h from empty for a 30 mAh cell). Check: with the ring in the cradle `TP_nCHG` is low;
-battery voltage rises; the cradle never sees more than 5.5 V (the PESD5V0 protects the pads).
-The firmware does not report charging (`MC_FLAG_CHARGING` stays 0) — the pad voltage itself is
-your indicator.
+Cradle (not modelled in `hardware/cad/`; a printed block): a saddle the band drops into palm-down,
+indexed by the signet so the ring only fits one way; two spring pogo pins (P50-B1 / P75-E2 class,
+0.68–1.0 mm tips) rise through the saddle on a ±25° V aimed at the ring axis and reach the ENIG contacts,
+which sit flush with the Ø20 bore behind the 3 × 3 windows in the 1.2 mm wall. Geometry for the default
+size (`python3 docs/build-helpers/tuning_calc.py pads --inner-d 20 --angle 25`): pad centres **8.45 mm
+apart across the finger** (8.73 mm along the bore), each 4.23 mm off the ring's vertical mid-plane and
+9.06 mm below the axis, pin axes tilted 25° from vertical; the two pads are **staggered 2.0 mm along the
+finger** (CHG− at X −1.5, CHG+ at X −3.5 from the band's mid-plane toward the antenna end). A 2-pin cable
+to a USB breakout: VBUS → CHG+ (PAD1/CP1), GND → CHG− (PAD2/CP2). Nothing else is in the cradle; the
+BQ25100 does the regulation (25 mA, 1 mA termination, ~1.5 h from empty for the 30 mAh cell). D3 lets a
+reversed ring survive, but key the saddle anyway. Check: TP7 `nCHG` low in the cradle; battery voltage
+rising; the pads never see more than 5.5 V (D2). `MC_FLAG_CHARGING` stays 0 until the firmware reads
+`PIN_CHG` (§2.1 item 4) — the pad voltage itself is your indicator.
 
 ### 2.9 Wearing and aiming
 
@@ -468,7 +572,8 @@ was taken; the Morse reply lands 2–6 s later.
 
 ### 2.10 On-finger calibration
 
-**Touch** (`PIN_TOUCH`, 3 × 4 mm pad on the top face): boot prints `touch baseline N`; the pad
+**Touch** (`PIN_TOUCH` IO8 → R13 → TPAD1 landing → foam contact → the 4 × 5 mm foil on the lid underside,
+0.8 mm of resin over it): boot prints `touch baseline N`; the pad
 triggers on +25 % over a slow baseline after 150 ms of contact (`trigger.cpp`). On a finger the
 adjacent finger is always near — enable touch only if a deliberate thumb press on the top face
 clearly exceeds the threshold: watch `touch (V > base)` lines while resting the hand, then
@@ -539,7 +644,8 @@ Nothing below needs the stage-1 ring; start it in parallel on a Seeed XIAO nRF52
 | `autocal FAILED (status 0xe8)` | DIAG_RESULT set: motor missing/ERM/wrong rated voltage; motor not coupled to mass | wiring; `drv2605_init(true)`; recompute `REG_RATED_V`/`REG_OD_CLAMP` for the motor (§1.8); stick the LRA down before calibrating |
 | Double-tap false triggers | threshold 0.56 g too low for hand impacts; 560 ms window too wide | §1.9: `imu_set_tap_threshold(12)`, `LATENCY 5`; compare `trigger_mask 1` vs `2`; log `TAP_SRC` |
 | Double-tap never fires | INT1 not on IO7; `trigger_mask` bit 1 clear; wrong I²C address not auto-detected | `imu ready at 0x18/0x19` line; `mcring config trigger_mask 3`; `TAP_SRC` shows `0x20` singles only → taps too slow |
-| ~3 mA deep-sleep current | camera board not gated (stage 0), IO21 high/floating without R17, WS2812 un-gated (0.6–1 mA), IMU in HP mode, 10 k divider | stage 0: pull the Sense board; stage 1: scope `CAM_3V3`/`VLED` in sleep, add `PIN_RGB_PWR` handling, 100 k divider, measure with INT1 lifted |
+| ~3 mA deep-sleep current | camera board not gated (stage 0), IO21 high/floating without R17, WS2812 un-gated (0.6–1 mA, or U9 bridged), 10 k divider (stage 0) | stage 0: pull the Sense board, 100 k divider; stage 1: scope `CAM_3V3`/`VLED` in sleep, add `PIN_RGB_PWR` handling |
+| ~100–130 µA deep-sleep current on stage 1 | expected as the firmware stands: `power_deep_sleep_now()` leaves the LIS2DW12 at 400 Hz high-performance (~90 µA) for tap-wake | `tuning_calc.py sleep`; confirm with INT1 lifted and the IMU powered down; the ≤ 30 µA figure needs the low-power wake mode (§2.1 item 4) |
 | Ring reboots during capture on battery | 300–370 mA peak sags a small cell / thin wires | 100 µF bulk at the module (stage 1), shorter battery leads; on the 100 mAh dev cell this should not happen — check solder joints |
 | Backend **401** | `MCRING_API_TOKEN` set | `mcring ... --token <t>`; app Settings → token |
 | Backend **400** `an image is required` | follow-up without a session id, or session expired (30 min) | pass `--session`, or send a new photo |
@@ -548,7 +654,7 @@ Nothing below needs the stage-1 ring; start it in parallel on a Seeed XIAO nRF52
 | Backend **501** | `provider=openai` without the `openai` package | `pip install openai` |
 | Answer is `? NO ANSWER` | model refused (422 internally, mapped to a stock answer) | expected for people/faces/unsafe content; re-aim |
 | Voice clip ignored (transcript `null`) | no `OPENAI_API_KEY` for transcription | add it to `backend/.env` (§1.10) |
-| LED dark on stage 1 | `LED_PWR_EN` (IO44) never driven | §2.1 item 4 |
+| LED dark on stage 1 | `PIN_RGB_PWR` (IO33, `LED_PWR_EN`) is defined but `feedback.cpp` never drives it; R18 keeps U9 off | §2.1 item 4 (patch, or bridge U9) |
 | `queue full, dropped an older capture` | > 3 captures offline | connect; raise `MAX_QUEUED_CAPTURES` only if PSRAM allows |
 
 ---
@@ -580,12 +686,12 @@ Tick each line with the evidence named; record numbers in `docs/benchmarks.md`.
 | F1 | side switch and on-finger double-tap trigger; < 1 false tap/h over a 4 h wear | §2.10 log |
 | F2 | transfer numbers within 20 % of stage 0 with the ring on the finger, phone in a pocket | app log |
 | F3/F4/F7 | unchanged from stage 0 (same firmware, same backend) | one full loop |
-| F5 | Morse readable on the finger through the shell at 15/8 WPM with `haptic_strength` ≤ 100; LED visible through the window in daylight | blind read of 5 short answers |
-| F6 | voice question through the 0.5 mm port is transcribed correctly 4 times out of 5 at arm's length | transcripts |
+| F5 | Morse readable on the finger through the shell at 15/8 WPM with `haptic_strength` ≤ 100; LED visible through the 1.2 mm lid in daylight (after the §2.1 item 4 patch) | blind read of 5 short answers |
+| F6 | voice question through the Ø0.8 lid port is transcribed correctly 4 times out of 5 at arm's length | transcripts |
 | F8 | as stage 0, plus wake-from-deep-sleep by tap and by button both produce a queued capture | `woke from deep sleep, cause 2/3` |
 | F9 | as stage 0 | |
-| N3 | ≥ 30 shots/day for 1 day on the 30 mAh cell with `idle_sleep_s 120`; deep sleep < 30 µA | PPK2 log, `batt` at end of day ≥ 3600 mV |
-| Mech | lid closes, switch actuates, lens clear, pads charge at 25 mA, 24 h worn without loose parts | inspection |
+| N3 | ≥ 30 shots/day for 1 day on the 30 mAh cell with `idle_sleep_s 120`; deep sleep **≤ 130 µA as the firmware stands** (≈ 110 µA modelled → 3.3 days at 30 shots/day), **≤ 30 µA** once the IMU low-power wake follow-up is in (≈ 22 µA → 4.7 days; `tuning_calc.py sleep [--imu lp-wakeup] --shots-per-day 30`; `hardware/power-budget.txt`'s 25 µA standby assumes the latter) | PPK2 log, `batt` at end of day ≥ 3600 mV |
+| Mech | lid clicks under the pod lip and stays on, key actuates the switch with 0.3 mm travel, lens clear and centred in the bore, pads charge at 25 mA, 24 h worn without loose parts and without the pod binding at the PIP joint | inspection |
 | Safety | cell never above 45 °C while charging; charger stops (`TP_nCHG` high) within 2 h | thermometer |
 
 ### Stage 2 — Oura-size (planning gate, not a build)

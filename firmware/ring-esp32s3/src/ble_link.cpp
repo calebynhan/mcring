@@ -6,6 +6,7 @@
 #include "config.h"
 #include "log.h"
 #include "mcring_proto.h"
+#include "audio_out.h"
 #include <Arduino.h>
 #include <NimBLEDevice.h>
 
@@ -15,10 +16,11 @@ namespace {
 
 NimBLEServer         *g_server = nullptr;
 NimBLECharacteristic *g_ctrl = nullptr, *g_status = nullptr, *g_meta = nullptr, *g_data = nullptr, *g_fb = nullptr;
+NimBLECharacteristic *g_events = nullptr, *g_audio = nullptr;
 volatile bool  g_connected = false;
 volatile uint16_t g_mtu = 23;
 volatile uint16_t g_conn_handle = 0xFFFF;
-volatile bool  g_data_sub = false, g_status_sub = false;
+volatile bool  g_data_sub = false, g_status_sub = false, g_events_sub = false;
 volatile int   g_credits = 0;
 int            g_credits_max = 6;
 uint32_t       g_last_tx_ms = 0;
@@ -44,7 +46,7 @@ class ServerCB : public NimBLEServerCallbacks {
   }
   void onDisconnect(NimBLEServer *, NimBLEConnInfo &, int reason) override {
     g_connected = false;
-    g_data_sub = g_status_sub = false;
+    g_data_sub = g_status_sub = g_events_sub = false;
     g_conn_handle = 0xFFFF;
     g_need_adv = true;
     LOGI(TAG, "disconnected (reason 0x%x)", reason);
@@ -70,11 +72,21 @@ class FbCB : public NimBLECharacteristicCallbacks {
   }
 };
 
+// Audio-out stream: runs on the NimBLE host task. The audio_out module's queue is lock-protected,
+// so blocks go straight in without a copy through loop() (lowest latency, no 517-byte staging).
+class AudioOutCB : public NimBLECharacteristicCallbacks {
+  void onWrite(NimBLECharacteristic *c, NimBLEConnInfo &) override {
+    NimBLEAttValue v = c->getValue();
+    if (v.size()) audio_out_on_packet(v.data(), v.size());
+  }
+};
+
 class NotifyCB : public NimBLECharacteristicCallbacks {
   void onSubscribe(NimBLECharacteristic *c, NimBLEConnInfo &, uint16_t subValue) override {
     bool on = (subValue & 0x0001) != 0;
     if (c == g_data) g_data_sub = on;
     if (c == g_status) g_status_sub = on;
+    if (c == g_events) g_events_sub = on;
     LOGI(TAG, "subscribe %s -> %d", c->getUUID().toString().c_str(), on);
   }
   // Called when a notification has been transmitted; use it as a TX credit.
@@ -83,10 +95,11 @@ class NotifyCB : public NimBLECharacteristicCallbacks {
   }
 };
 
-ServerCB  g_server_cb;
-CtrlCB    g_ctrl_cb;
-FbCB      g_fb_cb;
-NotifyCB  g_notify_cb;
+ServerCB   g_server_cb;
+CtrlCB     g_ctrl_cb;
+FbCB       g_fb_cb;
+AudioOutCB g_audio_cb;
+NotifyCB   g_notify_cb;
 
 bool do_notify(NimBLECharacteristic *c, const uint8_t *buf, size_t len) {
   if (!g_connected || !c) return false;
@@ -137,11 +150,15 @@ void init(const char *base_name) {
   g_meta   = svc->createCharacteristic(MCRING_UUID_XFER_META, NIMBLE_PROPERTY::NOTIFY);
   g_data   = svc->createCharacteristic(MCRING_UUID_XFER_DATA, NIMBLE_PROPERTY::NOTIFY, 517);
   g_fb     = svc->createCharacteristic(MCRING_UUID_FEEDBACK,  NIMBLE_PROPERTY::WRITE | NIMBLE_PROPERTY::WRITE_NR, 517);
+  g_events = svc->createCharacteristic(MCRING_UUID_EVENTS,    NIMBLE_PROPERTY::NOTIFY, MC_EVENT_LEN);
+  g_audio  = svc->createCharacteristic(MCRING_UUID_AUDIO_OUT, NIMBLE_PROPERTY::WRITE_NR, 517);
   g_ctrl->setCallbacks(&g_ctrl_cb);
   g_fb->setCallbacks(&g_fb_cb);
+  g_audio->setCallbacks(&g_audio_cb);
   g_status->setCallbacks(&g_notify_cb);
   g_meta->setCallbacks(&g_notify_cb);
   g_data->setCallbacks(&g_notify_cb);
+  g_events->setCallbacks(&g_notify_cb);
   svc->start();
 
   NimBLEAdvertising *adv = NimBLEDevice::getAdvertising();
@@ -158,6 +175,7 @@ bool connected() { return g_connected; }
 uint16_t mtu() { return g_mtu; }
 bool data_subscribed() { return g_data_sub; }
 bool status_subscribed() { return g_status_sub; }
+bool events_subscribed() { return g_events_sub; }
 int  tx_credits() { return g_credits; }
 void set_tx_credits_max(int n) { g_credits_max = n < 1 ? 1 : n; }
 
@@ -169,6 +187,13 @@ bool notify_status(const uint8_t *buf, size_t len) {
 }
 bool notify_meta(const uint8_t *buf, size_t len) { return do_notify(g_meta, buf, len); }
 bool notify_data(const uint8_t *buf, size_t len) { return do_notify(g_data, buf, len); }
+
+bool notify_event(uint8_t event, uint8_t arg) {
+  if (!g_connected || !g_events_sub) return false;
+  uint8_t buf[MC_EVENT_LEN];
+  mc_encode_event(event, arg, millis(), buf);
+  return do_notify(g_events, buf, sizeof buf);
+}
 
 void request_fast_params() {
   if (g_server && g_connected) g_server->updateConnParams(g_conn_handle, 12, 24, 0, 400);

@@ -1,7 +1,16 @@
-# Morse output spec
+# Morse output spec (optional / legacy "silent pattern" mode)
 
-mcring delivers short answers as International (ITU) Morse code on one or more physical
-channels: LED (light), haptic (vibration), buzzer (sound), or an auxiliary channel
+> **Status: optional, off by default.** mcring is voice-first: answers are spoken to the user
+> through the phone (and their own Bluetooth headphones) or, on the stage-1 ring, an on-ring
+> speaker — see `ble-gatt.md`. The Morse path below is kept as a *silent pattern* capability
+> for situations where audio is impossible (quiet room, hearing impairment, discreet use). The
+> codecs (`python/mcring_core/mcring_core/morse.py`, `firmware/.../lib/mcring_morse`) and the
+> `MORSE_TEXT` / `MORSE_UNITS` feedback opcodes still work and are still cross-tested, but
+> nothing in the default app flow or the default LLM prompt produces Morse any more. Haptics
+> in the default UX are only the short cues listed in `ble-gatt.md` (`CUE` opcode).
+
+When enabled, mcring delivers short answers as International (ITU) Morse code on one or more
+physical channels: LED (light), haptic (vibration), buzzer (sound), or an auxiliary channel
 (reserved for an air-puff / thermal actuator if one is ever fitted).
 
 ## Timing
@@ -39,11 +48,13 @@ Prosigns used by mcring:
 | `<HH>` | error | `........` |
 | `<BT>` | break / new section | `-...-` |
 
-The ring plays `<SN>` when a capture succeeds and `<HH>` on failure (LED only, 1 s).
+Legacy firmware played `<SN>` when a capture succeeded and `<HH>` on failure; the voice-first
+firmware uses the shorter non-Morse cues instead (`feedback_signal_*` remain available).
 
-## Short-answer rules (what the LLM is asked to produce)
+## Short-answer rules (only when Morse mode is enabled)
 
-The LLM returns two answers: a spoken/long one and a Morse-friendly `short` one:
+When the app has Morse mode on, the LLM is asked for two answers: a spoken/long one and a
+Morse-friendly `short` one:
 
 * ≤ 6 words, ≤ 32 characters, upper-case A–Z 0–9 and spaces only.
 * Nouns first, no articles, no filler ("FOXGLOVE TOXIC" not "This is a foxglove, which is toxic").

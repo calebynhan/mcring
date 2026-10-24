@@ -20,10 +20,14 @@ void settings_load() {
   s_cfg.haptic_strength   = prefs.getUChar("hap", DEFAULT_HAPTIC_STRENGTH);
   s_cfg.morse_wpm         = prefs.getUChar("wpm", DEFAULT_MORSE_WPM);
   s_cfg.feedback_channels = prefs.getUChar("fbch", DEFAULT_FEEDBACK_CHANNELS);
+  s_cfg.speaker_volume    = prefs.getUChar("spk", DEFAULT_SPEAKER_VOLUME);
+  s_cfg.cues_mask         = prefs.getUChar("cues", DEFAULT_CUES_MASK);
+  s_cfg.mic_source        = prefs.getUChar("mic", DEFAULT_MIC_SOURCE);
   prefs.end();
-  LOGI(TAG, "trig=%02x q=%u fs=%u sleep=%us led=%u hap=%u wpm=%u ch=%02x",
+  LOGI(TAG, "trig=%02x q=%u fs=%u sleep=%us led=%u hap=%u wpm=%u ch=%02x spk=%u cues=%02x mic=%s",
        s_cfg.trigger_mask, s_cfg.jpeg_quality, s_cfg.frame_size, s_cfg.idle_sleep_s,
-       s_cfg.led_brightness, s_cfg.haptic_strength, s_cfg.morse_wpm, s_cfg.feedback_channels);
+       s_cfg.led_brightness, s_cfg.haptic_strength, s_cfg.morse_wpm, s_cfg.feedback_channels,
+       s_cfg.speaker_volume, s_cfg.cues_mask, s_cfg.mic_source == MC_MIC_SRC_PHONE ? "phone" : "ring");
 }
 
 void settings_save() {
@@ -36,6 +40,9 @@ void settings_save() {
   prefs.putUChar("hap", s_cfg.haptic_strength);
   prefs.putUChar("wpm", s_cfg.morse_wpm);
   prefs.putUChar("fbch", s_cfg.feedback_channels);
+  prefs.putUChar("spk", s_cfg.speaker_volume);
+  prefs.putUChar("cues", s_cfg.cues_mask);
+  prefs.putUChar("mic", s_cfg.mic_source);
   prefs.end();
 }
 
@@ -49,6 +56,9 @@ bool settings_apply(uint8_t key, int32_t v) {
     case MC_CFG_HAPTIC_STRENGTH:   if (v < 0 || v > 127) return false; s_cfg.haptic_strength = v; break;
     case MC_CFG_MORSE_WPM:         if (v < 5 || v > 40) return false;  s_cfg.morse_wpm = v; break;
     case MC_CFG_FEEDBACK_CHANNELS: if (v < 0 || v > 15) return false;  s_cfg.feedback_channels = v; break;
+    case MC_CFG_SPEAKER_VOLUME:    if (v < 0 || v > 255) return false; s_cfg.speaker_volume = v; break;
+    case MC_CFG_CUES_MASK:         if (v < 0 || v > 7) return false;   s_cfg.cues_mask = v; break;
+    case MC_CFG_MIC_SOURCE_HINT:   if (v < 0 || v > 1) return false;   s_cfg.mic_source = v; break;
     default: return false;
   }
   settings_save();

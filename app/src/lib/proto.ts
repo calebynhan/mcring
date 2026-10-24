@@ -6,13 +6,39 @@ export const UUID_STATUS = '7a3b0003-9c2e-4f3a-b1d4-6d6372696e67';
 export const UUID_XFER_META = '7a3b0004-9c2e-4f3a-b1d4-6d6372696e67';
 export const UUID_XFER_DATA = '7a3b0005-9c2e-4f3a-b1d4-6d6372696e67';
 export const UUID_FEEDBACK = '7a3b0006-9c2e-4f3a-b1d4-6d6372696e67';
+/** Events (notify, ring → phone): button down/up, taps, capture/record lifecycle, battery, audio-out. */
+export const UUID_EVENTS = '7a3b0007-9c2e-4f3a-b1d4-6d6372696e67';
+/** Audio out (write-no-response, phone → ring speaker): ADPCM stream. */
+export const UUID_AUDIO_OUT = '7a3b0008-9c2e-4f3a-b1d4-6d6372696e67';
 
-export enum Op { CAPTURE = 0x01, ACK_TRANSFER = 0x02, SET_CONFIG = 0x03, PING = 0x04, ABORT = 0x05, RECORD_AUDIO = 0x06, SLEEP = 0x07, GET_STATUS = 0x08 }
-export enum Fb { MORSE_TEXT = 0x10, PATTERN = 0x11, STOP = 0x12, RGB = 0x13, MORSE_UNITS = 0x14, MORSE_UNITS_CONT = 0x15 }
+export enum Op { CAPTURE = 0x01, ACK_TRANSFER = 0x02, SET_CONFIG = 0x03, PING = 0x04, ABORT = 0x05, RECORD_AUDIO = 0x06, SLEEP = 0x07, GET_STATUS = 0x08, RECORD_START = 0x09, RECORD_STOP = 0x0a }
+/** MORSE_* are the legacy / optional "silent pattern" mode; CUE plays a built-in cue honouring CUES_MASK. */
+export enum Fb { MORSE_TEXT = 0x10, PATTERN = 0x11, STOP = 0x12, RGB = 0x13, MORSE_UNITS = 0x14, MORSE_UNITS_CONT = 0x15, CUE = 0x16 }
+export enum Cue { LISTENING = 1, ANSWER_READY = 2, ERROR = 3, OK = 4 }
 export enum Channel { LED = 1, HAPTIC = 2, BUZZER = 4, AUX = 8 }
-export enum Cfg { TRIGGER_MASK = 1, DEFAULT_QUALITY = 2, DEFAULT_FRAMESIZE = 3, IDLE_SLEEP_S = 4, LED_BRIGHTNESS = 5, HAPTIC_STRENGTH = 6, MORSE_WPM = 7, FEEDBACK_CHANNELS = 8 }
+export enum Cfg { TRIGGER_MASK = 1, DEFAULT_QUALITY = 2, DEFAULT_FRAMESIZE = 3, IDLE_SLEEP_S = 4, LED_BRIGHTNESS = 5, HAPTIC_STRENGTH = 6, MORSE_WPM = 7, FEEDBACK_CHANNELS = 8, SPEAKER_VOLUME = 9, CUES_MASK = 10, MIC_SOURCE_HINT = 11 }
+/** CUES_MASK bits (Cfg.CUES_MASK). */
+export enum Cues { HAPTIC = 1, LED = 2, BEEP = 4 }
+/** MIC_SOURCE_HINT values (Cfg.MIC_SOURCE_HINT). */
+export enum MicSource { RING = 0, PHONE = 1 }
 export enum RingState { IDLE = 0, CAPTURING = 1, TRANSFERRING = 2, RECORDING = 3, FEEDBACK = 4, ERROR = 5 }
+export enum Flag { CHARGING = 1, CAMERA_OK = 2, IMU_OK = 4, MIC_OK = 8, HAPTIC_OK = 16, QUEUED = 32, SPEAKER_OK = 64 }
 export enum XferType { JPEG = 1, ADPCM = 2, END = 0xff }
+/** Audio-out opcodes (phone → ring speaker). */
+export enum Ao { START = 0x20, DATA = 0x21, END = 0x22, STOP = 0x23 }
+export const AUDIO_CODEC_ADPCM = 2;
+/** Ring → phone events (characteristic 0007). */
+export enum RingEvent {
+  BUTTON_DOWN = 1, BUTTON_UP = 2 /* arg = held tenths of a second */, DOUBLE_TAP = 3, TOUCH = 4,
+  CAPTURE_STARTED = 5, CAPTURE_DONE = 6 /* arg = queued */, REC_STARTED = 7 /* arg = max s */, REC_STOPPED = 8 /* arg = tenths */,
+  LOW_BATTERY = 9 /* arg = pct */, AUDIO_UNDERRUN = 10, AUDIO_DONE = 11 /* arg 0 drained, 1 stopped */,
+}
+export const EVENT_LEN = 6;
+export const AUDIO_DATA_HDR_LEN = 3;
+/** mcring-ADPCM block: 256 samples @ 16 kHz = 16 ms. Must match lib/mcring_adpcm. */
+export const ADPCM_BLOCK_BYTES = 132;
+/** The ring starts playing once this many blocks are queued (~400 ms). */
+export const AUDIO_PREBUFFER_BLOCKS = 24;
 
 export const ERROR_NAMES: Record<number, string> = { 0: 'none', 1: 'camera_init', 2: 'capture_failed', 3: 'transfer_timeout', 4: 'oom', 5: 'mic' };
 
@@ -36,6 +62,10 @@ export const ping = () => Uint8Array.from([Op.PING]);
 export const abort = () => Uint8Array.from([Op.ABORT]);
 export const recordAudio = (seconds: number) => Uint8Array.from([Op.RECORD_AUDIO, Math.max(1, Math.min(8, seconds))]);
 export const sleep = () => Uint8Array.from([Op.SLEEP]);
+export const getStatus = () => Uint8Array.from([Op.GET_STATUS]);
+/** Begin a ring-mic recording now; ends on recordStop() or after 8 s. */
+export const recordStart = () => Uint8Array.from([Op.RECORD_START]);
+export const recordStop = () => Uint8Array.from([Op.RECORD_STOP]);
 
 // ---- feedback --------------------------------------------------------------
 export function fbMorseText(text: string, wpm = 15, channels = Channel.LED | Channel.HAPTIC): Uint8Array {
@@ -48,6 +78,8 @@ export function fbPattern(units: number[], unitMs: number, channels: number): Ui
 }
 export const fbStop = () => Uint8Array.from([Fb.STOP]);
 export const fbRgb = (r: number, g: number, b: number, ms: number) => Uint8Array.from([Fb.RGB, r, g, b, ...u16(ms)]);
+/** Play one of the ring's built-in cues (haptic/LED/beep per the ring's CUES_MASK). */
+export const fbCue = (cue: Cue) => Uint8Array.from([Fb.CUE, cue & 0xff]);
 /** Split a long unit pattern into MORSE_UNITS + MORSE_UNITS_CONT writes that fit maxWrite bytes. */
 export function fbMorseUnits(units: number[], unitMs: number, channels: number, maxWrite = 180): Uint8Array[] {
   const u = units.map((x) => Math.min(255, Math.max(1, x)));
@@ -63,7 +95,47 @@ export function fbMorseUnits(units: number[], unitMs: number, channels: number, 
   return writes;
 }
 
+// ---- audio out (phone → ring speaker) ----------------------------------------------
+export const audioStart = (sampleRate = 16000, codec = AUDIO_CODEC_ADPCM, volume = 255) =>
+  Uint8Array.from([Ao.START, ...u16(Math.floor(sampleRate / 100)), codec & 0xff, volume & 0xff]);
+/** One AUDIO_DATA packet: seq + one or more whole 132-byte ADPCM blocks. */
+export function audioData(seq: number, blocks: Uint8Array): Uint8Array {
+  if (blocks.length === 0 || blocks.length % ADPCM_BLOCK_BYTES !== 0) throw new Error(`payload must be a non-empty multiple of ${ADPCM_BLOCK_BYTES} bytes`);
+  const out = new Uint8Array(AUDIO_DATA_HDR_LEN + blocks.length);
+  out[0] = Ao.DATA; out[1] = seq & 0xff; out[2] = (seq >> 8) & 0xff;
+  out.set(blocks, AUDIO_DATA_HDR_LEN);
+  return out;
+}
+export const audioEnd = () => Uint8Array.from([Ao.END]);
+export const audioStop = () => Uint8Array.from([Ao.STOP]);
+/** Largest write-without-response payload for a negotiated ATT MTU. */
+export const maxWriteForMtu = (mtu: number) => Math.max(20, mtu - 3);
+export const audioBlocksPerWrite = (maxWrite: number) => Math.max(1, Math.floor((maxWrite - AUDIO_DATA_HDR_LEN) / ADPCM_BLOCK_BYTES));
+/**
+ * Split an ADPCM byte string into AUDIO_DATA writes of whole blocks that fit maxWrite bytes.
+ * maxWrite defaults to the iOS MTU (185 - 3): one block per write; pass 514 at MTU 517 for 3 blocks.
+ * Byte-identical to mcring_core.proto.audio_data_writes().
+ */
+export function audioDataWrites(adpcm: Uint8Array, maxWrite = 182, seqStart = 0): Uint8Array[] {
+  if (adpcm.length % ADPCM_BLOCK_BYTES !== 0) throw new Error(`ADPCM length ${adpcm.length} is not a multiple of ${ADPCM_BLOCK_BYTES}`);
+  const step = audioBlocksPerWrite(maxWrite) * ADPCM_BLOCK_BYTES;
+  const out: Uint8Array[] = [];
+  for (let off = 0, i = 0; off < adpcm.length; off += step, i++) out.push(audioData((seqStart + i) & 0xffff, adpcm.subarray(off, Math.min(adpcm.length, off + step))));
+  return out;
+}
+/** AUDIO_START, the data writes, AUDIO_END — everything needed to play one clip on the ring. */
+export const audioOutSequence = (adpcm: Uint8Array, maxWrite = 182, volume = 255, sampleRate = 16000): Uint8Array[] =>
+  [audioStart(sampleRate, AUDIO_CODEC_ADPCM, volume), ...audioDataWrites(adpcm, maxWrite), audioEnd()];
+
 // ---- ring → phone --------------------------------------------------------------
+export interface Event { event: RingEvent; arg: number; tMs: number }
+export function unpackEvent(b: Uint8Array): Event {
+  if (b.length < EVENT_LEN) throw new Error(`event packet too short (${b.length})`);
+  return { event: b[0], arg: b[1], tMs: rd32(b, 2) };
+}
+export const packEvent = (event: RingEvent, arg = 0, tMs = 0) => Uint8Array.from([event & 0xff, arg & 0xff, ...i32(tMs)]);
+export const eventName = (e: number) => (RingEvent[e] ?? `unknown(${e})`).toLowerCase();
+
 export interface Status {
   version: number; state: RingState; batteryMv: number; batteryPct: number; flags: number;
   uptimeS: number; lastError: number; queued: number;
@@ -72,7 +144,8 @@ export function unpackStatus(b: Uint8Array): Status {
   return { version: b[0], state: b[1], batteryMv: rd16(b, 2), batteryPct: b[4], flags: b[5], uptimeS: rd32(b, 6), lastError: b[10], queued: b[11] };
 }
 export const statusFlags = (s: Status) => ({
-  charging: !!(s.flags & 1), camera: !!(s.flags & 2), imu: !!(s.flags & 4), mic: !!(s.flags & 8), haptic: !!(s.flags & 16), queued: !!(s.flags & 32),
+  charging: !!(s.flags & Flag.CHARGING), camera: !!(s.flags & Flag.CAMERA_OK), imu: !!(s.flags & Flag.IMU_OK), mic: !!(s.flags & Flag.MIC_OK),
+  haptic: !!(s.flags & Flag.HAPTIC_OK), queued: !!(s.flags & Flag.QUEUED), speaker: !!(s.flags & Flag.SPEAKER_OK),
 });
 
 export interface XferStart {

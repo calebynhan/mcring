@@ -1,4 +1,4 @@
-"""Vision Q&A providers. Anthropic (Claude) is the default; OpenAI is optional."""
+"""Answer providers (photo + question, or voice/text chat). Anthropic (Claude) is the default; OpenAI is optional."""
 from __future__ import annotations
 
 import base64
@@ -8,22 +8,13 @@ import time
 from dataclasses import dataclass, field
 
 from .config import Settings
+from .errors import ModelRefused, ProviderError, map_openai_error
 from .prompts import SYSTEM_PROMPT
 from .schemas import LLMAnswer
 
+__all__ = ["ANSWER_SCHEMA", "LLMResult", "ModelRefused", "ProviderError", "get_provider"]
+
 log = logging.getLogger("mcring.llm")
-
-
-class ProviderError(RuntimeError):
-    def __init__(self, message: str, status: int = 502, retryable: bool = False):
-        super().__init__(message)
-        self.status = status
-        self.retryable = retryable
-
-
-class ModelRefused(ProviderError):
-    def __init__(self, message: str = "the model declined this request"):
-        super().__init__(message, status=422, retryable=False)
 
 
 @dataclass
@@ -38,18 +29,27 @@ class LLMResult:
     extra: dict = field(default_factory=dict)
 
 
+# Sent verbatim as the structured-output schema (Anthropic output_config.format / OpenAI strict json_schema).
+# Every key is required so both strict dialects accept it; optional values are empty strings/arrays.
+# No numeric bounds: neither dialect supports minimum/maximum, LLMAnswer clamps confidence client-side.
 ANSWER_SCHEMA = {
     "type": "object",
     "properties": {
-        "answer": {"type": "string"},
-        "short": {"type": "string"},
-        "subject": {"type": "string"},
-        "confidence": {"type": "number", "minimum": 0, "maximum": 1},
+        "answer": {"type": "string", "description": "Spoken answer, 1-3 short sentences, read aloud as-is."},
+        "subject": {"type": "string", "description": "Main subject identified, or empty."},
+        "confidence": {"type": "number", "description": "0 to 1."},
         "warnings": {"type": "array", "items": {"type": "string"}},
+        "follow_up": {"type": "string", "description": "Optional one-line follow-up offer, or empty."},
     },
-    "required": ["answer", "short", "subject", "confidence", "warnings"],
+    "required": ["answer", "subject", "confidence", "warnings", "follow_up"],
     "additionalProperties": False,
 }
+ANSWER_KEYS = ", ".join(ANSWER_SCHEMA["required"])
+
+
+def _image_block_anthropic(image_bytes: bytes, media_type: str) -> dict:
+    return {"type": "image", "source": {"type": "base64", "media_type": media_type,
+                                        "data": base64.standard_b64encode(image_bytes).decode()}}
 
 
 def _parse_answer(text: str) -> LLMAnswer:
@@ -88,17 +88,17 @@ class AnthropicProvider:
         self.fallbacks = settings.anthropic_fallbacks
         self.effort = settings.anthropic_effort
 
-    def ask(self, image_bytes: bytes, media_type: str, question: str, history: list[dict]) -> LLMResult:
+    def ask(self, image_bytes: bytes | None, media_type: str | None, question: str, history: list[dict]) -> LLMResult:
+        """One turn. `image_bytes` is None for a voice/text-only (chat) turn."""
         anthropic = self._anthropic
-        content = [
-            {"type": "image", "source": {"type": "base64", "media_type": media_type,
-                                          "data": base64.standard_b64encode(image_bytes).decode()}},
-            {"type": "text", "text": question},
-        ]
+        content: list[dict] = []
+        if image_bytes:
+            content.append(_image_block_anthropic(image_bytes, media_type or "image/jpeg"))
+        content.append({"type": "text", "text": question})
         messages = _history_blocks(history) + [{"role": "user", "content": content}]
         kwargs = dict(
             model=self.model,
-            max_tokens=2048,
+            max_tokens=4096,  # adaptive thinking shares this budget; a voice answer itself is ~100 tokens
             system=[{"type": "text", "text": SYSTEM_PROMPT, "cache_control": {"type": "ephemeral"}}],
             messages=messages,
             output_config={
@@ -158,23 +158,22 @@ class OpenAIProvider:
         self.client = OpenAI()
         self.model = settings.openai_model
 
-    def ask(self, image_bytes: bytes, media_type: str, question: str, history: list[dict]) -> LLMResult:
-        data_url = f"data:{media_type};base64,{base64.standard_b64encode(image_bytes).decode()}"
-        messages = [{"role": "system", "content": SYSTEM_PROMPT + "\nRespond with a single JSON object with keys answer, short, subject, confidence, warnings."}]
+    def ask(self, image_bytes: bytes | None, media_type: str | None, question: str, history: list[dict]) -> LLMResult:
+        messages = [{"role": "system", "content": SYSTEM_PROMPT + f"\nRespond with a single JSON object with keys {ANSWER_KEYS}."}]
         messages += _history_blocks(history)
-        messages.append({"role": "user", "content": [
-            {"type": "text", "text": question},
-            {"type": "image_url", "image_url": {"url": data_url, "detail": "low"}},
-        ]})
+        user_content: list[dict] = [{"type": "text", "text": question}]
+        if image_bytes:
+            data_url = f"data:{media_type or 'image/jpeg'};base64,{base64.standard_b64encode(image_bytes).decode()}"
+            user_content.append({"type": "image_url", "image_url": {"url": data_url, "detail": "low"}})
+        messages.append({"role": "user", "content": user_content})
         t0 = time.time()
         try:
             resp = self.client.chat.completions.create(
                 model=self.model, messages=messages, max_tokens=600,
                 response_format={"type": "json_schema", "json_schema": {"name": "mcring_answer", "schema": ANSWER_SCHEMA, "strict": True}},
             )
-        except Exception as e:  # noqa: BLE001 - map any SDK error to a 502
-            status = getattr(e, "status_code", 502) or 502
-            raise ProviderError(f"openai error: {e}", status=502 if status < 400 else status, retryable=status in (429, 500, 502, 503)) from e
+        except Exception as e:  # noqa: BLE001 - map any SDK error to a ProviderError
+            raise map_openai_error(e, "openai error") from e
         log.info("openai %s answered in %.2fs", resp.model, time.time() - t0)
         choice = resp.choices[0]
         if getattr(choice, "finish_reason", "") == "content_filter":

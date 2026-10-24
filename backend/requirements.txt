@@ -7,8 +7,13 @@ pydantic-settings>=2.3
 anthropic>=1.0
 pillow>=10.3
 -e ../python/mcring_core
-# optional providers
+# speech providers (gpt-4o-mini-transcribe / gpt-4o-mini-tts) and the optional provider=openai answer path
 openai>=1.40
+# optional: proper polyphase resampling for ring-speaker audio (pure-Python linear interpolation without it)
+numpy>=1.26
+# optional, on-device speech-to-text (MCRING_STT_PROVIDER=local). Pulls in ctranslate2 + PyAV (bundled ffmpeg),
+# so m4a/mp3 uploads decode without a system ffmpeg. Large download; uncomment to enable.
+# faster-whisper>=1.0
 # tests
 pytest>=8
 httpx>=0.27

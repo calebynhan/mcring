@@ -2,19 +2,22 @@
   "$schema": "https://json-schema.org/draft/2020-12/schema",
   "$id": "https://mcring.dev/schemas/ask_request.schema.json",
   "title": "mcring AskRequest (multipart form fields)",
-  "description": "POST /v1/ask is multipart/form-data: an `image` file part (JPEG/PNG), an optional `audio` part (IMA-ADPCM or WAV voice question), and these text fields.",
+  "description": "POST /v1/ask is multipart/form-data — one voice turn. File parts (both optional): `audio` = the spoken question (WAV, m4a/mp4 phone recording, mp3/ogg/flac/webm, or a raw mcring-ADPCM ring clip as `.adpcm` / `audio/x-mcring-adpcm`) and `image` = a JPEG/PNG/WebP photo from the ring (omit for a pure voice turn; a photo already in the session stays referenced). A turn needs a question (text or audio) or a photo, otherwise 400; a recording that transcribes to nothing gives 422. The text fields are listed here; they mirror the Form(...) parameters of `ask()` in backend/app/main.py (python/mcring_core/tests/test_schemas.py keeps them in step).",
   "type": "object",
   "properties": {
-    "question": {"type": "string", "maxLength": 2000, "description": "Free-text question about the image. Empty = use the mode's default question."},
-    "mode": {"type": "string", "enum": ["identify", "describe", "read_text", "translate", "custom"], "default": "identify"},
-    "provider": {"type": "string", "enum": ["anthropic", "openai"], "default": "anthropic"},
-    "session_id": {"type": "string", "maxLength": 64, "description": "Opaque id; lets follow-up questions refer to the previous image."},
-    "want_morse": {"type": "boolean", "default": true},
-    "want_speech": {"type": "boolean", "default": false, "description": "Ask the server to synthesize speech (phone-side TTS is the default)."},
-    "morse_char_wpm": {"type": "integer", "minimum": 5, "maximum": 40, "default": 15},
-    "morse_overall_wpm": {"type": "integer", "minimum": 3, "maximum": 40, "default": 8},
-    "max_short_chars": {"type": "integer", "minimum": 4, "maximum": 64, "default": 32},
-    "language": {"type": "string", "default": "en"}
+    "question": {"type": "string", "default": "", "description": "Typed question. Combined with the transcript when `audio` is also sent; empty = the mode's default question."},
+    "mode": {"type": "string", "enum": ["identify", "describe", "read_text", "translate", "chat", "custom"], "default": "identify", "description": "Without any photo every mode behaves as `chat` (question used verbatim); the response reports the effective mode."},
+    "provider": {"type": "string", "enum": ["", "anthropic", "openai"], "default": "", "description": "Empty = the server's configured provider."},
+    "session_id": {"type": "string", "default": "", "description": "Opaque id from a previous response; lets follow-up questions refer to the previous turns and photo. Empty = start a new session."},
+    "language": {"type": "string", "default": "en", "description": "Answer language (also passed to speech-to-text)."},
+    "want_speech": {"type": ["boolean", "null"], "default": null, "description": "Omitted/null = server default (true when a TTS provider is configured). true = synthesize `speech_text` server-side; false = the phone speaks `speech_text` itself."},
+    "speech_format": {"type": "string", "enum": ["mp3", "adpcm16k", "both"], "default": "mp3", "description": "mp3 → `speech` (phone / headphones); adpcm16k → `speech_adpcm` (16 kHz mcring-ADPCM for the ring speaker); both → both."},
+    "voice": {"type": "string", "default": "", "description": "TTS voice; empty = the server's default voice."},
+    "want_morse": {"type": "boolean", "default": false, "description": "Optional silent-pattern output (`short` + `morse` in the response). Off by default."},
+    "morse_char_wpm": {"type": "integer", "minimum": 5, "maximum": 40, "default": 15, "description": "Only with want_morse (clamped server-side)."},
+    "morse_overall_wpm": {"type": "integer", "minimum": 3, "maximum": 40, "default": 8, "description": "Only with want_morse; Farnsworth overall speed (clamped to <= morse_char_wpm)."},
+    "morse_channels": {"type": "integer", "minimum": 0, "maximum": 15, "default": 3, "description": "Only with want_morse: Feedback channel bits baked into morse.ring_packet_b64 (bit0 LED, bit1 haptic, bit2 buzzer, bit3 aux)."},
+    "max_short_chars": {"type": "integer", "minimum": 4, "maximum": 64, "default": 32, "description": "Only with want_morse: length cap for `short`."}
   },
   "additionalProperties": false
 }
