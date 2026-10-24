@@ -1,0 +1,608 @@
+[
+  {
+    "url": "https://eater.net/6502",
+    "title": "Ben Eater: Build a 6502 computer (project page)",
+    "verified_by": "WebSearch 'Ben Eater 6502 computer video series eater.net': episode descriptions point to 'the project page at eater.net/6502' for schematics/datasheets/kit",
+    "section": "3.1"
+  },
+  {
+    "url": "https://www.oreilly.com/library/view/-/9781098151539",
+    "title": "Making Embedded Systems, 2nd ed. (Elecia White), O'Reilly",
+    "verified_by": "WebSearch 'Elecia White Making Embedded Systems 2nd edition O'Reilly': result 'www.oreilly.com/library/view/-/9781098151539', March 2024, 428 pages",
+    "section": "3.1, 3.10"
+  },
+  {
+    "url": "https://github.com/eleciawhite/making-embedded-systems",
+    "title": "Making Embedded Systems companion code (GitHub)",
+    "verified_by": "Same search: result 'making embedded systems' https://github.com/eleciawhite/making-embedded-systems, 'companion code for the second edition'",
+    "section": "3.1"
+  },
+  {
+    "url": "https://www.espressif.com/sites/default/files/documentation/esp32-s3_datasheet_en.pdf",
+    "title": "ESP32-S3 Series Datasheet (PDF)",
+    "verified_by": "WebSearch '\"esp32-s3_datasheet_en.pdf\" espressif.com sites default files': KeyeStudio docs and Flux parts library both cite this exact URL; HTML version at documentation.espressif.com shows 'ESP32-S3 Series Datasheet v2.1'",
+    "section": "3.1"
+  },
+  {
+    "url": "https://www.espressif.com/sites/default/files/documentation/esp32-s3_technical_reference_manual_en.pdf",
+    "title": "ESP32-S3 Technical Reference Manual (PDF)",
+    "verified_by": "WebSearch 'ESP32-S3 datasheet technical reference manual PDF': 'The English PDF is at .../esp32-s3_technical_reference_manual_en.pdf ... v1.6 | 2024.12.10'",
+    "section": "3.1"
+  },
+  {
+    "url": "https://infocenter.nordicsemi.com/pdf/nRF52840_PS_v1.8.pdf",
+    "title": "nRF52840 Product Specification v1.8 (PDF)",
+    "verified_by": "WebSearch 'nRF52840 Product Specification docs.nordicsemi.com': result 'nRF52840 PS v1.8' https://infocenter.nordicsemi.com/pdf/nRF52840_PS_v1.8.pdf dated 2023-12-01",
+    "section": "3.1"
+  },
+  {
+    "url": "https://interrupt.memfault.com/blog/zero-to-main-1",
+    "title": "From Zero to main(): Bare metal C (Memfault Interrupt)",
+    "verified_by": "WebSearch 'Memfault Interrupt \"Zero to main()\"': result 'From Zero to main(): Bare metal C' https://interrupt.memfault.com/blog/zero-to-main-1 (14 May 2019, François Baldassari)",
+    "section": "3.1"
+  },
+  {
+    "url": "https://docs.espressif.com/projects/esp-idf/en/v4.4/esp32s3/api-reference/peripherals/gpio.html",
+    "title": "ESP-IDF: GPIO & RTC GPIO (ESP32-S3, v4.4)",
+    "verified_by": "WebSearch 'ESP-IDF GPIO & RTC GPIO API reference esp32s3': result 'GPIO & RTC GPIO' at this v4.4 esp32s3 URL",
+    "section": "3.2"
+  },
+  {
+    "url": "https://docs.espressif.com/projects/arduino-esp32/en/latest/api/ledc.html",
+    "title": "Arduino-ESP32: LED Control (LEDC) API",
+    "verified_by": "WebSearch 'arduino-esp32 docs \"LED Control (LEDC)\" api ledc.html': result 'LED Control (LEDC)' https://docs.espressif.com/projects/arduino-esp32/en/latest/api/ledc.html",
+    "section": "3.2"
+  },
+  {
+    "url": "https://docs.espressif.com/projects/esp-idf/en/release-v5.1/esp32s3/api-reference/peripherals/ledc.html",
+    "title": "ESP-IDF: LED Control (LEDC) (ESP32-S3, release-v5.1)",
+    "verified_by": "WebSearch 'ESP-IDF LED Control (LEDC) API reference esp32s3': result 'LED Control (LEDC)' at .../release-v5.1/esp32s3/api-reference/peripherals/ledc.html; snippet: 8 channels, low-speed only on S3",
+    "section": "3.2"
+  },
+  {
+    "url": "https://docs.espressif.com/projects/esp-idf/en/v4.4.7/esp32s3/api-reference/peripherals/touch_pad.html",
+    "title": "ESP-IDF: Touch Sensor (ESP32-S3, v4.4.7)",
+    "verified_by": "WebSearch 'ESP-IDF touch sensor API reference esp32s3': result 'Touch Sensor' at this URL; snippet: 'the S3's raw value rises as pad capacitance increases'",
+    "section": "3.2"
+  },
+  {
+    "url": "https://learn.sparkfun.com/tutorials/pulse-width-modulation",
+    "title": "SparkFun: Pulse Width Modulation",
+    "verified_by": "WebSearch 'SparkFun learn tutorial \"Pulse Width Modulation\"': results 'Pulse Width Modulation a learn.sparkfun.com tutorial' (/all?print=1) and /res pages of this tutorial",
+    "section": "3.2"
+  },
+  {
+    "url": "https://wokwi.com",
+    "title": "Wokwi online ESP32/Arduino simulator",
+    "verified_by": "WebSearch 'Wokwi ESP32 simulator online': 'Visit wokwi.com, click on new project, and select ESP32'; simulates ESP32, S2, S3, C3, C6, H2; free for personal use",
+    "section": "3.2, 3.3"
+  },
+  {
+    "url": "https://learn.sparkfun.com/tutorials/i2c/all",
+    "title": "SparkFun: I2C",
+    "verified_by": "WebSearch (allowed_domains learn.sparkfun.com) 'I2C Inter-Integrated Circuit SDA SCL protocol tutorial': result 'I2C - SparkFun Learn' https://learn.sparkfun.com/tutorials/i2c/all and its PDF (sfe.io/t82)",
+    "section": "3.3"
+  },
+  {
+    "url": "https://learn.sparkfun.com/tutorials/serial-peripheral-interface-spi",
+    "title": "SparkFun: Serial Peripheral Interface (SPI)",
+    "verified_by": "WebSearch 'SparkFun learn tutorial \"Serial Peripheral Interface (SPI)\"': result 'Serial Peripheral Interface (SPI)' https://learn.sparkfun.com/tutorials/serial-peripheral-interface-spi (by Mike Grusin)",
+    "section": "3.3"
+  },
+  {
+    "url": "https://www.ti.com/product/DRV2605L",
+    "title": "TI DRV2605L product page (datasheet download)",
+    "verified_by": "WebSearch 'TI DRV2605L datasheet pdf haptic driver LRA RTP mode': TI product pages for DRV2605L returned (www.ti.com/product/de-de/DRV2605L, focus.ti.com/product/DRV2605L); the un-localized /product/DRV2605L path is TI's canonical form of the same page",
+    "section": "3.3"
+  },
+  {
+    "url": "https://www.st.com/content/st_com/en/products/mems-and-sensors/accelerometers/lis2dw12.html",
+    "title": "ST LIS2DW12 product page (datasheet download)",
+    "verified_by": "WebSearch 'STMicroelectronics LIS2DW12 datasheet pdf double tap': result 'www.st.com' https://www.st.com/content/st_com/en/products/mems-and-sensors/accelerometers/lis2dw12.html; 'Download datasheet is on the st.com product page'",
+    "section": "3.3"
+  },
+  {
+    "url": "https://docs.espressif.com/projects/esp-idf/en/v4.4/esp32s3/api-reference/peripherals/i2s.html",
+    "title": "ESP-IDF: Inter-IC Sound (I2S), legacy driver (ESP32-S3, v4.4)",
+    "verified_by": "WebSearch 'ESP-IDF v4.4 I2S driver API reference esp32s3 PDM mode DMA buffer': result 'Inter-IC Sound (I2S)' at this URL; snippet on i2s_read, driver_install, DMA",
+    "section": "3.4"
+  },
+  {
+    "url": "https://www.ap.com/download/understanding-pdm-digital-audio-2",
+    "title": "Understanding PDM Digital Audio (Audio Precision, Thomas Kite)",
+    "verified_by": "WebSearch '\"Understanding PDM Digital Audio\" Thomas Kite Audio Precision PDF': result 'Understanding PDM Digital Audio' https://www.ap.com/download/understanding-pdm-digital-audio-2 (by Dr Tom Kite, dated 2024-04-25)",
+    "section": "3.4, 3.10"
+  },
+  {
+    "url": "https://www.nxp.com/docs/en/user-manual/UM11732.pdf",
+    "title": "NXP I2S bus specification (UM11732)",
+    "verified_by": "WebSearch 'NXP I2S bus specification PDF UM11732': Wikipedia I2S reference list cites '\"UM11732 I2S bus specification\" (PDF). NXP. https://www.nxp.com/docs/en/user-manual/UM11732.pdf'",
+    "section": "3.4"
+  },
+  {
+    "url": "https://learn.adafruit.com/adafruit-max98357-i2s-class-d-mono-amp",
+    "title": "Adafruit: MAX98357 I2S Class-D Mono Amp guide",
+    "verified_by": "WebSearch 'Adafruit learn MAX98357 I2S Class-D Mono Amp guide': 'The official Adafruit guide is at learn.adafruit.com/adafruit-max98357-i2s-class-d-mono-amp' (downloads subpage returned); last edited 2025-07-03",
+    "section": "3.4"
+  },
+  {
+    "url": "https://components.espressif.com/components/espressif/esp32-camera",
+    "title": "esp32-camera component (Espressif Component Registry)",
+    "verified_by": "WebSearch 'espressif esp32-camera github driver OV2640 DVP': result 'esp32 camera' https://components.espressif.com/components/espressif/esp32-camera, latest 2.1.7, supports ESP32/S2/S3",
+    "section": "3.4"
+  },
+  {
+    "url": "https://wiki.seeedstudio.com/xiao_esp32s3_camera_usage/",
+    "title": "Seeed wiki: Camera Usage in Seeed Studio XIAO ESP32S3 Sense",
+    "verified_by": "WebSearch (allowed_domains wiki.seeedstudio.com) 'XIAO ESP32S3 Sense camera getting started': result 'Camera Usage in Seeed Studio XIAO ESP32S3 Sense' https://wiki.seeedstudio.com/xiao_esp32s3_camera_usage/",
+    "section": "3.4"
+  },
+  {
+    "url": "https://docs.espressif.com/projects/esp-idf/en/v5.3/esp32s3/api-reference/system/sleep_modes.html",
+    "title": "ESP-IDF: Sleep Modes (ESP32-S3, v5.3)",
+    "verified_by": "WebSearch 'ESP-IDF Sleep Modes api reference esp32s3 deep sleep ext0 ext1 wakeup': result 'Sleep Modes' at this URL",
+    "section": "3.5"
+  },
+  {
+    "url": "https://randomnerdtutorials.com/esp32-deep-sleep-arduino-ide-wake-up-sources/",
+    "title": "Random Nerd Tutorials: ESP32 Deep Sleep with Arduino IDE and Wake Up Sources",
+    "verified_by": "WebSearch 'Random Nerd Tutorials ESP32 deep sleep wake up sources Arduino IDE': result 'esp32 deep sleep arduino ide wake up sources' https://randomnerdtutorials.com/esp32-deep-sleep-arduino-ide-wake-up-sources (updated 8 Oct 2024)",
+    "section": "3.5"
+  },
+  {
+    "url": "https://docs.espressif.com/projects/esp-idf/en/latest/esp32s3/api-guides/low-power-mode/low-power-mode-soc.html",
+    "title": "ESP-IDF: Introduction to Low Power Mode for Systemic Power Management (ESP32-S3)",
+    "verified_by": "WebSearch 'Espressif \"ESP32-S3 Low Power Mode User Guide\"': result 'Introduction to Low Power Mode for Systemic Power Management' at .../en/latest/esp32s3/api-guides/low-power-mode/low-power-mode-soc.html",
+    "section": "3.5"
+  },
+  {
+    "url": "https://docs.espressif.com/projects/esp-idf/en/v5.2/esp32/api-guides/current-consumption-measurement-modules.html",
+    "title": "ESP-IDF: Current Consumption Measurement of Modules",
+    "verified_by": "WebSearch 'Andreas Spiess YouTube ESP32 deep sleep current measurement video': result 'Current Consumption Measurement of Modules' https://docs.espressif.com/projects/esp-idf/en/v5.2/esp32/api-guides/current-consumption-measurement-modules.html",
+    "section": "3.5"
+  },
+  {
+    "url": "https://www.nordicsemi.com/Products/Development-hardware/Power-Profiler-Kit-2",
+    "title": "Nordic Power Profiler Kit II",
+    "verified_by": "WebSearch 'Nordic Power Profiler Kit II PPK2 product page': result 'Power Profiler Kit II' https://www.nordicsemi.com/Products/Development-hardware/Power-Profiler-Kit-2 (200 nA-1 A, 100 ksps)",
+    "section": "3.5"
+  },
+  {
+    "url": "https://docs.espressif.com/projects/arduino-esp32/en/latest/tutorials/preferences.html",
+    "title": "Arduino-ESP32: Preferences",
+    "verified_by": "WebSearch 'arduino-esp32 Preferences library tutorial docs.espressif.com': top result https://docs.espressif.com/projects/arduino-esp32/en/latest/tutorials/preferences.html",
+    "section": "3.6"
+  },
+  {
+    "url": "https://docs.espressif.com/projects/esp-idf/en/v5.3/esp32s3/api-reference/storage/nvs_flash.html",
+    "title": "ESP-IDF: Non-Volatile Storage Library (ESP32-S3, v5.3)",
+    "verified_by": "WebSearch 'ESP-IDF Non-volatile storage library NVS api reference esp32s3': result 'Non-Volatile Storage Library' at .../en/v5.3/esp32s3/api-reference/storage/nvs_flash.html",
+    "section": "3.6"
+  },
+  {
+    "url": "https://randomnerdtutorials.com/esp32-save-data-permanently-preferences/",
+    "title": "Random Nerd Tutorials: ESP32 Save Data Permanently using Preferences Library",
+    "verified_by": "WebSearch 'arduino-esp32 Preferences library tutorial': result 'esp32 save data permanently preferences' https://randomnerdtutorials.com/esp32-save-data-permanently-preferences/",
+    "section": "3.6"
+  },
+  {
+    "url": "https://docs.espressif.com/projects/arduino-esp32/en/latest/",
+    "title": "Arduino-ESP32 documentation (landing)",
+    "verified_by": "Parent of verified pages .../arduino-esp32/en/latest/api/ledc.html, .../tutorials/preferences.html and .../migration_guides/2.x_to_3.0.html returned by WebSearch",
+    "section": "3.7"
+  },
+  {
+    "url": "https://docs.espressif.com/projects/arduino-esp32/en/latest/migration_guides/2.x_to_3.0.html",
+    "title": "Arduino-ESP32: Migration from 2.x to 3.0",
+    "verified_by": "WebSearch 'arduino-esp32 documentation migration guide 2.x to 3.0': result 'Migration from 2.x to 3.0' at this URL; covers LEDC/I2S/BLE API changes",
+    "section": "3.7"
+  },
+  {
+    "url": "https://docs.espressif.com/projects/esp-idf/en/v5.4/esp32s3/get-started/",
+    "title": "ESP-IDF Programming Guide: Get Started (ESP32-S3, v5.4)",
+    "verified_by": "WebSearch 'ESP-IDF Programming Guide Get Started esp32s3': result 'Get Started' https://docs.espressif.com/projects/esp-idf/en/v5.4/esp32s3/get-started/",
+    "section": "3.7"
+  },
+  {
+    "url": "https://docs.platformio.org/en/stable/platforms/espressif32.html",
+    "title": "PlatformIO: Espressif 32 platform",
+    "verified_by": "WebSearch 'PlatformIO Espressif 32 platform documentation docs.platformio.org': result 'Espressif 32' https://docs.platformio.org/en/stable/platforms/espressif32.html",
+    "section": "3.7"
+  },
+  {
+    "url": "https://github.com/pioarduino/platform-espressif32",
+    "title": "pioarduino platform-espressif32 (GitHub)",
+    "verified_by": "WebSearch '\"github.com/pioarduino/platform-espressif32\"': commit URL under https://github.com/pioarduino/platform-espressif32/commit/6bb840fa... returned; README install line quoted",
+    "section": "3.7"
+  },
+  {
+    "url": "https://docs.platformio.org/en/latest/advanced/unit-testing/frameworks/unity.html",
+    "title": "PlatformIO: Unity test framework",
+    "verified_by": "WebSearch 'PlatformIO unit testing documentation Unity test framework native platform': result https://docs.platformio.org/en/latest/advanced/unit-testing/frameworks/unity.html",
+    "section": "3.7"
+  },
+  {
+    "url": "https://www.digikey.com/en/maker/tutorials/2022/increase-the-quality-of-your-embedded-projects-using-platformio-unit-tests",
+    "title": "Digi-Key: Increase the quality of your embedded projects using PlatformIO unit tests",
+    "verified_by": "Same search: result 'Maker.io main logo' https://www.digikey.com/en/maker/tutorials/2022/increase-the-quality-of-your-embedded-projects-using-platformio-unit-tests",
+    "section": "3.7"
+  },
+  {
+    "url": "https://docs.espressif.com/projects/esp-idf/en/latest/esp32s3/api-reference/system/log.html",
+    "title": "ESP-IDF: Logging library (ESP32-S3)",
+    "verified_by": "WebSearch 'ESP-IDF Logging library api reference ESP_LOGI esp32s3': result 'Logging library' https://docs.espressif.com/projects/esp-idf/en/latest/esp32s3/api-reference/system/log.html",
+    "section": "3.8"
+  },
+  {
+    "url": "https://docs.espressif.com/projects/esp-idf/en/v5.2/esp32s3/api-guides/fatal-errors.html",
+    "title": "ESP-IDF: Fatal Errors (ESP32-S3, v5.2)",
+    "verified_by": "WebSearch 'ESP-IDF \"Fatal Errors\" api guide esp32s3 Guru Meditation backtrace': result 'Fatal Errors' https://docs.espressif.com/projects/esp-idf/en/v5.2/esp32s3/api-guides/fatal-errors.html",
+    "section": "3.8"
+  },
+  {
+    "url": "https://docs.platformio.org/en/stable/core/userguide/device/cmd_monitor.html",
+    "title": "PlatformIO: pio device monitor (filters incl. esp32_exception_decoder)",
+    "verified_by": "WebSearch 'PlatformIO device monitor filters esp32_exception_decoder documentation': result 'pio device monitor' https://docs.platformio.org/en/stable/core/userguide/device/cmd_monitor.html",
+    "section": "3.8"
+  },
+  {
+    "url": "https://www.robmiles.com/journal/2024/7/5/debug-esp32esp8266-programs-in-platformio-using-the-exception-decoder",
+    "title": "Rob Miles: Debug ESP32/ESP8266 programs in PlatformIO using the exception decoder",
+    "verified_by": "Same search: result with this exact URL and title",
+    "section": "3.8"
+  },
+  {
+    "url": "https://docs.espressif.com/projects/esp-idf/en/latest/esp32s3/api-guides/jtag-debugging/",
+    "title": "ESP-IDF: JTAG Debugging (ESP32-S3)",
+    "verified_by": "WebSearch 'ESP-IDF JTAG debugging esp32s3 built-in USB JTAG OpenOCD': result 'JTAG Debugging' https://docs.espressif.com/projects/esp-idf/en/latest/esp32s3/api-guides/jtag-debugging/; snippet 'openocd -f board/esp32s3-builtin.cfg'",
+    "section": "3.8"
+  },
+  {
+    "url": "https://www.state-machine.com/video-course",
+    "title": "Miro Samek: Modern Embedded Systems Programming Video Course",
+    "verified_by": "WebSearch 'Miro Samek \"Modern Embedded Systems Programming\" video course state machines': result 'Modern Embedded Systems Programming Video Course' https://www.state-machine.com/video-course",
+    "section": "3.9"
+  },
+  {
+    "url": "https://www.youtube.com/playlist?list=PLEBQazB0HUyQ4hAPU1cJED6t3DU0h34bz",
+    "title": "Digi-Key: Introduction to RTOS (12-part FreeRTOS on ESP32 series, YouTube playlist)",
+    "verified_by": "WebSearch 'Digi-Key \"Introduction to RTOS\" Shawn Hymel ESP32 FreeRTOS video series': result 'videohighlight.com/playlist/PLEBQazB0HUyQ4hAPU1cJED6t3DU0h34bz' listing the 12-video Introduction to RTOS playlist (Part 1 to Part 12, Jan-Apr 2021); official Part 1/2 video pages on digikey.com also returned",
+    "section": "3.9"
+  },
+  {
+    "url": "https://docs.espressif.com/projects/esp-idf/en/v4.3.5/esp32/api-guides/freertos-smp.html",
+    "title": "ESP-IDF FreeRTOS SMP Changes (critical sections, task pinning)",
+    "verified_by": "WebSearch 'ESP-IDF \"FreeRTOS (IDF)\" api guide critical sections': result 'ESP-IDF FreeRTOS SMP Changes' https://docs.espressif.com/projects/esp-idf/en/v4.3.5/esp32/api-guides/freertos-smp.html; snippet on mutex-based critical sections",
+    "section": "3.9"
+  },
+  {
+    "url": "https://esp32.com/viewtopic.php?p=50172",
+    "title": "esp32.com forum: portENTER_CRITICAL explanation",
+    "verified_by": "WebSearch 'ESP-IDF FreeRTOS (IDF) critical sections portENTER_CRITICAL spinlock': result 'portENTER_CRITICAL explaination' https://esp32.com/viewtopic.php?p=50172 (Espressif staff: the mux is a spinlock)",
+    "section": "3.9"
+  },
+  {
+    "url": "https://embeddedartistry.com/blog/2017/4/6/circular-buffers-in-cc",
+    "title": "Embedded Artistry: Creating a Circular Buffer in C and C++",
+    "verified_by": "WebSearch 'Embedded Artistry \"Creating a Circular Buffer in C and C++\"': result with this exact URL and title",
+    "section": "3.9"
+  },
+  {
+    "url": "https://embedded.fm",
+    "title": "Embedded.fm podcast",
+    "verified_by": "WebSearch 'Embedded.fm podcast Elecia White Christopher White site': 'The official site is embedded.fm'; transcripts/episodes pages at embedded.fm returned",
+    "section": "3.9"
+  },
+  {
+    "url": "https://xiph.org/video/vid2.shtml",
+    "title": "Xiph.org: Digital Show & Tell (Monty Montgomery)",
+    "verified_by": "WebSearch 'Xiph.org Monty \"Digital Show and Tell\" video': result 'xiph.org' https://xiph.org/video/vid2.shtml plus press page and wiki.xiph.org/Videos/Digital_Show_and_Tell",
+    "section": "3.10"
+  },
+  {
+    "url": "https://wiki.multimedia.cx/index.php/IMA_ADPCM",
+    "title": "MultimediaWiki: IMA ADPCM",
+    "verified_by": "WebSearch 'MultimediaWiki IMA ADPCM step table index table': result 'IMA ADPCM' https://wiki.multimedia.cx/index.php/IMA_ADPCM; snippet 'saturate the computed step index between 0 and 88'",
+    "section": "3.10"
+  },
+  {
+    "url": "https://www.drdobbs.com/database/algorithm-alley/184410326",
+    "title": "Dr. Dobb's: Inside IMA ADPCM",
+    "verified_by": "Same search: result 'Inside IMA ADPCM' https://www.drdobbs.com/database/algorithm-alley/184410326?pgno=3 (base article URL used)",
+    "section": "3.10"
+  },
+  {
+    "url": "https://beej.us/guide/bgc/html/",
+    "title": "Beej's Guide to C Programming",
+    "verified_by": "WebSearch 'Beej's Guide to C Programming online': result 'Beej's Guide to C Programming' https://beej.us/guide/bgc/html/",
+    "section": "3.11"
+  },
+  {
+    "url": "https://www.embedded.com/?p=4023801",
+    "title": "Embedded.com: Introduction To The Volatile Keyword In C/C++ (Nigel Jones)",
+    "verified_by": "WebSearch 'embedded.com \"Introduction to the volatile keyword\" Nigel Jones': result 'Introduction To The Volatile Keyword In C/C++' https://www.embedded.com/?p=4023801",
+    "section": "3.11"
+  },
+  {
+    "url": "https://barrgroup.com/coding-standard",
+    "title": "Barr Group: Embedded C Coding Standard (BARR-C:2018)",
+    "verified_by": "WebSearch 'Barr Group Embedded C Coding Standard free download': press releases quote 'BARR-C:2018 is immediately available in a free PDF download and in HTML format at https://barrgroup.com/coding-standard'",
+    "section": "3.11"
+  },
+  {
+    "url": "https://gcc.gnu.org/onlinedocs/gcc-14.2.0/gcc/Common-Type-Attributes.html",
+    "title": "GCC manual: Common Type Attributes (GCC 14.2.0)",
+    "verified_by": "WebSearch '\"gcc.gnu.org/onlinedocs/gcc/Common-Type-Attributes.html\"': result '6.35.1 Common Type Attributes' https://gcc.gnu.org/onlinedocs/gcc-14.2.0/gcc/Common-Type-Attributes.html",
+    "section": "3.11"
+  },
+  {
+    "url": "https://www.youtube.com/watch?v=NcaiHcBvDR4",
+    "title": "Computerphile: Endianness Explained With an Egg",
+    "verified_by": "WebSearch 'Computerphile endianness video Steve Bagley': result 'Endianness Explained With an Egg - Computerphile' https://glasp.co/youtube/NcaiHcBvDR4 (video ID NcaiHcBvDR4, Nov 2018, ~10 min)",
+    "section": "3.11"
+  },
+  {
+    "url": "https://academy.nordicsemi.com/courses/bluetooth-low-energy-fundamentals/",
+    "title": "Nordic DevAcademy: Bluetooth Low Energy Fundamentals (course)",
+    "verified_by": "WebSearch 'Nordic DevAcademy Bluetooth Low Energy Fundamentals course' and '\"academy.nordicsemi.com/courses/bluetooth-low-energy-fundamentals\"': course page (?p=6036) and lesson URLs under .../courses/bluetooth-low-energy-fundamentals/lessons/... returned; free, 6 lessons, 8-10 h",
+    "section": "4.1"
+  },
+  {
+    "url": "https://academy.nordicsemi.com/courses/bluetooth-low-energy-fundamentals/lessons/lesson-2-bluetooth-le-advertising/",
+    "title": "DevAcademy BLE Fundamentals lesson 2: Bluetooth LE Advertising",
+    "verified_by": "WebSearch 'academy.nordicsemi.com ... lesson-2-bluetooth-le-advertising': result 'lesson 2 bluetooth le advertising' at this URL",
+    "section": "4.1"
+  },
+  {
+    "url": "https://academy.nordicsemi.com/courses/bluetooth-low-energy-fundamentals/lessons/lesson-3-bluetooth-le-connections/",
+    "title": "DevAcademy BLE Fundamentals lesson 3: Bluetooth LE Connections",
+    "verified_by": "Same search: result 'lesson 3 bluetooth le connections' at this URL",
+    "section": "4.1"
+  },
+  {
+    "url": "https://bluetooth.com/wp-content/uploads/2022/05/the-bluetooth-le-primer-v1.2.0.pdf",
+    "title": "Bluetooth SIG: The Bluetooth LE Primer v1.2.0 (PDF)",
+    "verified_by": "WebSearch 'Bluetooth SIG \"The Bluetooth Low Energy Primer\" PDF': result 'the bluetooth le primer v1.2.0' at this URL (v1.2.0, updated 15 March 2024)",
+    "section": "4.1, 4.6"
+  },
+  {
+    "url": "https://www.bluetooth.com/bluetooth-resources/the-bluetooth-low-energy-primer/",
+    "title": "Bluetooth SIG: The Bluetooth Low Energy primer (landing page)",
+    "verified_by": "WebSearch (allowed_domains bluetooth.com) 'LE Security Study Guide': result 'The Bluetooth® Low Energy primer' https://www.bluetooth.com/bluetooth-resources/the-bluetooth-low-energy-primer/",
+    "section": "4.1"
+  },
+  {
+    "url": "https://interrupt.memfault.com/blog/bluetooth-low-energy-a-primer",
+    "title": "Memfault Interrupt: Bluetooth Low Energy: A Primer",
+    "verified_by": "WebSearch 'memfault interrupt blog \"ble-throughput-primer\"' (extended): result 'Bluetooth Low Energy: A Primer - Interrupt - Memfault' https://interrupt.memfault.com/blog/bluetooth-low-energy-a-primer (30 Jul 2019, Mohammad Afaneh)",
+    "section": "4.1"
+  },
+  {
+    "url": "https://learn.adafruit.com/introduction-to-bluetooth-low-energy",
+    "title": "Adafruit: Introduction to Bluetooth Low Energy",
+    "verified_by": "WebSearch 'Adafruit learn \"Introduction to Bluetooth Low Energy\" GATT': result '# Introduction to Bluetooth Low Energy' https://learn.adafruit.com/introduction-to-bluetooth-low-energy.md?view=all (base guide URL used)",
+    "section": "4.1"
+  },
+  {
+    "url": "https://academy.nordicsemi.com/courses/bluetooth-low-energy-fundamentals/lessons/lesson-4-bluetooth-le-data-exchange/topic/services-and-characteristics/",
+    "title": "DevAcademy BLE Fundamentals lesson 4 topic: Services and characteristics",
+    "verified_by": "WebSearch 'Novel Bits Bluetooth Low Energy primer GATT services characteristics guide': result 'services and characteristics' at this exact URL",
+    "section": "4.2"
+  },
+  {
+    "url": "https://novelbits.io/bluetooth-gatt-services-characteristics/",
+    "title": "Novel Bits: Bluetooth GATT: How to Design Custom Services & Characteristics [MIDI device use case]",
+    "verified_by": "WebSearch 'novelbits.io bluetooth gatt services characteristics design custom article': result https://novelbits.io/bluetooth-gatt-services-characteristics/ for the MIDI custom-GATT tutorial",
+    "section": "4.2"
+  },
+  {
+    "url": "https://devzone.nordicsemi.com/nordic/short-range-guides/b/bluetooth-low-energy/posts/ble-services-a-beginners-tutorial",
+    "title": "Nordic DevZone: BLE Services, a beginner's tutorial",
+    "verified_by": "WebSearch 'Novel Bits ... GATT services characteristics guide': result 'ble services a beginners tutorial' at this URL (marked unmaintained)",
+    "section": "4.2"
+  },
+  {
+    "url": "https://bluetooth.com/wp-content/uploads/Files/Specification/Assigned_Numbers.html",
+    "title": "Bluetooth SIG: Assigned Numbers (HTML)",
+    "verified_by": "WebSearch 'Bluetooth SIG Assigned Numbers document GATT UUIDs': result 'Assigned Numbers' https://bluetooth.com/wp-content/uploads/Files/Specification/Assigned_Numbers.html",
+    "section": "4.2"
+  },
+  {
+    "url": "https://interrupt.memfault.com/blog/ble-throughput-primer",
+    "title": "Memfault Interrupt: A Practical Guide to BLE Throughput",
+    "verified_by": "WebSearch 'memfault interrupt blog \"ble-throughput-primer\"' (extended): result 'A Practical Guide to BLE Throughput' https://interrupt.memfault.com/blog/ble-throughput-primer (24 Sep 2019, Chris Coleman)",
+    "section": "4.3"
+  },
+  {
+    "url": "https://punchthrough.com/maximizing-ble-throughput-on-ios-and-android/",
+    "title": "Punch Through: Maximizing BLE Throughput on iOS and Android (Part 1)",
+    "verified_by": "WebSearch 'Punch Through \"Maximizing BLE Throughput\" blog Part 1': result 'Maximizing BLE Throughput on iOS and Android' at this URL",
+    "section": "4.3"
+  },
+  {
+    "url": "https://punchthrough.com/maximizing-ble-throughput-part-2-use-larger-att-mtu/",
+    "title": "Punch Through: Maximizing BLE Throughput Part 2: Use Larger ATT MTU",
+    "verified_by": "Same search: result 'Maximizing BLE Throughput Part 2: Use Larger ATT MTU' at this URL",
+    "section": "4.3"
+  },
+  {
+    "url": "https://punchthrough.com/tag/ble-throughput",
+    "title": "Punch Through: BLE throughput series (tag page)",
+    "verified_by": "Same search: result 'ble throughput' https://punchthrough.com/tag/ble-throughput",
+    "section": "4.3"
+  },
+  {
+    "url": "https://devzone.nordicsemi.com/nordic/nordic-blog/b/blog/posts/the-ultimate-guide-to-maximizing-your-ble-and-blue",
+    "title": "Nordic DevZone: The ultimate guide to maximizing your BLE and Bluetooth 5 data throughput",
+    "verified_by": "WebSearch 'Nordic DevZone blog \"ultimate guide to maximizing your BLE and Bluetooth 5 data throughput\"': result with this exact URL and title",
+    "section": "4.3"
+  },
+  {
+    "url": "https://developer.apple.com/accessories/Accessory-Design-Guidelines.pdf",
+    "title": "Apple: Accessory Design Guidelines for Apple Devices (PDF, R26)",
+    "verified_by": "WebSearch 'Apple \"Accessory Design Guidelines for Apple Devices\" PDF': result 'Accessory Design Guidelines' https://developer.apple.com/accessories/Accessory-Design-Guidelines.pdf (Release R26, 2025-06-09)",
+    "section": "4.3"
+  },
+  {
+    "url": "https://docs.silabs.com/bluetooth/3.3/bluetooth-miscellaneous-mobile/selecting-suitable-connection-parameters-for-apple-devices",
+    "title": "Silicon Labs: Selecting Suitable Connection Parameters for Apple Devices",
+    "verified_by": "WebSearch 'Apple Accessory Design Guidelines Bluetooth Low Energy connection interval MTU 185': result 'Selecting Suitable Connection Parameters for Apple Devices' at this URL",
+    "section": "4.3"
+  },
+  {
+    "url": "https://developer.apple.com/forums/thread/773555",
+    "title": "Apple Developer Forums: Request for Suggestions to Improve BLE Throughput on iOS Devices",
+    "verified_by": "Same search: result with this exact URL and title",
+    "section": "4.3"
+  },
+  {
+    "url": "https://github.com/h2zero/NimBLE-Arduino",
+    "title": "NimBLE-Arduino (h2zero) on GitHub",
+    "verified_by": "WebSearch 'h2zero NimBLE-Arduino github documentation': result 'NimBLE Arduino' https://github.com/h2zero/NimBLE-Arduino; README quotes (version 2 released, supported MCUs)",
+    "section": "4.4, 4.8"
+  },
+  {
+    "url": "https://mynewt.apache.org/latest/network/ble_hs/ble_hs.html",
+    "title": "Apache Mynewt: NimBLE Host API reference",
+    "verified_by": "WebSearch 'Apache Mynewt NimBLE documentation host stack': result 'NimBLE Host' https://mynewt.apache.org/latest/network/ble_hs/ble_hs.html",
+    "section": "4.4, 4.8"
+  },
+  {
+    "url": "https://docs.espressif.com/projects/esp-idf/en/latest/esp32s3/api-guides/ble/overview.html",
+    "title": "ESP-IDF: Bluetooth LE Overview (ESP32-S3)",
+    "verified_by": "WebSearch 'ESP-IDF NimBLE-based host APIs documentation esp32s3': result https://docs.espressif.com/projects/esp-idf/en/latest/esp32s3/api-guides/ble/overview.html (ESP-NimBLE / ESP-Bluedroid description)",
+    "section": "4.4, 4.8"
+  },
+  {
+    "url": "https://punchthrough.com/android-ble-operation-queue/",
+    "title": "Punch Through: Building a Reliable Android BLE Operation Queue",
+    "verified_by": "WebSearch 'Punch Through Android BLE operation queue article': result 'Building a Reliable Android BLE Operation Queue' https://punchthrough.com/android-ble-operation-queue/",
+    "section": "4.4"
+  },
+  {
+    "url": "https://eater.net/crc",
+    "title": "Ben Eater: error detection series (checksums, How do CRCs work?, hardware CRC)",
+    "verified_by": "WebSearch 'Ben Eater \"How do CRCs work?\" video': result 'Learn about error detection' https://eater.net/crc listing the CRC video with parity/checksum and hardware-build videos",
+    "section": "4.5"
+  },
+  {
+    "url": "https://community.memfault.com/t/a-practical-guide-to-ble-throughput-interrupt/80",
+    "title": "Memfault community thread: A Practical Guide to BLE Throughput",
+    "verified_by": "WebSearch 'Memfault Interrupt \"A Practical Guide to BLE Throughput\"' and the extended search: result 'A Practical Guide to BLE Throughput | Interrupt' https://community.memfault.com/t/a-practical-guide-to-ble-throughput-interrupt/80 (link layer acknowledged, supervision timeout 100 ms-32 s)",
+    "section": "4.5"
+  },
+  {
+    "url": "https://academy.nordicsemi.com/courses/bluetooth-low-energy-fundamentals/lessons/lesson-3-bluetooth-le-connections/topic/connection-process/",
+    "title": "DevAcademy BLE Fundamentals lesson 3 topic: Connection process",
+    "verified_by": "WebSearch 'academy.nordicsemi.com ... lesson-3-bluetooth-le-connections': result 'connection process' at this exact URL",
+    "section": "4.5"
+  },
+  {
+    "url": "https://academy.nordicsemi.com/courses/bluetooth-low-energy-fundamentals/lessons/lesson-5-bluetooth-le-security-fundamentals/topic/pairing-process/",
+    "title": "DevAcademy BLE Fundamentals lesson 5 topic: Pairing process",
+    "verified_by": "WebSearch 'Nordic DevAcademy Bluetooth Low Energy Fundamentals lesson 5 security pairing bonding': result 'pairing process' at this exact URL",
+    "section": "4.6"
+  },
+  {
+    "url": "https://www.bluetooth.com/bluetooth-resources/le-security-study-guide/",
+    "title": "Bluetooth SIG: The Bluetooth LE Security Study Guide",
+    "verified_by": "WebSearch (allowed_domains bluetooth.com) 'LE Security Study Guide': result 'The Bluetooth® LE Security Study Guide' https://www.bluetooth.com/bluetooth-resources/le-security-study-guide/ (25 Oct 2019, Zephyr-based exercises)",
+    "section": "4.6"
+  },
+  {
+    "url": "https://www.nordicsemi.com/Products/Development-tools/nRF-Connect-for-mobile",
+    "title": "nRF Connect for Mobile (Nordic Semiconductor)",
+    "verified_by": "WebSearch 'nRF Connect for Mobile app Nordic Semiconductor product page': result 'nRF Connect for Mobile Mobile app' https://www.nordicsemi.com/Products/Development-tools/nRF-Connect-for-mobile",
+    "section": "4.7"
+  },
+  {
+    "url": "https://apps.apple.com/app/lightblue/id557428110",
+    "title": "LightBlue (Punch Through) on the App Store",
+    "verified_by": "WebSearch 'LightBlue app Punch Through Bluetooth Low Energy explorer': result 'apps.apple.com' https://apps.apple.com/app/lightblue/id557428110 (central and peripheral modes)",
+    "section": "4.7"
+  },
+  {
+    "url": "https://docs.nordicsemi.com/r/bYkE8evbjCoV6wV0tetlaQ/tkNhkQyalEt_B1SGFLOmNw",
+    "title": "Nordic: nRF Sniffer for Bluetooth LE overview (docs.nordicsemi.com)",
+    "verified_by": "WebSearch 'Nordic nRF Sniffer for Bluetooth LE Wireshark documentation': result 'nRF Sniffer for Bluetooth LE overview' at this URL (Wireshark external capture plugin, follows encrypted connections with LTK/IRK)",
+    "section": "4.7"
+  },
+  {
+    "url": "https://academy.nordicsemi.com/courses/bluetooth-low-energy-fundamentals/lessons/lesson-6-bluetooth-le-sniffer/topic/blefund-lesson-6-exercise-3/",
+    "title": "DevAcademy BLE Fundamentals lesson 6: Bluetooth LE sniffer, exercise 3",
+    "verified_by": "WebSearch 'Nordic DevAcademy ... lesson 5 security pairing bonding': result 'blefund lesson 6 exercise 3' at this exact URL",
+    "section": "4.7"
+  },
+  {
+    "url": "https://bleak.readthedocs.io",
+    "title": "bleak documentation (Read the Docs)",
+    "verified_by": "WebSearch 'bleak python BLE library documentation readthedocs': result https://bleak.readthedocs.io (latest release 3.0.1, GATT client, Tier-1 platforms)",
+    "section": "4.7"
+  },
+  {
+    "url": "https://novelbits.io/bluetooth-le-development-tools",
+    "title": "Novel Bits: Bluetooth LE Development Tools",
+    "verified_by": "WebSearch 'Memfault Interrupt \"A Practical Guide to BLE Throughput\"': result 'Bluetooth LE Development Tools' https://novelbits.io/bluetooth-le-development-tools",
+    "section": "4.7"
+  },
+  {
+    "url": "https://docs.zephyrproject.org/latest/connectivity/bluetooth/api/index.html",
+    "title": "Zephyr Project: Bluetooth API reference (latest)",
+    "verified_by": "WebSearch 'Zephyr docs latest connectivity bluetooth index': result https://docs.zephyrproject.org/latest/connectivity/bluetooth/api/index.html (API groups: Classic Host, LE Audio, LE Host, Mesh, Core Host)",
+    "section": "4.8"
+  },
+  {
+    "url": "https://academy.nordicsemi.com/?p=3700",
+    "title": "Nordic DevAcademy: nRF Connect SDK Fundamentals (course)",
+    "verified_by": "WebSearch 'Nordic DevAcademy \"nRF Connect SDK Fundamentals\" course': result 'nRF Connect SDK Fundamentals' https://academy.nordicsemi.com/?p=3700 (free, 8 lessons, 8-10 h)",
+    "section": "4.8"
+  },
+  {
+    "url": "https://github.com/NordicDeveloperAcademy/bt-fund",
+    "title": "NordicDeveloperAcademy/bt-fund (BLE Fundamentals exercise code)",
+    "verified_by": "WebSearch 'Nordic DevAcademy Bluetooth Low Energy Fundamentals course': result 'bt fund' https://github.com/NordicDeveloperAcademy/bt-fund",
+    "section": "4.8"
+  },
+  {
+    "url": "https://github.com/dotintent/react-native-ble-plx",
+    "title": "react-native-ble-plx (dotintent) on GitHub",
+    "verified_by": "WebSearch 'react-native-ble-plx documentation dotintent': 'Main repo: https://github.com/dotintent/react-native-ble-plx'; wiki covers scanning, MTU negotiation, notifications, Expo config plugin",
+    "section": "4.9"
+  },
+  {
+    "url": "https://docs.expo.dev/develop/development-builds/introduction/",
+    "title": "Expo: Introduction to development builds",
+    "verified_by": "WebSearch 'Expo docs prebuild development builds': result https://docs.expo.dev/develop/development-builds/introduction/ ('your own version of Expo Go ... any native libraries')",
+    "section": "4.9"
+  },
+  {
+    "url": "https://developer.apple.com/documentation/corebluetooth",
+    "title": "Apple Developer: Core Bluetooth framework documentation",
+    "verified_by": "WebSearch 'Apple developer documentation Core Bluetooth framework': result https://developer.apple.com/documentation/corebluetooth.md (framework overview; CBCentralManager / CBPeripheral)",
+    "section": "4.9"
+  },
+  {
+    "url": "https://punchthrough.com/core-bluetooth-guide/",
+    "title": "Punch Through: Apple's iOS Core Bluetooth: The Ultimate Guide",
+    "verified_by": "WebSearch 'Punch Through \"Ultimate Guide\" Core Bluetooth iOS': result 'Apple's iOS Core Bluetooth: The Ultimate Guide' https://punchthrough.com/core-bluetooth-guide/",
+    "section": "4.9"
+  },
+  {
+    "url": "https://developer.android.com/develop/connectivity/bluetooth/ble/ble-overview",
+    "title": "Android Developers: Bluetooth Low Energy overview",
+    "verified_by": "WebSearch 'developer.android.com Bluetooth Low Energy overview guide connect GATT server': result 'Bluetooth Low Energy' https://developer.android.com/develop/connectivity/bluetooth/ble/ble-overview?hl=de (base URL used)",
+    "section": "4.9"
+  },
+  {
+    "url": "https://punchthrough.com/android-ble-guide/",
+    "title": "Punch Through: Android BLE: The Ultimate Guide to Bluetooth Low Energy",
+    "verified_by": "WebSearch 'Punch Through \"Ultimate Guide to Android Bluetooth Low Energy\"': result 'Android BLE: The Ultimate Guide to Bluetooth Low Energy' https://punchthrough.com/android-ble-guide/ (updated 17 Apr 2024)",
+    "section": "4.9"
+  },
+  {
+    "url": "https://punchthrough.com/android-ble-development-tips/",
+    "title": "Punch Through: 4 Tips to Make Android BLE Actually Work",
+    "verified_by": "WebSearch 'Punch Through Android BLE operation queue article': result '4 Tips to Make Android BLE Actually Work' https://punchthrough.com/android-ble-development-tips/",
+    "section": "4.9"
+  }
+]

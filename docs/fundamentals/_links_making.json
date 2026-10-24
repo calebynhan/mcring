@@ -1,0 +1,398 @@
+[
+  {
+    "url": "https://docs.kicad.org/",
+    "title": "KiCad documentation",
+    "verified_by": "UNVERIFIED in this run: KiCad documentation home (KiCad is the layout tool named throughout hardware/electrical/README.md section 4). Root/landing page only, no deep path; included because the repo depends on the tool and a home page is the stablest possible link. Reviewer: please confirm it resolves. Network re-check was impossible in the run that wrote chapters 7-9 (WebSearch per-turn budget exhausted, WebFetch had no DNS, egress proxy answered 403 for every general host).",
+    "section": "07-pcb-design-and-assembly.md 7.1, 7.5"
+  },
+  {
+    "url": "https://interrupt.memfault.com/blog/schematic-review-checklist",
+    "title": "Memfault Interrupt: A Schematic Review Checklist for Firmware Engineers",
+    "verified_by": "Re-used from docs/fundamentals/_links_electronics.json (section 01-electronics-basics.md 1.2), whose entry records: WebSearch (interrupt.memfault.com): 'A Schematic Review Checklist for Firmware Engineers' at this exact URL Network re-check was impossible in the run that wrote chapters 7-9 (WebSearch per-turn budget exhausted, WebFetch had no DNS, egress proxy answered 403 for every general host).",
+    "section": "07-pcb-design-and-assembly.md 7.1, 7.8"
+  },
+  {
+    "url": "https://www.ti.com/lit/snva009",
+    "title": "TI AN-1112 (SNVA009): DSBGA Wafer Level Chip Scale Package",
+    "verified_by": "Re-used from docs/fundamentals/_links_electronics.json (section 01-electronics-basics.md 1.6), whose entry records: WebSearch results: 'ti.com/lit/snva009' (rev. AI, Dec 2019) and e2e-hosted snva009ag.pdf Network re-check was impossible in the run that wrote chapters 7-9 (WebSearch per-turn budget exhausted, WebFetch had no DNS, egress proxy answered 403 for every general host).",
+    "section": "07-pcb-design-and-assembly.md 7.2, 7.5, 7.6"
+  },
+  {
+    "url": "https://jlcpcb.com/blog/ic-package-types-guide",
+    "title": "JLCPCB: IC package types explained",
+    "verified_by": "Re-used from docs/fundamentals/_links_electronics.json (section 01-electronics-basics.md 1.6), whose entry records: WebSearch result with this exact title and URL Network re-check was impossible in the run that wrote chapters 7-9 (WebSearch per-turn budget exhausted, WebFetch had no DNS, egress proxy answered 403 for every general host).",
+    "section": "07-pcb-design-and-assembly.md 7.2"
+  },
+  {
+    "url": "https://www.electronics-notes.com/articles/electronic_components/surface-mount-technology-smd-smt/passive-component-size-codes-overlap-trap.php",
+    "title": "Electronics Notes: SMD passive sizes, imperial vs metric trap",
+    "verified_by": "Re-used from docs/fundamentals/_links_electronics.json (section 01-electronics-basics.md 1.6), whose entry records: WebSearch result with this exact title and URL Network re-check was impossible in the run that wrote chapters 7-9 (WebSearch per-turn budget exhausted, WebFetch had no DNS, egress proxy answered 403 for every general host).",
+    "section": "07-pcb-design-and-assembly.md 7.2"
+  },
+  {
+    "url": "https://www.sparkfun.com/tutorials/223",
+    "title": "SparkFun: How to Read a Datasheet",
+    "verified_by": "Re-used from docs/fundamentals/_links_electronics.json (section 01-electronics-basics.md 1.5), whose entry records: WebSearch result: 'How to Read a Datasheet' https://sparkfun.com/tutorials/223 Network re-check was impossible in the run that wrote chapters 7-9 (WebSearch per-turn budget exhausted, WebFetch had no DNS, egress proxy answered 403 for every general host).",
+    "section": "07-pcb-design-and-assembly.md 7.2"
+  },
+  {
+    "url": "https://www.ti.com/product/TPS22916",
+    "title": "TI TPS22916 product page / datasheet",
+    "verified_by": "Re-used from docs/fundamentals/_links_electronics.json (section 01-electronics-basics.md 1.3), whose entry records: WebSearch result: 'www.ti.com' https://www.ti.com/product/TPS22916 (5.5-V, 2-A, 60-mΩ, 10-nA leakage load switch, Rev. F datasheet) Network re-check was impossible in the run that wrote chapters 7-9 (WebSearch per-turn budget exhausted, WebFetch had no DNS, egress proxy answered 403 for every general host).",
+    "section": "07-pcb-design-and-assembly.md 7.2"
+  },
+  {
+    "url": "https://fedevel.com/blog/what-decoupling-capacitor-value-to-use-and-where-to-place-them-eric-bogatin",
+    "title": "Eric Bogatin on Robert Feranec's channel: decoupling capacitor value and placement",
+    "verified_by": "Re-used from docs/fundamentals/_links_electronics.json (section 01-electronics-basics.md 1.2), whose entry records: WebSearch result: 'What Decoupling Capacitor Value To Use And Where To Place Them | Eric Bogatin' (fedevel.com blog page with the Feb 2023 video and chapter list) Network re-check was impossible in the run that wrote chapters 7-9 (WebSearch per-turn budget exhausted, WebFetch had no DNS, egress proxy answered 403 for every general host).",
+    "section": "07-pcb-design-and-assembly.md 7.3"
+  },
+  {
+    "url": "https://www.eevblog.com/2016/03/11/eevblog-859-bypass-capacitor-tutorial",
+    "title": "EEVblog #859: Bypass Capacitor Tutorial",
+    "verified_by": "Re-used from docs/fundamentals/_links_electronics.json (section 01-electronics-basics.md 1.2), whose entry records: WebSearch result: 'EEVblog #859 – Bypass Capacitor Tutorial' at this exact URL (March 2016, ~33 min) Network re-check was impossible in the run that wrote chapters 7-9 (WebSearch per-turn budget exhausted, WebFetch had no DNS, egress proxy answered 403 for every general host).",
+    "section": "07-pcb-design-and-assembly.md 7.3"
+  },
+  {
+    "url": "https://www.ti.com/product/TPS62840",
+    "title": "TI TPS62840 product page / datasheet",
+    "verified_by": "Re-used from docs/fundamentals/_links_electronics.json (section 01-electronics-basics.md 1.4), whose entry records: WebSearch (ti.com): 'TPS62840 data sheet, product information and support' https://www.ti.com/product/TPS62840; 60 nA IQ, 750 mA Network re-check was impossible in the run that wrote chapters 7-9 (WebSearch per-turn budget exhausted, WebFetch had no DNS, egress proxy answered 403 for every general host).",
+    "section": "07-pcb-design-and-assembly.md 7.3"
+  },
+  {
+    "url": "https://interrupt.memfault.com/blog/smart-ring-development-part-2",
+    "title": "Memfault Interrupt: Smart Ring Development (Part 2) — Hardware Design",
+    "verified_by": "Re-used from docs/fundamentals/_links_electronics.json (section 02-batteries-and-power-budgets.md 2.6), whose entry records: WebSearch (interrupt.memfault.com): 'Smart Ring Development (Part 2) － Hardware Design' at this exact URL (Mikolaj Stawiski, 10 July 2025; BQ25125, DA14531 vs nRF52805, rigid-flex) Network re-check was impossible in the run that wrote chapters 7-9 (WebSearch per-turn budget exhausted, WebFetch had no DNS, egress proxy answered 403 for every general host).",
+    "section": "07-pcb-design-and-assembly.md 7.3"
+  },
+  {
+    "url": "https://www.espressif.com/sites/default/files/documentation/esp32-s3_datasheet_en.pdf",
+    "title": "ESP32-S3 Series Datasheet (Espressif)",
+    "verified_by": "Re-used from docs/fundamentals/_links_electronics.json (section 02-batteries-and-power-budgets.md 2.6), whose entry records: WebSearch (espressif.com): 'ESP32-S3 Series Datasheet Version 2.2' at this exact URL Network re-check was impossible in the run that wrote chapters 7-9 (WebSearch per-turn budget exhausted, WebFetch had no DNS, egress proxy answered 403 for every general host).",
+    "section": "07-pcb-design-and-assembly.md 7.4"
+  },
+  {
+    "url": "https://punchthrough.com/maximizing-ble-throughput-on-ios-and-android/",
+    "title": "Punch Through: Maximizing BLE Throughput on iOS and Android (Part 1)",
+    "verified_by": "Re-used from docs/fundamentals/_links_embedded.json (section 4.3), whose entry records: WebSearch 'Punch Through \"Maximizing BLE Throughput\" blog Part 1': result 'Maximizing BLE Throughput on iOS and Android' at this URL Network re-check was impossible in the run that wrote chapters 7-9 (WebSearch per-turn budget exhausted, WebFetch had no DNS, egress proxy answered 403 for every general host).",
+    "section": "07-pcb-design-and-assembly.md 7.4"
+  },
+  {
+    "url": "https://academy.nordicsemi.com/courses/designing-low-power-bluetooth-le-products/",
+    "title": "Nordic DevAcademy: Designing Low-Power Bluetooth LE Products",
+    "verified_by": "Re-used from docs/fundamentals/_links_electronics.json (section 02-batteries-and-power-budgets.md 2.3), whose entry records: WebSearch (academy.nordicsemi.com): 'Designing Low-Power Bluetooth LE Products - Nordic Developer Academy' at this exact URL (intermediate, 7 lessons, 10-12 h) Network re-check was impossible in the run that wrote chapters 7-9 (WebSearch per-turn budget exhausted, WebFetch had no DNS, egress proxy answered 403 for every general host).",
+    "section": "07-pcb-design-and-assembly.md 7.4"
+  },
+  {
+    "url": "https://jlcpcb.com/",
+    "title": "JLCPCB",
+    "verified_by": "UNVERIFIED in this run: JLCPCB home (fab named in docs/07-build-guide.md section 2.2 and hardware/electrical/README.md section 5). Root/landing page only, no deep path; included because the repo depends on the tool and a home page is the stablest possible link. Reviewer: please confirm it resolves. Network re-check was impossible in the run that wrote chapters 7-9 (WebSearch per-turn budget exhausted, WebFetch had no DNS, egress proxy answered 403 for every general host).",
+    "section": "07-pcb-design-and-assembly.md 7.5"
+  },
+  {
+    "url": "https://www.pcbway.com/",
+    "title": "PCBWay",
+    "verified_by": "UNVERIFIED in this run: PCBWay home (fab named in docs/07-build-guide.md section 2.2 and hardware/electrical/README.md section 5). Root/landing page only, no deep path; included because the repo depends on the tool and a home page is the stablest possible link. Reviewer: please confirm it resolves. Network re-check was impossible in the run that wrote chapters 7-9 (WebSearch per-turn budget exhausted, WebFetch had no DNS, egress proxy answered 403 for every general host).",
+    "section": "07-pcb-design-and-assembly.md 7.5"
+  },
+  {
+    "url": "https://learn.adafruit.com/smt-manufacturing",
+    "title": "Adafruit: SMT Manufacturing",
+    "verified_by": "Re-used from docs/fundamentals/_links_electronics.json (section 01-electronics-basics.md 1.6), whose entry records: WebSearch (learn.adafruit.com): 'Overview' https://learn.adafruit.com/smt-manufacturing?view=all plus sub-pages (solder-paste-syringes, stenciling-machines, smt-wipes) Network re-check was impossible in the run that wrote chapters 7-9 (WebSearch per-turn budget exhausted, WebFetch had no DNS, egress proxy answered 403 for every general host).",
+    "section": "07-pcb-design-and-assembly.md 7.5, 7.6"
+  },
+  {
+    "url": "https://learn.adafruit.com/adafruit-guide-excellent-soldering/surface-mount",
+    "title": "Adafruit Guide to Excellent Soldering: Surface Mount Components",
+    "verified_by": "Re-used from docs/fundamentals/_links_electronics.json (section 01-electronics-basics.md 1.6), whose entry records: WebSearch (learn.adafruit.com): 'Surface Mount Components' at this exact URL Network re-check was impossible in the run that wrote chapters 7-9 (WebSearch per-turn budget exhausted, WebFetch had no DNS, egress proxy answered 403 for every general host).",
+    "section": "07-pcb-design-and-assembly.md 7.6, 7.7, 7.8"
+  },
+  {
+    "url": "https://www.esda.org/esd-overview/esd-fundamentals/part-1-an-introduction-to-esd/",
+    "title": "EOS/ESD Association: Fundamentals Part 1 — An Introduction to ESD",
+    "verified_by": "Re-used from docs/fundamentals/_links_electronics.json (section 01-electronics-basics.md 1.7), whose entry records: WebSearch (esda.org): 'EOS/ESD Fundamentals Part 1' at this exact URL Network re-check was impossible in the run that wrote chapters 7-9 (WebSearch per-turn budget exhausted, WebFetch had no DNS, egress proxy answered 403 for every general host).",
+    "section": "07-pcb-design-and-assembly.md 7.7"
+  },
+  {
+    "url": "https://www.oreilly.com/library/view/making-embedded-systems/9781098151539/",
+    "title": "Making Embedded Systems, 2nd ed. (Elecia White)",
+    "verified_by": "Re-used from docs/fundamentals/_links_electronics.json (section 01-electronics-basics.md 1.5), whose entry records: WebSearch (oreilly.com): '6. Managing the Flow of Activity - Making Embedded Systems, 2nd Edition [Book]' at https://www.oreilly.com/library/view/making-embedded-systems/9781098151539/ch06.html; book root is the parent path Network re-check was impossible in the run that wrote chapters 7-9 (WebSearch per-turn budget exhausted, WebFetch had no DNS, egress proxy answered 403 for every general host).",
+    "section": "07-pcb-design-and-assembly.md 7.8"
+  },
+  {
+    "url": "https://www.nordicsemi.com/Products/Development-hardware/Power-Profiler-Kit-2",
+    "title": "Nordic Power Profiler Kit II",
+    "verified_by": "Re-used from docs/fundamentals/_links_electronics.json (section 02-batteries-and-power-budgets.md 2.4), whose entry records: WebSearch result: 'Power Profiler Kit II' at this exact URL (sub-uA to 1 A, 100 ksps, source mode 0.8-5 V) Network re-check was impossible in the run that wrote chapters 7-9 (WebSearch per-turn budget exhausted, WebFetch had no DNS, egress proxy answered 403 for every general host).",
+    "section": "07-pcb-design-and-assembly.md 7.8"
+  },
+  {
+    "url": "https://eevblog.com/projects/ucurrent",
+    "title": "EEVblog µCurrent GOLD",
+    "verified_by": "Re-used from docs/fundamentals/_links_electronics.json (section 02-batteries-and-power-budgets.md 2.4), whose entry records: WebSearch result: 'µCurrent™ GOLD' https://eevblog.com/projects/ucurrent (burden voltage specs per range) Network re-check was impossible in the run that wrote chapters 7-9 (WebSearch per-turn budget exhausted, WebFetch had no DNS, egress proxy answered 403 for every general host).",
+    "section": "07-pcb-design-and-assembly.md 7.8"
+  },
+  {
+    "url": "https://docs.espressif.com/projects/esp-idf/en/latest/esp32s3/api-guides/jtag-debugging/",
+    "title": "ESP-IDF: JTAG Debugging (ESP32-S3)",
+    "verified_by": "Re-used from docs/fundamentals/_links_embedded.json (section 3.8), whose entry records: WebSearch 'ESP-IDF JTAG debugging esp32s3 built-in USB JTAG OpenOCD': result 'JTAG Debugging' https://docs.espressif.com/projects/esp-idf/en/latest/esp32s3/api-guides/jtag-debugging/; snippet 'openocd -f board/esp32s3-builtin.cfg' Network re-check was impossible in the run that wrote chapters 7-9 (WebSearch per-turn budget exhausted, WebFetch had no DNS, egress proxy answered 403 for every general host).",
+    "section": "07-pcb-design-and-assembly.md 7.8"
+  },
+  {
+    "url": "https://cadquery.readthedocs.io/",
+    "title": "CadQuery documentation",
+    "verified_by": "UNVERIFIED in this run: CadQuery documentation home (cadquery 2.8 is the dependency of hardware/cad/mcring_stage1.py). Root/landing page only, no deep path; included because the repo depends on the tool and a home page is the stablest possible link. Reviewer: please confirm it resolves. Network re-check was impossible in the run that wrote chapters 7-9 (WebSearch per-turn budget exhausted, WebFetch had no DNS, egress proxy answered 403 for every general host).",
+    "section": "08-mechanical-cad-and-3d-printing.md 8.1, 8.2, 8.6"
+  },
+  {
+    "url": "https://github.com/CadQuery/cadquery",
+    "title": "CadQuery on GitHub",
+    "verified_by": "UNVERIFIED in this run: CadQuery GitHub repository (the library imported as `import cadquery as cq` in hardware/cad/mcring_stage1.py). Root/landing page only, no deep path; included because the repo depends on the tool and a home page is the stablest possible link. Reviewer: please confirm it resolves. Network re-check was impossible in the run that wrote chapters 7-9 (WebSearch per-turn budget exhausted, WebFetch had no DNS, egress proxy answered 403 for every general host).",
+    "section": "08-mechanical-cad-and-3d-printing.md 8.1"
+  },
+  {
+    "url": "https://github.com/CadQuery/CQ-editor",
+    "title": "CQ-editor on GitHub",
+    "verified_by": "UNVERIFIED in this run: CQ-editor GitHub repository (the CadQuery project GUI editor). Root/landing page only, no deep path; included because the repo depends on the tool and a home page is the stablest possible link. Reviewer: please confirm it resolves. Network re-check was impossible in the run that wrote chapters 7-9 (WebSearch per-turn budget exhausted, WebFetch had no DNS, egress proxy answered 403 for every general host).",
+    "section": "08-mechanical-cad-and-3d-printing.md 8.2"
+  },
+  {
+    "url": "https://formlabs.com/",
+    "title": "Formlabs",
+    "verified_by": "UNVERIFIED in this run: Formlabs home (SLA printer/resin vendor; the chapter points at its support design-spec and post-processing articles). Root/landing page only, no deep path; included because the repo depends on the tool and a home page is the stablest possible link. Reviewer: please confirm it resolves. Network re-check was impossible in the run that wrote chapters 7-9 (WebSearch per-turn budget exhausted, WebFetch had no DNS, egress proxy answered 403 for every general host).",
+    "section": "08-mechanical-cad-and-3d-printing.md 8.3, 8.4, 8.7"
+  },
+  {
+    "url": "https://www.digikey.com/en/maker/projects/oura-ring-teardown-gen-3-and-2/2c005e01f82d429398e78f49591793cc",
+    "title": "DigiKey Maker: Oura Ring Teardown (Gen 3 and 2)",
+    "verified_by": "Re-used from docs/fundamentals/_links_electronics.json (section 02-batteries-and-power-budgets.md 2.6), whose entry records: WebSearch (digikey.com): 'Oura Ring Teardown (Gen 3 and 2)' at this exact URL; Gen 3 Grepow YE160723G 16 mAh, Gen 2 BQ25120A Network re-check was impossible in the run that wrote chapters 7-9 (WebSearch per-turn budget exhausted, WebFetch had no DNS, egress proxy answered 403 for every general host).",
+    "section": "08-mechanical-cad-and-3d-printing.md 8.6, 8.8"
+  },
+  {
+    "url": "https://www.grepow.com/wearables/smart-ring.html",
+    "title": "Grepow: smart ring batteries (curved cells)",
+    "verified_by": "Re-used from docs/fundamentals/_links_electronics.json (section 02-batteries-and-power-budgets.md 2.6), whose entry records: WebSearch (grepow.com): 'Patented Smart Ring Battery NeoRRow Technology' at this exact URL Network re-check was impossible in the run that wrote chapters 7-9 (WebSearch per-turn budget exhausted, WebFetch had no DNS, egress proxy answered 403 for every general host).",
+    "section": "08-mechanical-cad-and-3d-printing.md 8.8"
+  },
+  {
+    "url": "https://interrupt.memfault.com/blog/smart-ring-development-part-2",
+    "title": "Memfault Interrupt: Smart Ring Development (Part 2) — Hardware Design",
+    "verified_by": "Re-used from docs/fundamentals/_links_electronics.json (section 02-batteries-and-power-budgets.md 2.6), whose entry records: WebSearch (interrupt.memfault.com): 'Smart Ring Development (Part 2) － Hardware Design' at this exact URL (Mikolaj Stawiski, 10 July 2025; BQ25125, DA14531 vs nRF52805, rigid-flex) Network re-check was impossible in the run that wrote chapters 7-9 (WebSearch per-turn budget exhausted, WebFetch had no DNS, egress proxy answered 403 for every general host).",
+    "section": "08-mechanical-cad-and-3d-printing.md 8.8"
+  },
+  {
+    "url": "https://fastapi.tiangolo.com/",
+    "title": "FastAPI documentation",
+    "verified_by": "UNVERIFIED in this run: FastAPI documentation home (backend/app/main.py is a FastAPI app). Root/landing page only, no deep path; included because the repo depends on the tool and a home page is the stablest possible link. Reviewer: please confirm it resolves. Network re-check was impossible in the run that wrote chapters 7-9 (WebSearch per-turn budget exhausted, WebFetch had no DNS, egress proxy answered 403 for every general host).",
+    "section": "09-software-stack.md 9.1, 9.2, 9.9"
+  },
+  {
+    "url": "https://docs.pydantic.dev/",
+    "title": "pydantic documentation",
+    "verified_by": "UNVERIFIED in this run: pydantic documentation home (backend/app/schemas.py and config.py use pydantic / pydantic-settings). Root/landing page only, no deep path; included because the repo depends on the tool and a home page is the stablest possible link. Reviewer: please confirm it resolves. Network re-check was impossible in the run that wrote chapters 7-9 (WebSearch per-turn budget exhausted, WebFetch had no DNS, egress proxy answered 403 for every general host).",
+    "section": "09-software-stack.md 9.1"
+  },
+  {
+    "url": "https://www.uvicorn.org/",
+    "title": "uvicorn",
+    "verified_by": "UNVERIFIED in this run: uvicorn documentation home (backend/README.md runs `uvicorn app.main:app`). Root/landing page only, no deep path; included because the repo depends on the tool and a home page is the stablest possible link. Reviewer: please confirm it resolves. Network re-check was impossible in the run that wrote chapters 7-9 (WebSearch per-turn budget exhausted, WebFetch had no DNS, egress proxy answered 403 for every general host).",
+    "section": "09-software-stack.md 9.1"
+  },
+  {
+    "url": "https://docs.python.org/3/library/asyncio.html",
+    "title": "Python 3 documentation: asyncio",
+    "verified_by": "UNVERIFIED in this run: Python 3 standard library documentation, asyncio module page. Root/landing page only, no deep path; included because the repo depends on the tool and a home page is the stablest possible link. Reviewer: please confirm it resolves. Network re-check was impossible in the run that wrote chapters 7-9 (WebSearch per-turn budget exhausted, WebFetch had no DNS, egress proxy answered 403 for every general host).",
+    "section": "09-software-stack.md 9.1, 9.2"
+  },
+  {
+    "url": "https://platform.claude.com/docs/en/build-with-claude/prompt-caching",
+    "title": "Claude docs: Prompt caching",
+    "verified_by": "Official Claude docs page listed in Anthropic's bundled claude-api skill, shared/live-sources.md (skill cache 2026-10) as 'Prompt Caching' at this path (the skill lists the Markdown variant with a .md suffix; linked here without it). Network re-check was impossible in the run that wrote chapters 7-9 (WebSearch per-turn budget exhausted, WebFetch had no DNS, egress proxy answered 403 for every general host).",
+    "section": "09-software-stack.md 9.3, 9.4"
+  },
+  {
+    "url": "https://platform.claude.com/docs/en/build-with-claude/vision",
+    "title": "Claude docs: Vision",
+    "verified_by": "Official Claude docs page listed in Anthropic's bundled claude-api skill, shared/live-sources.md (skill cache 2026-10) as 'Vision' at this path (the skill lists the Markdown variant with a .md suffix; linked here without it). Network re-check was impossible in the run that wrote chapters 7-9 (WebSearch per-turn budget exhausted, WebFetch had no DNS, egress proxy answered 403 for every general host).",
+    "section": "09-software-stack.md 9.4"
+  },
+  {
+    "url": "https://platform.claude.com/docs/en/build-with-claude/structured-outputs",
+    "title": "Claude docs: Structured outputs",
+    "verified_by": "Official Claude docs page listed in Anthropic's bundled claude-api skill, shared/live-sources.md (skill cache 2026-10) as 'Structured Outputs' at this path (the skill lists the Markdown variant with a .md suffix; linked here without it). Network re-check was impossible in the run that wrote chapters 7-9 (WebSearch per-turn budget exhausted, WebFetch had no DNS, egress proxy answered 403 for every general host).",
+    "section": "09-software-stack.md 9.4"
+  },
+  {
+    "url": "https://platform.claude.com/docs/en/build-with-claude/effort",
+    "title": "Claude docs: Effort",
+    "verified_by": "Official Claude docs page listed in Anthropic's bundled claude-api skill, shared/live-sources.md (skill cache 2026-10) as 'Effort Parameter' at this path (the skill lists the Markdown variant with a .md suffix; linked here without it). Network re-check was impossible in the run that wrote chapters 7-9 (WebSearch per-turn budget exhausted, WebFetch had no DNS, egress proxy answered 403 for every general host).",
+    "section": "09-software-stack.md 9.4"
+  },
+  {
+    "url": "https://platform.claude.com/docs/en/build-with-claude/adaptive-thinking",
+    "title": "Adaptive thinking",
+    "verified_by": "Official Claude docs page listed in Anthropic's bundled claude-api skill, shared/live-sources.md (skill cache 2026-10) as 'Adaptive Thinking' at this path (the skill lists the Markdown variant with a .md suffix; linked here without it). Network re-check was impossible in the run that wrote chapters 7-9 (WebSearch per-turn budget exhausted, WebFetch had no DNS, egress proxy answered 403 for every general host).",
+    "section": "09-software-stack.md 9.4"
+  },
+  {
+    "url": "https://platform.claude.com/docs/en/build-with-claude/refusals-and-fallback",
+    "title": "Claude docs: Refusals and fallback",
+    "verified_by": "Official Claude docs page linked from Anthropic's bundled claude-api skill, python/claude-api/README.md, section 'Refusal Fallbacks' (anchor #how-refusals-are-billed), skill cache 2026-10. Network re-check was impossible in the run that wrote chapters 7-9 (WebSearch per-turn budget exhausted, WebFetch had no DNS, egress proxy answered 403 for every general host).",
+    "section": "09-software-stack.md 9.4"
+  },
+  {
+    "url": "https://platform.claude.com/docs/en/api/errors",
+    "title": "Claude docs: Errors",
+    "verified_by": "Official Claude docs page listed in Anthropic's bundled claude-api skill, shared/live-sources.md (skill cache 2026-10) as 'Errors' at this path (the skill lists the Markdown variant with a .md suffix; linked here without it). Network re-check was impossible in the run that wrote chapters 7-9 (WebSearch per-turn budget exhausted, WebFetch had no DNS, egress proxy answered 403 for every general host).",
+    "section": "09-software-stack.md 9.4"
+  },
+  {
+    "url": "https://platform.claude.com/docs/en/about-claude/pricing",
+    "title": "Pricing",
+    "verified_by": "Official Claude docs page listed in Anthropic's bundled claude-api skill, shared/live-sources.md (skill cache 2026-10) as 'Pricing' at this path (the skill lists the Markdown variant with a .md suffix; linked here without it). Network re-check was impossible in the run that wrote chapters 7-9 (WebSearch per-turn budget exhausted, WebFetch had no DNS, egress proxy answered 403 for every general host).",
+    "section": "09-software-stack.md 9.4"
+  },
+  {
+    "url": "https://github.com/anthropics/anthropic-sdk-python",
+    "title": "Anthropic Python SDK on GitHub",
+    "verified_by": "Repository URL listed in Anthropic's bundled claude-api skill, shared/live-sources.md, 'Claude API SDK Repositories' table (skill cache 2026-10). Network re-check was impossible in the run that wrote chapters 7-9 (WebSearch per-turn budget exhausted, WebFetch had no DNS, egress proxy answered 403 for every general host).",
+    "section": "09-software-stack.md 9.4"
+  },
+  {
+    "url": "https://platform.claude.com/docs/en/build-with-claude/token-counting",
+    "title": "Claude docs: Token counting",
+    "verified_by": "Official Claude docs page listed in Anthropic's bundled claude-api skill, shared/live-sources.md (skill cache 2026-10) as 'Token Counting' at this path (the skill lists the Markdown variant with a .md suffix; linked here without it). Network re-check was impossible in the run that wrote chapters 7-9 (WebSearch per-turn budget exhausted, WebFetch had no DNS, egress proxy answered 403 for every general host).",
+    "section": "09-software-stack.md 9.4"
+  },
+  {
+    "url": "https://xiph.org/video/vid2.shtml",
+    "title": "Xiph.org: Digital Show & Tell (Monty Montgomery)",
+    "verified_by": "Re-used from docs/fundamentals/_links_embedded.json (section 3.10), whose entry records: WebSearch 'Xiph.org Monty \"Digital Show and Tell\" video': result 'xiph.org' https://xiph.org/video/vid2.shtml plus press page and wiki.xiph.org/Videos/Digital_Show_and_Tell Network re-check was impossible in the run that wrote chapters 7-9 (WebSearch per-turn budget exhausted, WebFetch had no DNS, egress proxy answered 403 for every general host).",
+    "section": "09-software-stack.md 9.5"
+  },
+  {
+    "url": "https://wiki.multimedia.cx/index.php/IMA_ADPCM",
+    "title": "MultimediaWiki: IMA ADPCM",
+    "verified_by": "Re-used from docs/fundamentals/_links_embedded.json (section 3.10), whose entry records: WebSearch 'MultimediaWiki IMA ADPCM step table index table': result 'IMA ADPCM' https://wiki.multimedia.cx/index.php/IMA_ADPCM; snippet 'saturate the computed step index between 0 and 88' Network re-check was impossible in the run that wrote chapters 7-9 (WebSearch per-turn budget exhausted, WebFetch had no DNS, egress proxy answered 403 for every general host).",
+    "section": "09-software-stack.md 9.5"
+  },
+  {
+    "url": "https://platform.openai.com/docs",
+    "title": "OpenAI API documentation",
+    "verified_by": "UNVERIFIED in this run: OpenAI API documentation home (backend/app/stt.py and tts.py call the openai package). Root/landing page only, no deep path; included because the repo depends on the tool and a home page is the stablest possible link. Reviewer: please confirm it resolves. Network re-check was impossible in the run that wrote chapters 7-9 (WebSearch per-turn budget exhausted, WebFetch had no DNS, egress proxy answered 403 for every general host).",
+    "section": "09-software-stack.md 9.5"
+  },
+  {
+    "url": "https://github.com/SYSTRAN/faster-whisper",
+    "title": "faster-whisper on GitHub (SYSTRAN)",
+    "verified_by": "UNVERIFIED in this run: faster-whisper GitHub repository (optional dependency named in backend/README.md and backend/app/stt.py). Root/landing page only, no deep path; included because the repo depends on the tool and a home page is the stablest possible link. Reviewer: please confirm it resolves. Network re-check was impossible in the run that wrote chapters 7-9 (WebSearch per-turn budget exhausted, WebFetch had no DNS, egress proxy answered 403 for every general host).",
+    "section": "09-software-stack.md 9.5"
+  },
+  {
+    "url": "https://react.dev/",
+    "title": "React documentation",
+    "verified_by": "UNVERIFIED in this run: React documentation home (app/ uses react 18.3.1). Root/landing page only, no deep path; included because the repo depends on the tool and a home page is the stablest possible link. Reviewer: please confirm it resolves. Network re-check was impossible in the run that wrote chapters 7-9 (WebSearch per-turn budget exhausted, WebFetch had no DNS, egress proxy answered 403 for every general host).",
+    "section": "09-software-stack.md 9.6"
+  },
+  {
+    "url": "https://reactnative.dev/",
+    "title": "React Native documentation",
+    "verified_by": "UNVERIFIED in this run: React Native documentation home (app/ uses react-native 0.76.9). Root/landing page only, no deep path; included because the repo depends on the tool and a home page is the stablest possible link. Reviewer: please confirm it resolves. Network re-check was impossible in the run that wrote chapters 7-9 (WebSearch per-turn budget exhausted, WebFetch had no DNS, egress proxy answered 403 for every general host).",
+    "section": "09-software-stack.md 9.6"
+  },
+  {
+    "url": "https://docs.expo.dev/",
+    "title": "Expo documentation",
+    "verified_by": "UNVERIFIED in this run: Expo documentation home (app/ is an Expo SDK 52 project, app/package.json). Root/landing page only, no deep path; included because the repo depends on the tool and a home page is the stablest possible link. Reviewer: please confirm it resolves. Network re-check was impossible in the run that wrote chapters 7-9 (WebSearch per-turn budget exhausted, WebFetch had no DNS, egress proxy answered 403 for every general host).",
+    "section": "09-software-stack.md 9.6, 9.7"
+  },
+  {
+    "url": "https://docs.expo.dev/develop/development-builds/introduction/",
+    "title": "Expo: Introduction to development builds",
+    "verified_by": "Re-used from docs/fundamentals/_links_embedded.json (section 4.9), whose entry records: WebSearch 'Expo docs prebuild development builds': result https://docs.expo.dev/develop/development-builds/introduction/ ('your own version of Expo Go ... any native libraries') Network re-check was impossible in the run that wrote chapters 7-9 (WebSearch per-turn budget exhausted, WebFetch had no DNS, egress proxy answered 403 for every general host).",
+    "section": "09-software-stack.md 9.6"
+  },
+  {
+    "url": "https://github.com/dotintent/react-native-ble-plx",
+    "title": "react-native-ble-plx on GitHub",
+    "verified_by": "Re-used from docs/fundamentals/_links_embedded.json (section 4.9), whose entry records: WebSearch 'react-native-ble-plx documentation dotintent': 'Main repo: https://github.com/dotintent/react-native-ble-plx'; wiki covers scanning, MTU negotiation, notifications, Expo config plugin Network re-check was impossible in the run that wrote chapters 7-9 (WebSearch per-turn budget exhausted, WebFetch had no DNS, egress proxy answered 403 for every general host).",
+    "section": "09-software-stack.md 9.6"
+  },
+  {
+    "url": "https://developer.apple.com/documentation/corebluetooth",
+    "title": "Apple Developer: Core Bluetooth",
+    "verified_by": "Re-used from docs/fundamentals/_links_embedded.json (section 4.9), whose entry records: WebSearch 'Apple developer documentation Core Bluetooth framework': result https://developer.apple.com/documentation/corebluetooth.md (framework overview; CBCentralManager / CBPeripheral) Network re-check was impossible in the run that wrote chapters 7-9 (WebSearch per-turn budget exhausted, WebFetch had no DNS, egress proxy answered 403 for every general host).",
+    "section": "09-software-stack.md 9.7"
+  },
+  {
+    "url": "https://punchthrough.com/core-bluetooth-guide/",
+    "title": "Punch Through: Apple's iOS Core Bluetooth — The Ultimate Guide",
+    "verified_by": "Re-used from docs/fundamentals/_links_embedded.json (section 4.9), whose entry records: WebSearch 'Punch Through \"Ultimate Guide\" Core Bluetooth iOS': result 'Apple's iOS Core Bluetooth: The Ultimate Guide' https://punchthrough.com/core-bluetooth-guide/ Network re-check was impossible in the run that wrote chapters 7-9 (WebSearch per-turn budget exhausted, WebFetch had no DNS, egress proxy answered 403 for every general host).",
+    "section": "09-software-stack.md 9.7"
+  },
+  {
+    "url": "https://developer.android.com/develop/connectivity/bluetooth/ble/ble-overview",
+    "title": "Android Developers: Bluetooth Low Energy overview",
+    "verified_by": "Re-used from docs/fundamentals/_links_embedded.json (section 4.9), whose entry records: WebSearch 'developer.android.com Bluetooth Low Energy overview guide connect GATT server': result 'Bluetooth Low Energy' https://developer.android.com/develop/connectivity/bluetooth/ble/ble-overview?hl=de (base URL used) Network re-check was impossible in the run that wrote chapters 7-9 (WebSearch per-turn budget exhausted, WebFetch had no DNS, egress proxy answered 403 for every general host).",
+    "section": "09-software-stack.md 9.7"
+  },
+  {
+    "url": "https://punchthrough.com/android-ble-guide/",
+    "title": "Punch Through: Android BLE — The Ultimate Guide",
+    "verified_by": "Re-used from docs/fundamentals/_links_embedded.json (section 4.9), whose entry records: WebSearch 'Punch Through \"Ultimate Guide to Android Bluetooth Low Energy\"': result 'Android BLE: The Ultimate Guide to Bluetooth Low Energy' https://punchthrough.com/android-ble-guide/ (updated 17 Apr 2024) Network re-check was impossible in the run that wrote chapters 7-9 (WebSearch per-turn budget exhausted, WebFetch had no DNS, egress proxy answered 403 for every general host).",
+    "section": "09-software-stack.md 9.7"
+  },
+  {
+    "url": "https://www.typescriptlang.org/docs/",
+    "title": "TypeScript documentation",
+    "verified_by": "UNVERIFIED in this run: TypeScript documentation home (app/src is TypeScript, app/tsconfig.json). Root/landing page only, no deep path; included because the repo depends on the tool and a home page is the stablest possible link. Reviewer: please confirm it resolves. Network re-check was impossible in the run that wrote chapters 7-9 (WebSearch per-turn budget exhausted, WebFetch had no DNS, egress proxy answered 403 for every general host).",
+    "section": "09-software-stack.md 9.8"
+  },
+  {
+    "url": "https://developer.mozilla.org/en-US/docs/Web/JavaScript",
+    "title": "MDN Web Docs: JavaScript",
+    "verified_by": "UNVERIFIED in this run: MDN Web Docs JavaScript landing page. Root/landing page only, no deep path; included because the repo depends on the tool and a home page is the stablest possible link. Reviewer: please confirm it resolves. Network re-check was impossible in the run that wrote chapters 7-9 (WebSearch per-turn budget exhausted, WebFetch had no DNS, egress proxy answered 403 for every general host).",
+    "section": "09-software-stack.md 9.8"
+  },
+  {
+    "url": "https://www.youtube.com/watch?v=NcaiHcBvDR4",
+    "title": "Computerphile: Endianness Explained With an Egg",
+    "verified_by": "Re-used from docs/fundamentals/_links_embedded.json (section 3.11), whose entry records: WebSearch 'Computerphile endianness video Steve Bagley': result 'Endianness Explained With an Egg - Computerphile' https://glasp.co/youtube/NcaiHcBvDR4 (video ID NcaiHcBvDR4, Nov 2018, ~10 min) Network re-check was impossible in the run that wrote chapters 7-9 (WebSearch per-turn budget exhausted, WebFetch had no DNS, egress proxy answered 403 for every general host).",
+    "section": "09-software-stack.md 9.8"
+  },
+  {
+    "url": "https://docs.pytest.org/",
+    "title": "pytest documentation",
+    "verified_by": "UNVERIFIED in this run: pytest documentation home (backend/, python/mcring_core and tools/ring-cli test with pytest). Root/landing page only, no deep path; included because the repo depends on the tool and a home page is the stablest possible link. Reviewer: please confirm it resolves. Network re-check was impossible in the run that wrote chapters 7-9 (WebSearch per-turn budget exhausted, WebFetch had no DNS, egress proxy answered 403 for every general host).",
+    "section": "09-software-stack.md 9.9"
+  },
+  {
+    "url": "https://jestjs.io/",
+    "title": "Jest documentation",
+    "verified_by": "UNVERIFIED in this run: Jest documentation home (app/package.json runs jest with ts-jest). Root/landing page only, no deep path; included because the repo depends on the tool and a home page is the stablest possible link. Reviewer: please confirm it resolves. Network re-check was impossible in the run that wrote chapters 7-9 (WebSearch per-turn budget exhausted, WebFetch had no DNS, egress proxy answered 403 for every general host).",
+    "section": "09-software-stack.md 9.9"
+  },
+  {
+    "url": "https://docs.platformio.org/en/latest/advanced/unit-testing/frameworks/unity.html",
+    "title": "PlatformIO: Unity test framework",
+    "verified_by": "Re-used from docs/fundamentals/_links_embedded.json (section 3.7), whose entry records: WebSearch 'PlatformIO unit testing documentation Unity test framework native platform': result https://docs.platformio.org/en/latest/advanced/unit-testing/frameworks/unity.html Network re-check was impossible in the run that wrote chapters 7-9 (WebSearch per-turn budget exhausted, WebFetch had no DNS, egress proxy answered 403 for every general host).",
+    "section": "09-software-stack.md 9.9"
+  },
+  {
+    "url": "https://www.digikey.com/en/maker/tutorials/2022/increase-the-quality-of-your-embedded-projects-using-platformio-unit-tests",
+    "title": "Digi-Key: Increase the quality of your embedded projects using PlatformIO unit tests",
+    "verified_by": "Re-used from docs/fundamentals/_links_embedded.json (section 3.7), whose entry records: Same search: result 'Maker.io main logo' https://www.digikey.com/en/maker/tutorials/2022/increase-the-quality-of-your-embedded-projects-using-platformio-unit-tests Network re-check was impossible in the run that wrote chapters 7-9 (WebSearch per-turn budget exhausted, WebFetch had no DNS, egress proxy answered 403 for every general host).",
+    "section": "09-software-stack.md 9.9"
+  },
+  {
+    "url": "https://github.com/ThrowTheSwitch/Unity",
+    "title": "Unity test framework on GitHub (ThrowTheSwitch)",
+    "verified_by": "UNVERIFIED in this run: Unity C test framework GitHub repository (firmware/ring-esp32s3/test/test_native/test_main.cpp includes unity.h via PlatformIO). Root/landing page only, no deep path; included because the repo depends on the tool and a home page is the stablest possible link. Reviewer: please confirm it resolves. Network re-check was impossible in the run that wrote chapters 7-9 (WebSearch per-turn budget exhausted, WebFetch had no DNS, egress proxy answered 403 for every general host).",
+    "section": "09-software-stack.md 9.9"
+  },
+  {
+    "url": "https://eater.net/crc",
+    "title": "Ben Eater: error detection series (checksums, CRCs)",
+    "verified_by": "Re-used from docs/fundamentals/_links_embedded.json (section 4.5), whose entry records: WebSearch 'Ben Eater \"How do CRCs work?\" video': result 'Learn about error detection' https://eater.net/crc listing the CRC video with parity/checksum and hardware-build videos Network re-check was impossible in the run that wrote chapters 7-9 (WebSearch per-turn budget exhausted, WebFetch had no DNS, egress proxy answered 403 for every general host).",
+    "section": "09-software-stack.md 9.9"
+  }
+]
