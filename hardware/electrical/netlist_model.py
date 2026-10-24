@@ -403,3 +403,32 @@ def _pkg(footprint: str) -> str:
 
 def _natkey(s: str):
     return [int(t) if t.isdigit() else t for t in re.split(r"(\d+)", s)]
+
+
+def _selftest() -> None:
+    """`python3 netlist_model.py` — builds a deliberately faulty netlist and checks every ERC kind fires."""
+    nl = Netlist("selftest")
+    nl.add(Part("U1", "IC", "X:Y", pins={"1": "VDD", "2": "GND", "3": "OUT", "4": "NC"},
+                power_pins={"1", "2"}, nc_pins={"4"}, is_ic=True))
+    nl.add(Part("R1", "10k", "X:R", pins={"1": "1", "2": "2"}))
+    nl.add(Part("C1", "100n", "X:C", pins={"1": "1", "2": "2"}))
+    nl.connect("3V3", "U1", "VDD")          # power net, no capacitor on it   -> no-decoupling
+    nl.connect("SIGNAL_X", "U1", "GND")     # power pin on a signal net        -> power-pin
+    nl.connect("SIGNAL_X", "R1", "1")
+    nl.connect("OUT", "U1", "3")            # single node                      -> single-node
+    nl.connect("GND", "C1", "2")
+    nl.connect("GND", "U1", "4")            # NC pin connected                 -> nc-connected
+    # R1.2 and C1.1 left open                                                  -> unconnected
+    kinds = {w.kind for w in nl.erc()}
+    expected = {"no-decoupling", "power-pin", "single-node", "nc-connected", "unconnected"}
+    assert kinds == expected, f"ERC self-test: got {kinds}, expected {expected}"
+    try:
+        nl.connect("OTHER", "U1", "3")
+        raise AssertionError("double connection not refused")
+    except ValueError:
+        pass
+    print(f"netlist_model self-test OK: {len(nl.erc())} warnings of kinds {sorted(kinds)}")
+
+
+if __name__ == "__main__":
+    _selftest()

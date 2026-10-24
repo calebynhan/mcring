@@ -137,7 +137,7 @@ def build() -> Netlist:
                 pins={"1": "1", "2": "2"}, description="optional IO0 boot button (top-actuated), DNP",
                 dnp=True, sheet="MCU"))
 
-    for p in u1_gnd:
+    for p in sorted(u1_gnd, key=int):          # sorted: keeps the export byte-stable between runs
         nl.connect("GND", "U1", p)
     nl.connect("3V3", "U1", "3")
     nl.connect_many("3V3", ("C4", "1"), ("C5", "1"), ("R1", "1"), ("R2", "1"), ("R3", "1"), ("R4", "1"), ("TP6", "1"))

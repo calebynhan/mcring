@@ -81,7 +81,10 @@
   #define CAM_PIN_VSYNC  38
   #define CAM_PIN_HREF   47
   #define CAM_PIN_PCLK   13
-  #define PIN_CAM_PWR    19    // load switch (TPS22916) EN for the camera + its 2.8 V LDO
+  #define PIN_CAM_PWR    21    // TPS22916 ON for the camera rail (CAM_3V3 -> 2.8 V AVDD + 1.2 V DVDD LDOs).
+                               // IO21: RTC GPIO, no boot-time activity, hold-capable in deep sleep; 100k
+                               // pull-down on the board keeps the camera off while the pin floats.
+                               // (was IO19 = native USB D-; IO19/IO20 are now USB test pads, see hardware/electrical)
 
   #define PIN_PDM_CLK    42
   #define PIN_PDM_DATA   41
@@ -97,7 +100,12 @@
   #define PIN_AUX         9
   #define PIN_LED        -1
   #define LED_ACTIVE_LOW  0
-  #define PIN_RGB        20    // XL-1010RGBC / WS2812B-2020 data
+  #define PIN_RGB        43    // WS2812B-2020 data via 100 R. IO43 = UART0 TXD0, free because logging is USB-CDC;
+                               // ROM boot output on TXD0 is harmless since the LED rail is power-gated.
+                               // (was IO20 = native USB D+)
+                               // HW NOTE: the LED supply is gated by a TPS22916 whose ON pin is IO44 (RXD0, 4.7k
+                               // pull-down, net LED_PWR_EN). Firmware must drive IO44 HIGH before neopixelWrite()
+                               // and LOW before sleep — a PIN_RGB_PWR define is still to be added (hardware/electrical/README.md).
 
 #else
   #error "Define a board: -DBOARD_XIAO_ESP32S3_SENSE or -DBOARD_MCRING_V1"
