@@ -1,6 +1,6 @@
 # mcring v1 (stage 1) — ERC
 
-Checked 92 parts / 313 pins / 65 nets / 299 nodes.
+Checked 96 parts / 323 pins / 65 nets / 309 nodes.
 
 * 1 warning(s) total, 0 unexplained, 1 explained.
 

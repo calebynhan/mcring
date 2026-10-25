@@ -37,19 +37,19 @@ CELL_GAP_X = 36
 MARGIN = 28
 TITLE_H = 66
 
-SHEETS = [("Power", "Power: cell, charger, pads, buck, battery sense"),
+SHEETS = [("Power", "Power: cell + charging pigtails (J1/J3 headers), charger, buck, battery sense"),
           ("MCU", "MCU: ESP32-S3-MINI-1U, straps, USB test pads, I2C pull-ups"),
           ("Camera", "Camera: OV2640 24-pin FPC, load switch, 2.8 V / 1.2 V LDOs, SCCB"),
           ("Sensors", "Sensors + Haptics: DRV2605L + LRA, LIS2DW12, T3902 mic, button, touch"),
-          ("Outputs", "Outputs + Connectors: WS2812 (gated), piezo, aux MOSFET, MAX98357A speaker amp (gated, optional)")]
+          ("Outputs", "Outputs + Connectors: WS2812 (gated), piezo pads, aux pads, MAX98357A speaker amp (gated, optional) + J5 speaker header")]
 
 SHEET_NOTES = {
     "Power": [f"BQ25100: R_ISET {R_ISET} -> ~25 mA (K_ISET 230 A*ohm, VERIFY); R_PRETERM {R_PRETERM} -> 1 mA (K 11.5, VERIFY).",
               f"BQ25100 has PRE_TERM, no TS pin (TS variant = BQ25101). nCHG -> IO{GPIO['nCHG']} (PIN_CHG, active low) + TP7, 100k pull-up.",
               f"TPS62840: R12 {R_VSET} from VSET to GND = 3.3 V code (SLVSE12 Table 1); MODE/STOP low; EN tied to VBAT.",
-              "Charging input: CP1/CP2 band contacts (off-board, dashed) -> PAD1/PAD2 wire pads -> D2 bidirectional TVS -> D3 series",
-              "Schottky -> CHG_IN. D3 blocks a ring seated the wrong way round in the 2-pin cradle. PAD1 doubles as the bring-up VBUS entry.",
-              "Cell BT1 (off-board) on the J1 wire pads. Battery divider 1 M / 1 M + 100 nF: 2.1 uA permanent drain (was 21 uA).",
+              "Charging input: CP1/CP2 band contacts (off-board, dashed) -> W2 pigtail -> J3 Pico-EZmate header -> D2 bidirectional TVS -> D3 series",
+              "Schottky -> CHG_IN. D3 blocks a ring seated the wrong way round in the 2-pin cradle. J3 pin 1 doubles as the bring-up VBUS entry.",
+              "Cell BT1 (off-board) -> W1 pigtail -> J1 Pico-EZmate header (top side; no solder). Battery divider 1 M / 1 M + 100 nF: 2.1 uA.",
               "100 uF 1206 bulk on 3V3 near the module absorbs the 300-370 mA capture/radio peaks."],
     "MCU": [f"IO{GPIO['CAM_PWR_EN']} CAM_PWR_EN (was IO19), IO{GPIO['RGB_DATA']} RGB data (was IO20); IO19/IO20 = native USB test pads.",
             f"IO{GPIO['LED_PWR_EN']} LED_PWR_EN (PIN_RGB_PWR) with 4.7k pull-down: WS2812 rail off at reset and in deep sleep (was IO44/RXD0).",
@@ -60,17 +60,17 @@ SHEET_NOTES = {
             "I2C 4.7k pull-ups on SDA/SCL (DRV2605L 0x5A, LIS2DW12 0x18). EN: 10k + 1 uF. IO0: 10k + pad + DNP button.",
             "ANT1 (off-board): 2.4 GHz flex antenna on the module's u.FL receptacle (not a pad) — see README §5."],
     "Camera": ["FPC pin order = ESP32-CAM / Arducam M0031 OV2640 (pin 1 NC ... 24 Y0) — VERIFY on the purchased head.",
-               "FPC1 is a BOTTOM-contact back-flip connector (F32R-1A7H1-11024; alt Hirose FH12-24S-0.5SH, confirm contact side).",
+               "FPC1 = Hirose FH12-24S-0.5SH(55): BOTTOM contact, flip-lock ZIF, 2.0 mm, LCSC C202112 (alt Amphenol F32R-1A7H1-11024 slider ZIF).",
                "CAM_3V3 (DOVDD) switched by U2 from IO21; AVDD 2.8 V (U3) and DVDD 1.2 V (U4, DNP if self-regulated) hang off it.",
                "SCCB pull-ups and RESET RC go to the switched rail so the unpowered sensor is never back-fed. PWDN tied low.",
                "Y0/Y1 unused (8-bit bus Y2..Y9 = D0..D7). XCLK 20 MHz from IO10 (LEDC)."],
     "Sensors": ["DRV2605L: IN/TRIG to GND (I2C RTP mode), EN tied to 3V3 (shutdown via EN would block I2C; idle = register STANDBY),",
-                "REG 1 uF. LRA M1 on OUT+/OUT-: INEED LRA0825BC-0167F, 240 Hz, 1.25 Vrms max.",
+                "REG 1 uF. OUT+/OUT- -> J4 Pico-EZmate header -> W3 pigtail -> LRA M1 (off-board): INEED LRA0825BC-0167F, 240 Hz, 1.25 Vrms max.",
                 "LIS2DW12: SA0 = GND (0x18), CS = VDD_IO (I2C), INT1 -> IO7 (RTC wake), INT2 NC.",
                 "T3902: SELECT = GND, CLK IO42, DATA IO41 (I2S0 PDM RX). Button to GND with 100 nF; touch pad via 1k."],
     "Outputs": [f"WS2812B-2020 powered from 3V3 through U9 (TPS22916, ON = IO{GPIO['LED_PWR_EN']}): ~0.6-1 mA idle otherwise.",
                 "Data from IO43 through 1 kOhm (limits the boot-chatter back-feed while VLED is off); 100 nF + 1 uF at the LED.",
-                "Piezo: IO4 -> 100 Ohm -> BZ1 wire pads; the 9x9 element PZ1 is off-board and optional (DNP until the enclosure has a pocket).",
+                "Piezo: IO4 -> 100 Ohm -> BZ1 bare pads; the 9x9 element PZ1 is off-board and optional (DNP until the enclosure has a pocket).",
                 "Q1 AO3400 low-side switch from IO9 (100k pull-down): aux pads = VBAT + open drain.",
                 f"OPTIONAL speaker (fit U10/U11/C25/C26/R20-R24/LS1 together): 3V3 -> U11 TPS22916 (ON = IO{GPIO['AMP_PWR_EN']} AMP_PWR_EN, 100k "
                 "pull-down) -> VAMP -> U10 MAX98357A VDD (10 uF + 100 nF); the amp draws nothing while U11 is open.",
@@ -80,7 +80,7 @@ SHEET_NOTES = {
                 f"IO35-37 low while AMP_PWR_EN is low (a pin left high is a mA-class drain, not damage). GAIN_SLOT -> R21 {R_GAIN} -> VAMP = 3 dB "
                 "(0 dBFS = 1.4 Vrms = 0.25 W into 8 Ohm, inside the speaker's 300 mW rating); R21 0R = 6 dB (0.5 W = speaker max, bench option),",
                 "DNP = 9 dB (clips at 3.3 V). TQFN pin table, SD/gain thresholds and the digital-input abs-max rating VERIFY (README §6 17-19).",
-                "OUTP/OUTN -> SPK1 wire pads (0.3 mm pair) -> LS1 PUI AS01008MR-2-R 10 mm 8 Ohm (off-board, enclosure speaker pocket)."],
+                "OUTP/OUTN (0.3 mm pair) -> J5 Pico-EZmate header -> W4 pigtail -> LS1 PUI AS01008MR-2-R 10 mm 8 Ohm (off-board, enclosure speaker pocket)."],
 }
 
 POWER_COLORS = {"GND": "#1b7f3a"}

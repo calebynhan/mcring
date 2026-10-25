@@ -4,7 +4,10 @@ Netlist-level design of the ring board (ESP32-S3-MINI-1U-N4R2, OV2640 24-pin FPC
 LRA, LIS2DW12, WS2812B-2020, Omron B3U-3000P, TDK T3902, BQ25100 + TPS62840, 301012 30 mAh cell, u.FL
 flex antenna, and the **optional** voice-first speaker: MAX98357A I²S amp behind a third TPS22916 + a
 10 mm 8 Ω PUI speaker). KiCad was not available where this was written, so the schematic is a small Python
-model that exports what pcbnew needs plus human-readable sheets.
+model that exports what pcbnew needs plus human-readable sheets. The board is **designed for assembly**: it is
+ordered populated (`docs/10-ordering-assembled-boards.md`) and every off-board part — cell, charging-pad pigtail,
+LRA, speaker — plugs into a 2-pin Molex Pico-EZmate header (J1/J3/J4/J5, top side); the owner never solders
+(item 21).
 
 | File | What |
 |---|---|
@@ -12,7 +15,7 @@ model that exports what pcbnew needs plus human-readable sheets.
 | `mcring_v1.py` | the design itself (every part, pin table, net). `python3 mcring_v1.py` regenerates `out/` and checks the GPIO map against `config.h` |
 | `schematic_svg.py` | renders five net-label schematic sheets (SVG + PNG) from the model |
 | `out/mcring_v1.net` | KiCad netlist (version "E") for **pcbnew → File → Import Netlist** — on-board parts only |
-| `out/mcring_v1_bom.csv` | BOM grouped by value + footprint with MPNs; `Mount` = `PCB` or `off-board` (cell, antenna, piezo element, band contacts, speaker) |
+| `out/mcring_v1_bom.csv` | BOM grouped by value + footprint with MPNs and an `LCSC` column; `Mount` = `PCB` or `off-board` (cell, antenna, piezo element, band contacts, LRA, speaker, the four pigtails) — `hardware/pcb/export_cpl.py` turns the on-board lines into the JLCPCB BOM/CPL |
 | `out/mcring_v1_nets.md` | every net with its nodes (off-board nodes marked `*`), every part with its pin → net table |
 | `out/erc.md` | ERC result (clean; one waived single-node net, the antenna's RF lead) |
 | `out/sch_power.*`, `sch_mcu.*`, `sch_camera.*`, `sch_sensors.*`, `sch_outputs.*` | schematic sheets |
@@ -81,13 +84,14 @@ carry all of them.
     source impedance is irrelevant; ADC pin leakage (tens of nA) costs ≤ 25 mV — note it, see §6.
 14. **R12 = 267 kΩ (E96, 1 %)**: the TPS62840 3.3 V code (VSET → GND; SLVSE12 Table 1, also TI's 3.3 V
     efficiency-plot condition). Replaces the `VSET-3V3` placeholder; the BOM is orderable.
-15. **Wire pads instead of connectors/footprints that do not fit**, matching the floorplan
-    (`hardware/pcb/board_params.json` → `wire_pads_bottom_mm`): `J1` = two 1.5 mm pads (the 4.25 mm JST SH
-    header fits neither side of the board), `BZ1` = two 1.2 mm pads, `PAD1`/`PAD2` = one 1.5 mm pad each
-    (floorplan PAD1w/PAD2w). The things wired to them are **off-board BOM lines**: `BT1` cell, `PZ1`
-    piezo element, `CP1`/`CP2` inner-band ENIG contacts, `ANT1` antenna. Off-board parts stay in the BOM,
-    the net listing and the ERC but are left out of `out/mcring_v1.net`, so pcbnew never asks for their
-    footprints. `M1` (LRA leads to two pads) and `J2` were already pads.
+15. **Plug-in headers instead of wire pads** (superseding the first pass's pads, see item 21): `J1` (cell), `J3`
+    (charging pads), `J4` (LRA) and `J5` (speaker) are Molex Pico-EZmate 78171-0002 2-circuit vertical headers
+    on the TOP side (the 4.25 mm JST SH header of the very first netlist fits neither side; the 1.55 mm
+    Pico-EZmate fits the top). Only `BZ1` (two 1.2 mm pads, optional piezo) and `J2` (aux) stay bare pads.
+    The things plugged into the headers are **off-board BOM lines**: `BT1` cell, `M1` LRA, `LS1` speaker,
+    `CP1`/`CP2` inner-band ENIG contacts, the four pigtails `W1`–`W4`, plus `PZ1` piezo element and `ANT1`
+    antenna. Off-board parts stay in the BOM, the net listing and the ERC but are left out of
+    `out/mcring_v1.net`, so pcbnew never asks for their footprints.
 16. **Charging input protection.** `D3` (PMEG2005EB Schottky, ~0.25 V at 25 mA) in series from the pad net
     `CHG_PAD` to `CHG_IN`, and `D2` is now the **bidirectional** PESD5V0S1BB. A ring seated the wrong way
     round in a 2-pin pogo cradle puts −5 V on the pad; with the old unidirectional TVS that forward-biased
@@ -98,11 +102,11 @@ carry all of them.
     receptacle on the module — not a module pad, hence the waived single-node net `ANT_RF`. The mated
     plug (2.9 mm) is already `top_max_height_mm` in `board_params.json`. Placement rule in §5. The 34.9 mm
     length means it wraps along the band from the back wall; confirm the fit in the CAD.
-18. **FPC1 is one part**: F32R-1A7H1-11024 (XKB, LCSC), 24-pin 0.5 mm **bottom-contact** back-flip,
-    2.0 mm tall, as `hardware/bom/stage1-ring.csv` and `board_params.json` assume. The Hirose
-    FH12-24S-0.5SH(55) is an "Alt MPN" field (confirm its contact side before substituting); the KiCad
-    FH12 land pattern is the standard 24 + 2 mounting-pad pattern the F32R copies — check it against the
-    F32R drawing.
+18. **FPC1 is the Hirose FH12-24S-0.5SH(55)**: 24-pin 0.5 mm **bottom-contact** ZIF with a rotating flip-lock
+    actuator, 2.0 mm tall, LCSC C202112 (JLCPCB extended part) — the KiCad land pattern this design always used.
+    The Amphenol FCI F32R-1A7H1-11024 (0.5 mm right-angle ZIF with a **slider**, bottom contact, 2.0 mm, same
+    land pattern and pinout) is the "Alt MPN". Earlier text calling the F32R an "XKB (LCSC) back-flip" was
+    wrong on both counts: it is Amphenol FCI and slider-type; the back-flip, dual-contact sibling is the F32D.
 19. `M1` LRA described correctly: INEED LRA0825BC-0167F, **240 Hz, 1.25 Vrms max** (the autocal
     registers in `docs/07-build-guide.md` §1.8 depend on it; the old "~170 Hz" was wrong).
 20. **Optional on-ring speaker added** (voice-first; `protocol/ble-gatt.md` AUDIO_OUT, `audio_out.cpp`):
@@ -133,11 +137,11 @@ carry all of them.
       highest non-clipping setting), which is why it stays the documented **bench option for +3 dB**, to be
       used with the CLI/app volume ≤ 200 (−2.1 dB ≈ rated power). 9 dB (DNP; the Adafruit breakout default
       and the task's "GND" guess, which is really 12 dB) clips the top 1.7 dB. One bench-reversible 0402.
-    * `SPK1` = two 1.5 mm wire pads (2.0 mm pitch, bottom, floorplan `SPK1a`/`SPK1b`) on `SPK_P`/`SPK_N`
-      (0.3 mm pair, filterless class D, leads ≤ 10 mm). The speaker `LS1` **PUI AS01008MR-2-R** (Ø10 × 2.9 mm
+    * `J5` = Pico-EZmate header (top side, right strip, back) on `SPK_P`/`SPK_N` (0.3 mm pair, filterless
+      class D, ≈ 15 mm up the back column; W4 pigtail ≤ 10 mm). The speaker `LS1` **PUI AS01008MR-2-R** (Ø10 × 2.9 mm
       max, 8 Ω, 300 mW rated / 500 mW max, 86 dB, top port, NdFeB magnet, solder pads) is **off-board** in the
       enclosure's speaker pocket (`hardware/pcb/board_params.json` → `speaker_mm`: right signet wall, grille
-      normal +y). Peak speaker current at full scale ≈ 0.25 A from the 3V3 rail (0.4 A with the 6 dB bench
+      normal +y), its pigtail rising through the J5 edge notch. Peak speaker current at full scale ≈ 0.25 A from the 3V3 rail (0.4 A with the 6 dB bench
       option): within the TPS62840's 750 mA with the radio quiet (`C3` 100 µF absorbs the class-D peaks);
       speech (RMS ≈ −18 dBFS below its peaks) averages ~5–10 mW, i.e. a few mA plus the amp's 2.4 mA.
     * Nets `I2S_BCLK` IO35, `I2S_LRCLK` IO36, `I2S_DOUT` IO37, `AMP_PWR_EN` IO34 — fixed by
@@ -152,9 +156,26 @@ carry all of them.
       BCLK/LRCLK at whatever level the stopped peripheral held). If the datasheet rates the digital inputs to
       +6 V independent of VDD (§6 item 19) there is no diode path and R22–R24 can become 0 Ω.
     * The whole group (`U10`, `U11`, `C25`, `C26`, `R20`–`R24`, `LS1`) is fitted or omitted together; the
-      `SPK1` pads stay either way. 11 parts, ≈ 22 mm² of bottom-side area: the amp block in the back-left corner
-      under the module, the `SPK1` pads on the right edge beside the LRA pads (`hardware/pcb/floorplan.md` §9 items
-      13–14).
+      `J5` header stays either way so the speaker can be plugged in later. 11 parts, ≈ 22 mm² of bottom-side
+      area: the amp block in the back-left corner under the module, OUTP/OUTN as a 0.3 mm pair ≈ 15 mm up the
+      back column to the J5 vias (`hardware/pcb/floorplan.md` §9 items 13–15).
+21. **Design for assembly — the owner never solders.** The board is ordered assembled (JLCPCB Standard PCBA,
+    both sides, or PCBWay; `docs/10-ordering-assembled-boards.md`) and the four off-board parts plug in:
+    * `J1` BAT, `J3` CHG, `J4` LRA, `J5` SPK = **Molex Pico-EZmate 78171-0002** (1.20 mm pitch, 2 circuits,
+      vertical SMT, side friction locks, **1.55 mm mated**; housing 78172-0002; cable 36920-0201 = two pigtails
+      when cut in half; alternative JST ACH BM02B-ACHSS-GAN-ETF, 1.4 mm, different land pattern). KiCad footprint
+      `Connector_Molex:Molex_Pico-EZmate_78171-0002_1x02-1MP_P1.20mm_Vertical` (name to VERIFY in the installed
+      library). They sit on the TOP in a 4.8 mm strip the board grew on the right (`hardware/pcb/floorplan.md` §2b:
+      board 26.5 × **22.8**), each with a 2.4 × 1.1 mm wire notch in the board edge beside it; neither family fits
+      the 1.15 mm bottom envelope.
+    * Off-board: `BT1` cell (tabs toward +y), `M1` LRA, `LS1` speaker, `CP1`/`CP2` band contacts, and the pigtails
+      `W1`–`W4` (28 AWG, plug one end, bare the other — terminated to the parts by a cable shop, solder-seal
+      sleeves or PCBWay's harness service; the band contacts take the silver conductive pen, ≤ 25 mA path).
+    * Not on LCSC, so **consigned** to the assembler: U1 ESP32-S3-MINI-1U-N4R2, the three TPS22916, the four
+      78171-0002. Every other on-board part is sourced; parts with a known C-number carry an `LCSC` field
+      (`export_cpl.py` writes them into the JLCPCB BOM, the rest are matched in JLCPCB's BOM tool).
+    * Nothing changed electrically: pin 1 of J1/J3 is the positive/CHG_PAD side (mark the silkscreen — the plug is
+      polarised); LRA and speaker polarity are irrelevant.
 
 ## 2. GPIO map (BOARD_MCRING_V1)
 
@@ -184,15 +205,15 @@ GPIO nets drift from this table or from `config.h` / `config_audio.h`.
 ## 3. Power tree
 
 ```
-CP1/CP2 band contacts (5 V pogo) ═wires═ PAD1/PAD2 ─ CHG_PAD ─ D2 PESD5V0S1BB (bidir.) ─ D3 Schottky ─ CHG_IN ─ BQ25100 (25 mA, 1 mA term, /CHG → IO3)
+CP1/CP2 band contacts (5 V pogo) ═W2 pigtail═ J3 header ─ CHG_PAD ─ D2 PESD5V0S1BB (bidir.) ─ D3 Schottky ─ CHG_IN ─ BQ25100 (25 mA, 1 mA term, /CHG → IO3)
                                                                                                                    │
-BT1 301012 30 mAh (PCM) ═wires═ J1 pads ─────────────────────────────────────────────────────────────── VBAT ─┬─ TPS62840 (2.2 µH, 10 µF/10 µF, R12 267k = 3.3 V) ─ 3V3 ─┬─ 100 µF + 10 µF + 100 nF at U1
+BT1 301012 30 mAh (PCM) ═W1 pigtail═ J1 header ──────────────────────────────────────────────────────── VBAT ─┬─ TPS62840 (2.2 µH, 10 µF/10 µF, R12 267k = 3.3 V) ─ 3V3 ─┬─ 100 µF + 10 µF + 100 nF at U1
                                                                                                               │                                                      ├─ DRV2605L (EN tied high), LIS2DW12, T3902, pull-ups
                                                                                                               │                                                      ├─ U2 TPS22916 (IO21) ─ CAM_3V3 ─┬─ DOVDD
                                                                                                               │                                                      │                                ├─ XC6206P282 ─ CAM_2V8 (AVDD)
                                                                                                               │                                                      │                                └─ XC6206P122 ─ CAM_1V2 (DVDD)
                                                                                                               │                                                      ├─ U9 TPS22916 (IO33) ─ VLED ─ WS2812B-2020
-                                                                                                              │                                                      └─ U11 TPS22916 (IO34) ─ VAMP ─ MAX98357A (10 µF + 100 nF; SD_MODE, R21 gain) ─ SPK1 pads ═wires═ LS1 10 mm speaker  [optional]
+                                                                                                              │                                                      └─ U11 TPS22916 (IO34) ─ VAMP ─ MAX98357A (10 µF + 100 nF; SD_MODE, R21 gain) ─ J5 header ═W4 pigtail═ LS1 10 mm speaker  [optional]
                                                                                                               ├─ 1 M/1 M divider ─ IO1 (2.1 µA)
                                                                                                               └─ J2 aux pad (+ AO3400 low side from IO9)
 ```
@@ -211,33 +232,34 @@ conservative upper bound.
 
 The KiCad *schematic* editor cannot import netlists; the file targets the **PCB editor**. Use the SVG sheets
 and `out/mcring_v1_nets.md` as the schematic reference while laying out. Off-board parts (`ANT1`, `BT1`,
-`CP1`, `CP2`, `PZ1`, `LS1`) are not in the netlist on purpose; their wires land on `J1`, `PAD1`, `PAD2`,
-`BZ1`, `SPK1`.
+`CP1`, `CP2`, `PZ1`, `LS1`, `M1`, `W1`–`W4`) are not in the netlist on purpose; they plug into `J1`, `J3`, `J4`,
+`J5` (the piezo would go on the bare `BZ1` pads).
 
 1. Create a KiCad project (`mcring_v1`), open the PCB editor.
 2. Add a footprint library named **`mcring`** and draw the custom footprints the netlist references
    (names in the BOM): `TPS22916_DSBGA-4_YFP`, `BQ25100_DSBGA-6_YFP`, `SW_Omron_B3U-3000P`,
-   `SW_Omron_B3U-1000P`, `MIC_TDK_T3902_3.5x2.65mm`, `LRA_8mm_2pad`, `PAD_Wire_2x1.5mm_P2.0mm` (J1),
-   `PAD_Wire_2x1.2mm_P2.0mm` (BZ1), `PAD_Wire_1x1.5mm` (PAD1, PAD2), `PAD_Touch_3x4mm`, `PAD_Aux_1x2`.
-   `PAD_Wire_2x1.5mm_P2.0mm` is shared by J1 and SPK1. Pad sizes and pitches match
-   `hardware/pcb/board_params.json` → `wire_pads_bottom_mm`. The remaining
-   footprints use KiCad 7/8 library names (`RF_Module:ESP32-S3-MINI-1U`, `Package_TO_SOT_SMD:SOT-583-8`,
-   `LED_SMD:LED_WS2812B-2020_PLCC4_2.0x2.0mm`, `Connector_FFC-FPC:Hirose_FH12-24S-0.5SH_…` (land pattern
-   for the F32R-1A7H1-11024 — check), `Package_LGA:LGA-12_2x2mm_P0.5mm`, `Package_SO:VSSOP-10_3x3mm_P0.5mm`,
+   `SW_Omron_B3U-1000P`, `MIC_TDK_T3902_3.5x2.65mm`, `PAD_Wire_2x1.2mm_P2.0mm` (BZ1), `PAD_Touch_3x4mm`,
+   `PAD_Aux_1x2`. Pad sizes and pitches match `hardware/pcb/board_params.json` → `wire_pads_bottom_mm`. The
+   remaining footprints use KiCad 7/8 library names (`RF_Module:ESP32-S3-MINI-1U`, `Package_TO_SOT_SMD:SOT-583-8`,
+   `LED_SMD:LED_WS2812B-2020_PLCC4_2.0x2.0mm`, `Connector_FFC-FPC:Hirose_FH12-24S-0.5SH_…` (FPC1 is the Hirose
+   part itself now), `Connector_Molex:Molex_Pico-EZmate_78171-0002_1x02-1MP_P1.20mm_Vertical` (J1/J3/J4/J5 —
+   confirm the name and the wire-exit side), `Package_LGA:LGA-12_2x2mm_P0.5mm`, `Package_SO:VSSOP-10_3x3mm_P0.5mm`,
    `Package_DFN_QFN:QFN-16-1EP_3x3mm_P0.5mm_EP1.7x1.7mm` (U10 MAX98357A TQFN — check the EP size against
    the Maxim T1633+4C drawing; pin 17 = EP), `Diode_SMD:D_SOD-523` ×2, passives 0402/0603/1206). If a name
    is missing in your KiCad version, change it in `mcring_v1.py` and regenerate — pad numbers must match
    the pin numbers in the model.
 3. **File → Import Netlist…**, pick `out/mcring_v1.net`, *Match by reference*, tick *Replace footprints with
    those specified in netlist*, *Update footprint fields*, then *Load and Test Netlist* → *Update PCB*.
-4. Board setup: outline from `hardware/pcb/board_params.json` (written by the floorplan step); design rules
+4. Board setup: outline from `hardware/pcb/board_params.json` (written by the floorplan step: 26.5 × 22.8 mm with
+   four 2.4 × 1.1 mm notches in the +y edge, `edge_notches_mm`); place every part at the floorplan's centre
+   (`hardware/pcb/out/mcring_v1_cpl.csv` imports as a position file); design rules
    below; net classes: `GND/3V3/VBAT/CAM_3V3/VLED/VAMP/CHG_PAD/CHG_IN/SW_NODE/SPK_P/SPK_N` 0.3 mm, everything
    else 0.1–0.15 mm.
 5. Re-import after any change to `mcring_v1.py` — pcbnew keeps placement and only updates connectivity.
 
 **Bring-up power without the cell:** a current-limited 4.0 V bench supply on `TP8` (VBAT) + `TP5` (GND)
-runs the whole board; 5 V for the charger goes onto the `PAD1` wire pad (`CHG_PAD`) — it is on the board,
-so no extra VBUS test pad is needed. USB data stays on `TP3`/`TP4`. The BQ25100 alone (no cell) cannot
+runs the whole board; 5 V for the charger goes into `J3` pin 1 (`CHG_PAD`) through a spare pigtail — no extra
+VBUS test pad is needed. USB data stays on `TP3`/`TP4`. The BQ25100 alone (no cell) cannot
 power the ESP32-S3 (its output is limited to the 25 mA charge current), so flashing always needs either
 the cell or the bench supply on `TP8`.
 
@@ -258,9 +280,9 @@ the cell or the bench supply on `TP8`.
 | Buck | TPS62840: CIN, L, COUT in a tight loop on the top layer; VOS sense trace from COUT; SW node minimal area | |
 | Camera FPC | DVP bus length-matched loosely (±5 mm is fine at 20 MHz); XCLK/PCLK away from the antenna feed | |
 | Touch pad | copper 3×4 mm on top, ground hatch around, **no copper under it** | |
-| Charging input | CP1/CP2 3×2 mm ENIG flush in the inner band, ≥ 3 mm apart; wires to PAD1/PAD2; D2 (bidirectional TVS) within 2 mm of PAD1, D3 (Schottky) right after it; **polarity hazard**: a reversed ring in the cradle is survived only because of D3 — keep it, and key the cradle anyway | |
+| Charging input | CP1/CP2 3×2 mm ENIG flush in the inner band, ≥ 3 mm apart; the W2 pigtail to J3; D2 (bidirectional TVS) within ≈ 2.5 mm of the J3 via, D3 (Schottky) right after it; **polarity hazard**: a reversed ring in the cradle is survived only because of D3 — keep it, and key the cradle anyway | |
 | Keep-outs | LRA, cell and antenna away from each other and from the antenna end of the module; the piezo element (PZ1) is off-board and needs its own pocket if fitted; the speaker LS1 (NdFeB magnet + steel) is in the **right** signet wall ≥ 5 mm from the flex antenna (`board_params.json` → `speaker_mm`) | |
-| Speaker amp (U10) | C26 100 nF within 1 mm of VDD pins 7/8, C25 10 µF next to it, EP to the GND pour with 2–4 vias; OUTP/OUTN as a 0.3 mm pair straight to the SPK1 pads (≤ 12 mm, bottom layer, GND pour both sides, ≥ 1 mm from SDA/SCL/IMU_INT1 and the PDM lines); I²S BCLK/LRCLK/DIN are 0.1 mm signals at 512 kHz, no matching, each through its 1 kΩ series resistor (R22–R24, the 0402 column beside U10's pin-1/16 corner); leads to LS1 ≤ 10 mm 30 AWG | filterless class D: short, tight output loop keeps the ~300 kHz edges off the sensor lines; the series resistors bound the ESD back-feed into the unpowered amp |
+| Speaker amp (U10) | C26 100 nF within 1 mm of VDD pins 7/8, C25 10 µF next to it, EP to the GND pour with 2–4 vias; OUTP/OUTN as a 0.3 mm pair up the back column to the J5 vias (≈ 15 mm, bottom layer, GND pour both sides, ≥ 1 mm from SDA/SCL/IMU_INT1 and the PDM lines); I²S BCLK/LRCLK/DIN are 0.1 mm signals at 512 kHz, no matching, each through its 1 kΩ series resistor (R22–R24, the 0402 column beside U10's pin-1/16 corner); W4 pigtail to LS1 ≤ 10 mm 28 AWG | filterless class D: short, tight output loop keeps the ~300 kHz edges off the sensor lines; the series resistors bound the ESD back-feed into the unpowered amp |
 
 Check your fab's 2-layer capability before ordering: 0.1/0.1 mm track/space and 0.2 mm drills are "advanced"
 options at JLCPCB/PCBWay (standard is 0.127 mm / 0.3 mm drill). If only standard rules are available, the
@@ -276,7 +298,7 @@ PDF before ordering.
 |---|---|---|
 | 1 | **ESP32-S3-MINI-1U pin table** used: 1–2 GND, 3 3V3, 4–25 IO0–IO21, 26 IO26, 27–36 IO33–IO42, 37 TXD0/IO43, 38 RXD0/IO44, 39 IO45, 40 IO46, 41 IO47, 42 IO48, 43–44 GND, 45 EN, 46–65 GND | every U1 node in the netlist; check `esp32-s3-mini-1_mini-1u_datasheet_en.pdf` Table "Pin Definitions" |
 | 2 | **IO33–IO37 are free GPIOs on the N4R2** *(web: ESP-IDF GPIO guide — SPIIO4–7/SPIDQS are used "under octal configurations" only; quad PSRAM uses SPICS1 = IO26)* | IO33 = LED_PWR_EN; the module datasheet carries a footnote on IO26 — read it and confirm there is none on 27–31 |
-| 3 | **FPC pin order** (ESP32-CAM / Arducam M0031): 1 NC, 2 AGND, 3 SIOD, 4 AVDD, 5 SIOC, 6 RESET, 7 VSYNC, 8 PWDN, 9 HREF, 10 DVDD, 11 DOVDD, 12 Y9, 13 XCLK, 14 Y8, 15 DGND, 16 Y7, 17 PCLK, 18 Y6, 19 Y2, 20 Y5, 21 Y3, 22 Y4, 23 Y1, 24 Y0; **F32R-1A7H1-11024 is bottom-contact** and its land pattern matches the KiCad FH12-24S-0.5SH footprint | a one-position-shifted variant exists (pin 1 AGND … pin 24 NC); buzz the purchased head before ordering boards. Also confirm whether the head needs external 1.2 V (U4) |
+| 3 | **FPC pin order** (ESP32-CAM / Arducam M0031): 1 NC, 2 AGND, 3 SIOD, 4 AVDD, 5 SIOC, 6 RESET, 7 VSYNC, 8 PWDN, 9 HREF, 10 DVDD, 11 DOVDD, 12 Y9, 13 XCLK, 14 Y8, 15 DGND, 16 Y7, 17 PCLK, 18 Y6, 19 Y2, 20 Y5, 21 Y3, 22 Y4, 23 Y1, 24 Y0; FPC1 = Hirose FH12-24S-0.5SH(55), bottom contact, flip-lock (the alternate F32R-1A7H1-11024 is bottom-contact too, slider type, same land pattern) | a one-position-shifted variant exists (pin 1 AGND … pin 24 NC); buzz the purchased head before ordering boards. Also confirm whether the head needs external 1.2 V (U4) |
 | 4 | **BQ25100** DSBGA ball map (A1 IN, A2 OUT, B1 /CHG, B2 PRE_TERM, C1 ISET, C2 VSS), K_ISET = 230 A·Ω, K_PRETERM = 11.5 A·Ω, no TS pin; VIN(min) with D3's ~0.25 V drop from a 4.75 V cradle (4.5 V at IN) | R10 = 9.1 kΩ → 25 mA, R11 = 11.5 kΩ → 1 mA |
 | 5 | **TPS62840DLCR** pin numbers (SOT-583: 1 SW, 2 GND, 3 VIN, 4 EN, 5 STOP, 6 MODE, 7 VSET, 8 VOS); **R12 = 267 kΩ for 3.3 V** *(web: SLVSE12 Table 1 via distributor copies; 1.8 V = GND, 2.5 V = 11.5 k, 3.0 V = 52.3 k, 3.3 V = 267 k)* | Vout wrong if the table row is misread |
 | 6 | **TPS22916C** ball map (A1 VIN, A2 VOUT, B1 ON, B2 GND), VIL ≥ 0.35 V so the 4.7 kΩ pull-down on IO33 holds the LED rail off, and that the "C" suffix (slower rise) is the wanted variant | U2, U9 |
@@ -293,6 +315,7 @@ PDF before ordering.
 | 17 | **MAX98357A 16-TQFN pin numbers**: 1 DIN, 2 GAIN_SLOT, 3 GND, 4 SD_MODE, 5/6 N.C., 7/8 VDD, 9 OUTP, 10 OUTN, 11 GND, 12/13 N.C., 14 LRCLK, 15 GND, 16 BCLK, EP not internally connected *(web: datasheet pin-description snippets; the top-view figure itself could not be fetched)*; package 3 × 3 × 0.75 mm, Maxim code T1633+4C; KiCad `QFN-16-1EP_3x3mm_P0.5mm` EP size variant | every U10 node; the floorplan allows 0.8 mm height |
 | 18 | **MAX98357A SD_MODE thresholds** (< 0.16 V shutdown, 0.16–0.77 (L+R)/2, 0.77–1.4 right, > 1.4 V left, internal 100 kΩ pull-down) and **gain table** (100 k→GND 15, GND 12, float 9, VDD 6, 100 k→VDD 3 dB) *(web: ADI design note "Optimize Cost, Size, and Performance with MAX98357 WLP", Adafruit/DFRobot guides)*; that SD_MODE tied to VDD is an allowed static configuration and the mode is read as the rail rises; quiescent 2.4 mA, shutdown ~0.5 µA (third-party); gain tolerance (±0.5 dB assumed) | SD_MODE = VAMP, R21 = 100k (3 dB; 0R = the 6 dB bench option) |
 | 19 | **MAX98357A digital inputs with VDD = 0**: the Absolute Maximum Ratings table could not be read. If BCLK/DIN/LRCLK/SD_MODE/GAIN_SLOT are rated to GND +6 V *independent of VDD* (as on other ADI I²S amps) there is no diode to VDD and R22–R24 can be 0 Ω; if they are rated VDD + 0.3 V, the fitted 1 kΩ bounds the back-feed to ≤ 2.6 mA per pin and the firmware must still park IO35–37 low while `AMP_PWR_EN` is low (§7). Bench check either way: VAMP with the amp off right after a stream has stopped (should read 0 V, not 1.5–2.6 V) | U10, R22–R24, audio_out.cpp |
+| 21 | **Molex Pico-EZmate 78171-0002**: 2-circuit header outline 4.2 × 4.5 mm (derived from the published 3-circuit 5.4 × 4.5), 1.55 mm mated height *(web: Molex part page)*, which end of the housing the 78172-0002 plug's wires leave (the floorplan points it at the board-edge notch), the KiCad footprint name, and the 36920-0201 / 68801-4146 cable availability (0 stock / "being discontinued" at the research snapshot — the JST ACH BM02B-ACHSS-GAN-ETF + ASACHSACH28W jumpers are the in-stock fallback, with a different land pattern) | J1, J3, J4, J5; `hardware/pcb/floorplan.py` CONN / NOTCH |
 | 20 | **PUI AS01008MR-2-R** outline Ø10.0 × 2.9 mm max seated height *(web: distributor listing: 8 Ω ± 15 %, 300 mW rated / 500 mW max, 86 dB, fo 1.2 kHz, top port, solder-pad terminals)* — the PUI drawing (terminal position, front/back venting) sets the pocket in the CAD; `board_params.json` `speaker_mm.thickness` carries 2.9; confirm which signal/duration the rated and maximum powers refer to (the 3 dB gain choice keeps a full-scale tone at the rated figure) | LS1, enclosure speaker pocket, R21 |
 
 ## 7. Firmware follow-ups implied by this design

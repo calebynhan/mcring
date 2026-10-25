@@ -20,6 +20,7 @@ exist yet, that step has not been run and the guide tells you what to fall back 
 | Path | Produced by | Used in |
 |---|---|---|
 | `hardware/pcb/out/wiring_stage0.png` | PCB/wiring step | §1.2 |
+| `hardware/pcb/out/wiring_stage0_solderless.png`, `hardware/pcb/wiring_stage0_solderless.md`, `hardware/bom/stage0-devkit-solderless.csv` | no-solder step (present) | §1.12 |
 | `hardware/pcb/floorplan.md`, `hardware/pcb/board_params.json` | PCB floorplan step | §2.1, §2.6 |
 | `hardware/electrical/out/mcring_v1.net`, `out/sch_*.png`, `out/erc.md` | electrical step (present) | §2.1, §2.3 |
 | `hardware/cad/out/mcring_stage1_{shell,lid,key}.stl`, `hardware/cad/fit_report.md`, `hardware/cad/README.md` | enclosure CAD step (CadQuery, generated from `board_params.json`; the old OpenSCAD file is gone) | §2.5–2.8 |
@@ -71,6 +72,10 @@ install one, or ignore (the text is printed anyway). Tests to run once: `docs/06
 ## 1. Stage 0 — bench rig (XIAO ESP32S3 Sense)
 
 ### 1.1 Order list
+
+> **No soldering iron?** §1.12 builds the same rig from parts that plug together (pre-soldered XIAO in
+> Seeed's Expansion Board Base, Grove haptic module, STEMMA QT accelerometer) — zero joints, same
+> firmware, same §1.4–§1.7 steps. Read §1.1–§1.3 for the parts' roles, then jump there.
 
 From `hardware/bom/stage0-devkit.csv` (≈ $40–55):
 
@@ -137,7 +142,7 @@ the port disappears for a second and comes back).
 ```
 [     150] I main: mcring fw 0.1.0 (xiao-esp32s3-sense) voice-first
 [     152] I cfg: trig=03 q=12 fs=2 sleep=120s led=96 hap=100 wpm=15 ch=03 spk=255 cues=03 mic=ring
-[     160] W imu: LIS2DW12 not found (who=...)
+[     160] W imu: no IMU found at 0x18/0x19 (LIS2DW12 who=0x44, LIS3DH who=0x33; read 0xff)
 [     165] W drv: DRV2605L not found (status=...)
 [     420] I cam: sensor PID=0x2640 detected          (0x3660 on OV3660 units)
 [     425] I spk: speaker configured (I2S1)           (the XIAO build always has the three I2S pins → SPEAKER_OK)
@@ -400,6 +405,132 @@ to GND or unplug `VIN` for sleep measurements on the dev kit; the stage-1 board 
 disconnected and the IMU unplugged to split it out. The fix is a firmware follow-up (§2.1 item 4), the
 same one that decides the stage-1 sleep figure in §2.4.
 
+### 1.12 No-solder variant (XIAO in the Expansion Board Base)
+
+**Do you have to solder for this project? Not for stage 0.** Two substitutions remove every joint:
+the XIAO is bought with its headers factory-soldered (Seeed 102010635) and seated in Seeed's
+**Expansion Board Base for XIAO** (103030356 / Adafruit 5033), and the two breakouts that normally
+need wires — the DRV2605L's motor pads and the accelerometer's power/I²C — become a **Grove Haptic
+Motor** (DRV2605L with its motor already attached) and a **LIS3DH STEMMA QT** board on a Grove→QT
+cable. The base already carries the button on D1 (= `PIN_BUTTON`), a passive buzzer on A3 = D3
+(= `PIN_BUZZER`) and a JST LiPo socket with a charger, so nothing from §1.2's table is wired by hand.
+The firmware runs the same loop (`pio run -e xiao_esp32s3_sense_base`). The one part that keeps
+unsoldered holes is the optional speaker amp (§1.12.5). For stage 1 the equivalent answer is *order the
+board assembled* (JLCPCB Standard PCBA, parts and costs in `docs/research/04-no-solder-sourcing.md`
+§B–C) — that design change is not made yet, see the end of this section.
+
+Drawing: `hardware/pcb/out/wiring_stage0_solderless.png`; connection table, the `MCRING_XIAO_BASE`
+build deltas and the check list: `hardware/pcb/wiring_stage0_solderless.md`. Prices are October-2026
+search snippets; the research report marks what it could not verify.
+
+#### 1.12.1 What to buy (`hardware/bom/stage0-devkit-solderless.csv`, ≈ $56–72)
+
+| Qty | Part | Replaces (§1.1) | Note |
+|---|---|---|---|
+| 1 | XIAO ESP32S3 Sense, **pre-soldered** — Seeed 102010635 ($14.90–19.95) | the bare XIAO + its 14 header joints | pins point down into the base; Sense board stays on top. Fallback if out of stock: the unsoldered board + a press-fit "hammer header" (Adafruit 3662; fit in the XIAO's holes unverified) |
+| 1 | Expansion Board Base for XIAO — Seeed 103030356 / Adafruit 5033 ($17.95) | breadboard, tactile switch, piezo, battery wiring | button on D1, buzzer on A3/D3, JST 2.0 LiPo + charger (≤ 460 mA), 2 × Grove I²C, Grove UART, Grove A0/D0, OLED 0x3C, RTC 0x51, microSD (CS D2) |
+| 1 | Grove – Haptic Motor — Seeed 105020011 (≈ $7.50–15) | DRV2605L breakout + LRA + 2 motor joints | DRV2605L 0x5A with an **ERM** attached; the LRA feel comes back on the stage-1 board |
+| 1 | LIS3DH STEMMA QT — Adafruit 2809 ($4.95) *or* SparkFun Micro LIS3DH Qwiic SEN-29529 ($5.95) | LIS2DW12 module + 4–5 wires | WHO_AM_I 0x33, detected at boot; no LIS2DW12 breakout with a QT/Qwiic plug exists (SparkFun's is retired) |
+| 1 | Grove → STEMMA QT / Qwiic cable — Adafruit 4528 or SparkFun PRT-15109 ($1.95) | — | base Grove I²C #2 → LIS3DH |
+| — | male-male jumpers; optionally one hammer-header strip (Adafruit 3662, $2.25) or an alligator-to-jumper set (Adafruit 3255, $7.95) | — | the LIS3DH `INT` → D8 jumper (optional) and, with the speaker, D10 → `DIN` |
+| 1 | LiPo **≥ 400 mAh**, JST-PH, with PCM — Adafruit 3898 or 1578 ($6.95–7.95) | the 100 mAh cell on the BAT pads | the base's charger is up to 460 mA: 4.6 C for the 100 mAh ring cell, so keep that cell for the soldered rig / stage 1 |
+| opt. | MAX98357A breakout (Adafruit 3006, $5.95) + 10 mm 8 Ω speaker + a "Grove to 4-pin male jumper" cable (Seeed 110990210) | the same amp | see §1.12.5 — the amp's 7 header holes are the one unsoldered thing |
+
+Not needed from §1.1: the tactile switch, the piezo, the divider resistors, the breadboard.
+
+#### 1.12.2 Seat and flash
+
+1. Push the XIAO into the base's socket: USB-C toward the base's USB end, `D0` at the base's `D0`
+   silkscreen; the Sense board stays clicked on top. Leave the base's microSD slot empty (its CS is D2
+   and its SPI shares D8/D9/D10 with the IMU interrupt, touch and I²S DIN).
+2. `cd firmware/ring-esp32s3 && pio run -e xiao_esp32s3_sense_base -t upload` (same boot/reset dance as
+   §1.3 if the port is missing).
+
+**Observe:** the §1.3 log with `mcring fw 0.1.0 (xiao-esp32s3-sense+base)` on the first line — the
+`+base` means `-DMCRING_XIAO_BASE` is in: ERM haptic profile, `PIN_HAPTIC` parked (D2 is the SD chip
+select), tap-source polling on. Press the base's own button: `event BUTTON_DOWN` / `BUTTON_UP` in
+`mcring events`, exactly as in §1.4–§1.7 — the button and the buzzer need no wiring at all.
+
+**If not:** the first line says `(xiao-esp32s3-sense)` without `+base` → you flashed the stock env; it
+still boots but drives the ERM with the LRA profile (`autocal FAILED`) and toggles D2. A dead board →
+XIAO reversed in the socket.
+
+#### 1.12.3 Haptics: plug the Grove Haptic Motor into Grove I²C #1
+
+Reset. **Observe:** `I drv: DRV2605L ready (ERM)` then `I drv: autocal ok (status 0xe0)`; the boot
+*ok* blink comes with a buzz from the module's motor; `mcring talk` cues as in §1.7. Skip §1.8's
+rated-voltage tuning (that is for the LRA); `mcring config haptic_strength 60–100` sets the level.
+
+**If not:** `DRV2605L not found` → the module is in the UART or A0/D0 socket; move it to an I²C
+socket. `autocal FAILED (status 0xe8)` → stock env flashed (see §1.12.2), or the motor is held still.
+
+#### 1.12.4 Double tap: Grove→QT cable into Grove I²C #2, QT plug into the LIS3DH
+
+Reset. **Observe:** `I imu: LIS3DH ready at 0x18 (double click -> INT1, latched; ths 9 = 562 mg)` (or
+`0x19` for the SparkFun board), status flag bit 2 set. Tape the breakout to a finger or a coin (a
+free-floating board taps itself) and tap it twice ~150 ms apart: `I trig: double tap`, `event
+DOUBLE_TAP` → the hands-free ask of §1.9. **No interrupt wire is needed for this**: the build polls the
+chip's latched click source every 25 ms, which adds at most 25 ms of latency.
+
+The interrupt jumper is only for **tap-to-wake from deep sleep** (EXT1): push a male jumper pin into
+the breakout's `INT` through-hole at a slight angle (friction fit), or tap in one hammer-header pin,
+or use an IC-hook clip, and plug the other end into the base's breakout header hole **D8**. Test:
+`mcring config idle_sleep_s 10`, disconnect, wait, double-tap → `I pwr: woke from deep sleep, cause 3`
+(`ESP_SLEEP_WAKEUP_EXT1`) and `I main: wake by tap -> ask`. Without the wire the ring wakes on the
+button only.
+
+Tuning is §1.9's, in the same units: the firmware keeps the tap threshold in 62.5 mg steps for both
+chips (`imu_set_tap_threshold(9)` ≈ 0.56 g; the LIS3DH driver scales it ×4 into its 7-bit `CLICK_THS`),
+and its 40 ms shock / 20 ms quiet / 560 ms window mirror the LIS2DW12 values (`src/imu_lis3dh.cpp`).
+`imu_read_tap_src()` returns the LIS2DW12 bit layout for either chip (`0x10` = double).
+
+**If not:** `W imu: no IMU found at 0x18/0x19 (…; read 0xff)` → the QT plug is in the breakout's socket
+but the Grove end is in the UART/A0 socket, or the cable is reversed-keyed (it is not; re-seat).
+`read 0x33` but no `ready` → I²C error after detection; check the Grove→QT cable. False double taps
+→ raise the threshold as in §1.9 (reflash), the polling path reports exactly what the interrupt path
+would.
+
+#### 1.12.5 Battery and the optional speaker
+
+*Battery:* plug a **≥ 400 mAh** JST-PH cell into the base's JST 2.0 socket — check red = `+` on the
+base silkscreen first (a Seeed forum thread reports reversed pigtails on early units; never force a
+plug) — and the base's charge LED lights while USB is in. `batt` in STATUS reads `0mV(255%)` = unknown:
+the A0 divider of §1.11 is not built on this rig (the cell's `+` is only on the JST pigtail). For the
+§1.11 current measurements put the meter in series through a JST-PH extension cable cut open; the
+deep-sleep numbers are not meaningful here (OLED, RTC and charger on the base, no camera power gate).
+Not verified from the base's schematic: whether its charger reaches the XIAO's BAT pads or only the
+5V/VIN pin — the XIAO's own BAT pads are unused either way, and nothing goes on the 5V header pin.
+
+*Speaker (optional, F12):* the MAX98357A breakout's speaker terminal block is pre-soldered, its
+**7-pin header is not**, and no I²S amp exists with a Grove/QT plug (Grove carries two signals, I²S
+needs three; the STEMMA Speaker is analog-in and the ESP32-S3 has no DAC). Honest options: (a) press
+hammer-header pins (Adafruit 3662) into the amp's holes and use female jumpers; (b) five joints at a
+makerspace / a friend with an iron; (c) defer — the amp is SMT on the stage-1 board. Wiring for (a) or
+(b): a "Grove to 4-pin male jumper" cable in the base's **Grove UART** socket gives `BCLK` (D7),
+`LRC` (D6), `VIN` (3V3) and `GND` in one plug (which Grove pin is D6 and which D7: base silkscreen —
+swap `BCLK`/`LRC` if silent), a jumper from breakout header D10 to `DIN`, `SD` → `VIN`, `GAIN` open;
+then §1.10 as written. Headphones need none of this.
+
+#### 1.12.6 Which §1 steps change
+
+| § | Soldered rig | No-solder rig |
+|---|---|---|
+| 1.1 / 1.2 | `stage0-devkit.csv`, `wiring_stage0.md` | `stage0-devkit-solderless.csv`, `wiring_stage0_solderless.md` |
+| 1.3 | `-e xiao_esp32s3_sense` | `-e xiao_esp32s3_sense_base`; boot line says `+base` |
+| 1.4–1.7 | tactile switch on D1 | the base's button — otherwise identical |
+| 1.8 | DRV2605L + LRA, rated-voltage tuning | Grove Haptic Motor (ERM): `ready (ERM)`, autocal, `haptic_strength` only |
+| 1.9 | LIS2DW12 + INT1 wire | LIS3DH, polled; INT jumper only for deep-sleep tap-wake; same thresholds/units |
+| 1.10 | amp header soldered | press-fit pins, a makerspace, or defer |
+| 1.11 | cell on BAT pads + divider | cell in the base's JST; no `batt` reading; no sleep figures |
+
+*Stage 1 without an iron:* order the board as **JLCPCB Standard PCBA** (Economic cannot place the
+0.4 mm DSBGAs or a double-sided board), with wire-to-board headers under 1.6 mm (Molex Pico-EZmate
+78171-0002 or JST ACH) for the cell, LRA and speaker so the off-board parts arrive on pigtails; the
+remaining 4–6 joints at the pigtail/part junctions go to a cable shop or spring-contact parts. Costs,
+LCSC part numbers and the open questions are in `docs/research/04-no-solder-sourcing.md` §B–C; the
+header footprints are **not** in `hardware/electrical/mcring_v1.py` / `floorplan.py` yet (the top side
+is full — a floorplan check comes first).
+
 ---
 
 ## 2. Stage 1 — oversized printed ring (ESP32-S3-MINI-1U board)
@@ -408,6 +539,14 @@ Decision already taken: ESP32-S3-MINI-1U (15.4 × 15.4 × 2.4 mm), antenna end p
 from the camera, on one rigid 2-layer 0.6 mm board in a signet bay on top of the band; exact
 outline in `hardware/pcb/board_params.json`, placement in `hardware/pcb/floorplan.md`,
 connectivity in `hardware/electrical/out/mcring_v1.net` (ERC clean: `out/erc.md`).
+
+**No soldering in this section.** The board (26.5 × 22.8 mm) is **ordered assembled** — procedure, costs and
+the consigned parts in `docs/10-ordering-assembled-boards.md` — and everything off-board plugs in: the cell,
+the charging-pad pigtail, the LRA and the optional speaker go into four 2-pin Molex Pico-EZmate headers on
+the board's top (J1 BAT, J3 CHG, J4 LRA, J5 SPK, each with a wire notch in the board edge beside it), the
+camera flex into a flip-lock ZIF (FPC1), the antenna onto the module's u.FL. The eight wire joints that
+remain are at the far ends of the four pigtails (cell, LRA, speaker leads and the two band contacts) and are
+made without an iron — pre-terminated harnesses, solder-seal sleeves or the silver pen (`docs/10` §7).
 
 ### 2.1 Before ordering anything
 
@@ -418,9 +557,10 @@ connectivity in `hardware/electrical/out/mcring_v1.net` (ERC clean: `out/erc.md`
 2. Buy the OV2640 24-pin head **first** and buzz its pin order against §6 item 2 — a
    one-position-shifted variant exists. Confirm whether the head regulates DVDD itself (then
    U4, the 1.2 V LDO, is DNP).
-3. Confirm your fab offers 0.1/0.1 mm track/space and 0.2 mm drills on 2-layer 0.6 mm. If not,
-   swap both TPS22916 (0.4 mm DSBGA) for TPS22917DBV (SOT-23-5) in `hardware/electrical/mcring_v1.py`,
-   regenerate, and use standard rules.
+3. The assembler needs 0.1/0.1 mm track/space, 0.2 mm drills and 0.35 mm-pitch BGA placement on a 2-layer
+   0.6 mm ENIG board: JLCPCB **Standard** PCBA (not Economic) or PCBWay — `docs/10` §2. If you must use a
+   cheaper tier, swap the three TPS22916 (0.4 mm DSBGA) for TPS22917DBV (SOT-23-5) in
+   `hardware/electrical/mcring_v1.py` and regenerate; the double-sided build stays.
 4. Firmware state on `BOARD_MCRING_V1` (stage 0 is unaffected; `hardware/electrical/README.md` §7):
    * **LED rail — done**: `feedback.cpp` drives `PIN_RGB_PWR` (IO33, net `LED_PWR_EN`, U9 TPS22916)
      high around every LED write (`rgb_rail()`) and `power_deep_sleep_now()` drives it low, so the
@@ -443,100 +583,82 @@ connectivity in `hardware/electrical/out/mcring_v1.net` (ERC clean: `out/erc.md`
      the ESP32-S3, which then re-arms the 400 Hz double-tap for a few seconds and goes back to sleep if
      none comes (`--imu lp-wakeup` → ~22 µA); LP1 at 200 Hz with `INT_DUR` rescaled (`--imu lp1-200`,
      ~30 µA, marginal tap timing) is the other option. §2.4 and §5 quote both figures.
-5. Order with the board (now in `hardware/bom/stage1-ring.csv`): the Molex 146153-0050 flex antenna
-   (34.9 × 9 mm, MHF1/u.FL pigtail — the stock 50 mm cable must be shortened or coiled, the cavity is
-   2 mm deep, `hardware/cad/README.md` "Antenna"); copper foil with conductive adhesive (3M 1181 class)
-   for the 4 × 5 mm lid electrode and a 3 × 4 × 3.6 mm conductive-foam block (or SMT spring finger) for
-   TPAD1; two 3 × 2 mm ENIG contacts for the band (a scrap of ENIG board); 30 AWG PTFE / wire-wrap wire
-   (≤ 0.7 mm OD for the Ø0.9 channels); UV-cure glue; a 0.3 mm foam or adhesive ring for the mic tube.
-   **Speaker option**: the MAX98357A in the **16-TQFN 3 × 3 mm** package (hand-solderable; the 9-WLP is
-   the noted alternative) and a third TPS22916 for U10/U11 on the board, plus the off-board **PUI
-   AS01008MR-2-R-class 8 Ω 10 mm speaker** (Ø10 × 2.5–3 mm) with two short 30 AWG leads to its wire pads.
-   Decide now whether this board gets the speaker: it is an option, and the headphone path needs none of it.
+5. Order separately from the boards (all in `hardware/bom/stage1-ring.csv`): the Molex 146153-0050 flex
+   antenna (34.9 × 9 mm, MHF1/u.FL pigtail — the stock 50 mm cable must be shortened or coiled, the cavity
+   is 2 mm deep, `hardware/cad/README.md` "Antenna"); the OV2640 head; the 301012 cell, the INEED LRA and
+   (speaker option) the PUI AS01008MR-2-R-class 8 Ω 10 mm speaker — each **terminated with a Pico-EZmate
+   plug**: two Molex 36920-0201 cables per ring cut in half give the four 28 AWG pigtails W1–W4, joined to
+   the parts' leads by a cable shop, by solder-seal sleeves or by PCBWay's harness service (`docs/10` §7);
+   copper foil with conductive adhesive (3M 1181 class) for the 4 × 5 mm lid electrode and a 3 × 4 × 3.6 mm
+   conductive-foam block (or SMT spring finger) for TPAD1; two 3 × 2 mm ENIG contacts for the band (a scrap
+   of ENIG board) and the MG 842AR silver conductive pen that bonds the charging pigtail's bare ends to them;
+   UV-cure glue; a 0.3 mm foam or adhesive ring for the mic tube. **Speaker option**: U10 (MAX98357A
+   16-TQFN) and U11 (third TPS22916) are placed by the assembler when you leave the group populated in the
+   BOM; the J5 header is populated either way, so the speaker can be added later by plugging it in. Decide
+   now whether this run gets the amp group; the headphone path needs none of it.
 
-### 2.2 PCB order settings
+### 2.2 PCB + assembly order settings
+
+The full click-by-click procedure, the consigned parts and the cost of a 5-board run are in
+`docs/10-ordering-assembled-boards.md`; the settings in one table:
 
 | Setting | Value |
 |---|---|
 | Layers / thickness / material | 2 / **0.6 mm** / FR-4 TG150+, 1 oz copper |
+| Outline | **26.5 × 22.8 mm**, r 1.5, four **2.4 × 1.1 mm wire notches** in the right (+y) edge at x = 7.65 / 12.4 / 17.1 / 21.8 (`board_params.json` → `edge_notches_mm`) |
 | Min track / clearance | **0.10 / 0.10 mm** (fine), 0.15 general, 0.3 power (`hardware/electrical/README.md` §5) |
 | Min via | 0.20 mm drill / 0.45 mm pad |
 | Surface finish | **ENIG** (DSBGA/LGA co-planarity, charging pads) |
 | Solder mask | green or black; expansion 0.05 mm (0.03 on DSBGA pads, NSMD) |
-| Silkscreen | none under the module |
-| Stencil | **two**, 0.10 mm (4 mil) stainless, frameless — one per side: the **bottom** carries every IC except the module, both DSBGAs, the BQ25100, the mic and all passives (72 of the 87 placed parts in `board_params.json`, U10/U11 and the SPK1 speaker pads among them — left unfitted when the speaker option is not built; see the current `hardware/pcb/floorplan.md`); the **top** only U1, FPC1, SW1, D1, R7, C3. Ask for 1:1 apertures on the DSBGA pads (the fab may want to shrink them — say no) |
-| Quantity | 5–10; order 2 spare boards' worth of parts |
-| Fiducials | 2 per side if there is room (the bottom is the dense side) |
+| Silkscreen | none under the module; **pin-1 marks on J1/J3/J4/J5** (the Pico-EZmate plug is polarised) |
+| Assembly tier | **JLCPCB Standard PCBA, both sides** (0.35 mm BGA capability for the four 0.4 mm DSBGAs; Economic is 0.5 mm / single side) or PCBWay PCBA with X-ray on the BGAs |
+| Assembly files | `hardware/pcb/out/mcring_v1_bom_jlc.csv` + `mcring_v1_cpl.csv` from `python3 hardware/pcb/export_cpl.py` (73 placed parts, 31 BOM lines, ≈ 290 joints); `mcring_v1_pcba_notes.md` lists what each line resolves to |
+| Consigned parts | ESP32-S3-MINI-1U-N4R2, TPS22916CYFPR (×3), Molex 78171-0002 (×4) — not stocked by LCSC; everything else sourced |
+| Stencil | made by the assembler, **two** (double-sided; 0.10 mm). Ask in the order remarks for **1:1 apertures on the DSBGA pads** (they may want to shrink them — say no) |
+| Quantity | 5 boards; consigned parts with attrition (+2–5 per line) |
+| DNP decisions | U4 (1.2 V LDO) DNP if the OV2640 head regulates DVDD; the speaker group U10/U11/C25/C26/R20–R24 in or out (J5 stays) |
 
-Also order with the board: low-temperature SnBi58 paste (138 °C) **and/or** SAC305 paste (both if
-you want the two-alloy build of §2.3), a hot plate (PCB preheater) and a hot-air station, flux gel,
-Kapton tape, a USB microscope.
+Nothing for soldering goes on the shopping list. Tools for the rest of §2: tweezers, 0.8 / 1.1 / 4.5 mm drill
+bits for the printed parts, UV-cure glue, a heat gun or lighter if you use solder-seal sleeves (`docs/10` §7),
+a multimeter, and a USB microscope is still nice for the incoming inspection.
 
-### 2.3 Assembly order
+### 2.3 Incoming inspection of the assembled boards, and the pigtails
 
-The board is double-sided and bottom-heavy (`hardware/pcb/floorplan.md` §2–3): the **bottom** carries
-every IC except the module (U7 BQ25100, U8 TPS62840 + L1, U2/U9 TPS22916, U3/U4 XC6206, U5 DRV2605L,
-U6 LIS2DW12, Q1, D2/D3, MK1 mic, and — speaker option — U10 MAX98357A 16-TQFN + U11 TPS22916), all
-passives and all wire pads (J1 cell, PAD1w/PAD2w charging, M1 LRA, BZ1 piezo, J2 aux, the two speaker
-pads); the **top** carries U1 (the module), FPC1, SW1, D1 + R7, C3, the TPAD1 copper landing and the
-eight test pads TP1–TP8. So: bottom first on the hot plate, prove the power
-tree, then the top. Two ways to keep the bottom joints solid during the top reflow:
+The boards arrive populated on both sides (`hardware/pcb/floorplan.md` §2–3): the **bottom** carries every
+IC except the module (U7 BQ25100 under J3, U8 TPS62840 + L1, U2/U9 TPS22916, U3/U4 XC6206, U5 DRV2605L,
+U6 LIS2DW12, Q1, D2/D3, MK1 mic, and — speaker option — U10 MAX98357A + U11 TPS22916), all passives and
+the two bare pad pairs (BZ1 piezo, J2 aux — unused in the ring build); the **top** carries U1 (the module),
+FPC1, SW1, D1 + R7, C3, the four Pico-EZmate headers J4 / J3 / J1 / J5 in the right strip, the TPAD1 copper
+landing and the eight test pads TP1–TP8. Before anything else:
 
-* **(A) one alloy** — top side by hot air with the board on the preheater at ≤ 120 °C (SnBi) / ≤ 150 °C
-  (SAC305); the bottom parts hang on surface tension, which is fine for 0402s, SOT-23s and DSBGAs but
-  needs a steady hand over the module.
-* **(B) two alloys** — bottom in SAC305 (liquidus 217 °C), top in SnBi58 (138 °C) on the hot plate at
-  165–175 °C: the bottom never re-melts. Easier for the 15.4 mm module; SnBi on the module's pads is
-  fine for a prototype.
+1. **Look** (USB microscope or a loupe): the module's u.FL end at the board's back edge (x = 26.5, away
+   from FPC1); FPC1's mouth at the front edge with its actuator closed; the four headers with their
+   wire-exit end toward the board edge and the notch straight ahead of each; D1's DIN pad toward R7; D3's
+   cathode toward U7; the mic flat on the bottom with the Ø0.6 port hole visible from the top; no solder
+   bridging visible at the DSBGA perimeters (U2/U9/U11 next to their caps, U7 under J3). Pin-1 marks on
+   the headers are what you will plug against — if the silkscreen has none, mark pin 1 (the end nearer
+   the board's front for J1/J3/J4/J5 as laid out; check the layout) with a paint dot.
+2. **Power check** — every pad you need is on the top side. 4.0 V, 100 mA current limit, on TP8 (`VBAT`)
+   / TP5 (`GND`): TP6 `3V3` = 3.30 ± 0.05 V (R12 = 267 k), `CAM_3V3` (at C10) and `VLED` (at C21) 0 V
+   between captures, idle current < 20 µA with the module held in reset (TP2 `EN` to TP5) — buck IQ +
+   divider; DRV2605L and LIS2DW12 power up in standby / power-down. Release EN: the module boots (§2.4).
+   Speaker option: the amp rail at U11's output (and U10 `VDD`) reads 0 V until a stream plays.
+   Charger: plug a cell into **J1** through its pigtail, feed 5 V into **J3 pin 1** (`CHG_PAD`) and GND into
+   J3 pin 2 through the charging pigtail's bare ends (or a spare pigtail): TP7 `nCHG` goes low, ≈ 25 mA flows
+   into the cell, U7.A1 sits ~0.25 V below the pad (D3). Swap the 5 V: nothing conducts (D2 bidirectional +
+   D3) — that is the reversed-cradle case. A board that fails here with everything else right has a
+   DSBGA ball open (U7 or a TPS22916): that is an assembler claim, not a repair.
+3. **Continuity spot-checks**: U1 pads 3 / 45 / 4 → TP6 / TP2 / TP1; FPC1 pins 3 / 5 / 13 (SIOD / SIOC /
+   XCLK) → R5 / R6 / U1 (buzz against `floorplan.md` §7); J1 pin 1 → TP8; J3 pin 1 → D2.
 
-**Pass 1 — bottom side (stencil + hot plate):**
-
-1. Kapton over the Ø0.6 mic port hole from the **top** (paste must not enter it), stencil the bottom.
-   Place under the microscope: U7 BQ25100 (DSBGA-6), U2 and U9 TPS22916 (DSBGA-4), U8 TPS62840 (SOT-583)
-   + L1 (2016 inductor), U3 (2.8 V) and U4 (1.2 V — DNP if the purchased head regulates DVDD itself)
-   XC6206, D2 PESD5V0S1BB (bidirectional, no polarity) and D3 PMEG2005EB (cathode toward U7 / `CHG_IN`),
-   Q1 AO3400A, U5 DRV2605L (VSSOP-10), U6 LIS2DW12 (LGA-12), MK1 T3902 with its port over the board hole,
-   and all 0402/0603 passives. Speaker option: U10 MAX98357A (16-TQFN, pin-1 mark toward its decoupling
-   caps; the exposed pad is GND — paste it) and U11 TPS22916 (DSBGA-4, the amp rail switch, ON = IO34).
-   Check the reel labels for the values that set the power tree: R8/R9 1 M
-   (divider), R10 9.1 k (25 mA charge), R11 11.5 k (1 mA termination), R12 267 k (3.3 V), R17/R19 100 k,
-   R18 4.7 k. Nothing goes on the wire pads.
-2. Reflow on the hot plate: SnBi peak 165–175 °C for 30 s; SAC305 peak 235–245 °C. The 0.6 mm board
-   heats fast — do not exceed 60 s above liquidus.
-3. Inspect: every DSBGA sits flat with no bridging visible at the perimeter balls; continuity between
-   adjacent balls must be open; the mic sits flat (its port is the acoustic path).
-4. Power check — every pad you need is on the still-empty top side. 4.0 V, 100 mA current limit, on
-   TP8 (`VBAT`) / TP5 (`GND`): TP6 `3V3` = 3.30 ± 0.05 V (R12 = 267 k), `CAM_3V3` (at C10) and `VLED`
-   (at C21) 0 V — R17/R18 hold the two load-switch enables low with no module fitted — idle current
-   < 20 µA (buck IQ + divider; DRV2605L and LIS2DW12 power up in standby / power-down). Jumper R17's
-   upper pad (`CAM_PWR_EN`, U2.B1) to TP6: `CAM_3V3` 3.3 V, `CAM_2V8` 2.8 V at C11, `CAM_1V2` 1.2 V at
-   C12 (if U4 fitted); jumper R18's upper pad (`LED_PWR_EN`) to TP6: `VLED` 3.3 V. Speaker option: the
-   amp rail at U11's output (and U10 `VDD`) reads 0 V with its enable pull-down alone and 3.3 V with the
-   IO34 net jumpered to TP6; idle current then rises by the MAX98357A's ~2.4 mA. Charger: replace the
-   bench supply by a 3.7 V cell on J1a (BAT+) / J1b (GND), put 5 V on the PAD1w pad (`CHG_PAD`) and GND
-   on PAD2w: TP7 `nCHG` goes low, ≈ 25 mA flows into the cell, U7.A1 sits ~0.25 V below the pad (D3).
-   Swap the 5 V: nothing conducts (D2 bidirectional + D3) — that is the reversed-cradle case.
-
-**Pass 2 — top side:**
-
-5. Leave the Kapton over the mic hole, stencil the top. Place U1 ESP32-S3-MINI-1U with the **u.FL end
-   flush with the back edge** (x = 26.5, away from FPC1 — the antenna end points toward the back of the
-   hand), FPC1 (mouth toward the front edge; bottom-contact), SW1 (plunger out of the left edge, y = 0;
-   it reflows fine), D1 (DIN toward R7), R7, C3. Leave TPAD1 bare — the foam contact goes on at final
-   assembly (§2.6).
-6. Reflow: (B) hot plate 165–175 °C with SnBi; (A) hot air 300 °C / low flow in a slow spiral over the
-   module with the board on the preheater — the shield can is the thermal mass, give it time. A gentle
-   push after the paste melts seats the edge pads. Keep the FPC1 actuator open and paste-free.
-7. Inspect the module perimeter; continuity U1 pads 3 / 45 / 4 → TP6 / TP2 / TP1; FPC1 pins 3 / 5 / 13
-   (SIOD / SIOC / XCLK) → R5 / R6 / U1 (buzz against `floorplan.md` §7). Remove the Kapton.
-
-**Wires (before the board goes into the bay — every wire pad is on the bottom and the wires go down
-into the band):** LRA leads to M1a/M1b (≈ 15 mm, strain relief with a dab of UV glue), the two 30 AWG
-charging-pad wires to PAD1w (CHG+) / PAD2w (CHG−) (≈ 25 mm, trimmed later in the rib grooves), the
-10 mm speaker's leads to its two pads if the speaker option is built (≈ 15 mm; polarity irrelevant
-for one driver), piezo to BZ1a/BZ1b if fitted, J2 only for the air-puff experiment. The cell leads go on **last**, in §2.6
-step 4, with the cell already in its pocket. Snap the antenna's u.FL plug onto the module for the §2.4
-BLE checks (press straight down until it clicks; the mated plug is the 2.9 mm tallest part).
+**Pigtails (the only wire work, and none of it on the board).** Each off-board part needs a Pico-EZmate
+plug on its leads: W1 cell, W2 charging contacts, W3 LRA, W4 speaker — half of a Molex 36920-0201 cable
+each (plug one end, bare the other). Have them made (`docs/10` §7: cable shop, PCBWay harness service, or
+solder-seal sleeves with a heat gun); lengths: cell ≈ 25 mm from the tabs, LRA ≈ 25 mm, speaker ≈ 15 mm
+(polarity irrelevant for one driver), charging pigtail ≈ 60 mm per wire (it runs through the floor groove
+and the band channels; trimmed at the windows). J2 and BZ1 are bare pads for the bench only. Snap the
+antenna's u.FL plug onto the module for the §2.4 BLE checks (press straight down until it clicks; the mated
+plug is the 2.9 mm tallest part).
 
 ### 2.4 Firmware on the stage-1 board
 
@@ -592,15 +714,17 @@ the pocket position, port size and post-processing step from the current `hardwa
 and `fit_report.md`; a shell printed from an older `out/` has no speaker pocket.
 
 Numbers you will touch (`default_params()` in the script): band Ø20.0 ID × 22.4 OD × 12 wide, wall 1.2;
-signet 31.5 × 21.0 mm, lid top 11.1 mm above the skin, pod roof 12.7; lens bore Ø4.6 (OV2640 barrel 4.5),
-lens axis 6.25 mm above the skin; mic port Ø0.8 in the lid above a Ø1.8 tube that ends 0.3 mm above the
-board; switch slot 3.4 × 1.6 through the left wall with a 4.6 × 2.8 × 0.5 counterbore inside for the key's
-flange; cell pocket 10.4 × 12.4 × 3.4 and LRA pocket Ø8.4 × 2.9, both recessed into the bay floor under the
-board; charging-pad windows 3 × 3 at ±25° from the bottom of the band, fed by two Ø0.9 wire channels from
-the grooves on the −Y rib; lid 1.2 thick in a 0.5 rebate with 0.15 clearance, Ø0.5 detent beads, 1.0 mm
-pod-roof lip over its front edge; LED: the lid stays 1.2 mm thick over D1 (an engraved Ø3 ring marks the
-spot, the LED top is 2.3 mm below the lid) — no thinned window; touch dimple 4 × 5 × 0.4 (0.8 mm resin
-over the lid electrode).
+signet 31.5 × 25.8 mm (28.95 across the speaker bump), lid top 11.1 mm above the skin, pod roof 12.7; lens
+bore Ø4.6 (OV2640 barrel 4.5), lens axis 6.25 mm above the skin; mic port Ø0.8 in the lid above a Ø1.8 tube
+that ends 0.3 mm above the board; switch slot 3.4 × 1.6 through the left wall with a 4.6 × 2.8 × 0.5
+counterbore inside for the key's flange; cell pocket 10.4 × 12.4 × 3.4 (tabs toward +y, 3 × 0.8 lead channel
+to the wall under J1) and LRA pocket Ø8.4 × 2.9, both recessed into the bay floor under the board;
+charging-pad windows 3 × 3 at ±25° from the bottom of the band, fed by two Ø1.1 wire channels from the
+grooves on the −Y rib and a 1.2 × 0.8 groove in the bay floor that carries the two wires round to the J3 notch;
+lid 1.2 thick in a 0.5 rebate with 0.15 clearance, Ø0.5 detent beads, 1.0 mm pod-roof lip over its front
+edge; LED: the lid stays 1.2 mm thick over D1 (an engraved Ø3 ring marks the spot, the LED top is 2.3 mm
+below the lid) — no thinned window; touch dimple 4 × 5 × 0.4 (0.8 mm resin over the lid electrode). The
+signet is 4.8 mm wider than the wire-pad design of the first pass: that is the price of the plug-in headers.
 
 SLA (recommended): white or translucent **tough** resin (the detent rims and the 0.7 mm wall around the
 switch counterbore do not survive a brittle one), 0.05 mm layers. **Shell**: bay opening up, finger axis
@@ -614,14 +738,16 @@ and the key will not print — glue a 3.2 × 1.4 mm pin on a flange instead.
 
 Post-processing: ream the lens bore with a 4.5 mm drill shank (print 4.6, finish to a snug fit on the
 barrel); clear the Ø0.8 mic hole down through the tube with a 0.8 mm drill; slide the key through the
-3.4 × 1.6 slot (0.3 mm travel at the cap); open the two 3 × 3 pad windows and pass a 0.9 mm drill through
+3.4 × 1.6 slot (0.3 mm travel at the cap); open the two 3 × 3 pad windows and pass a 1.1 mm drill through
 the two wire channels (they start in the open grooves on the −Y rib and surface in the bay floor beside
-the −Y wall); clear the 3 × 0.8 mm cell-lead channel. Fill the grooves with resin only after the wires are
-in (§2.6).
+the −Y wall); run a scriber along the 1.2 × 0.8 floor groove (−Y edge → across at x 10.25 → +Y edge to the
+J3 notch position) and the 3 × 0.8 cell-lead channel (+Y edge of the cell pocket to the wall under J1) so
+no resin skin is left in them. Fill the rib grooves with resin only after the wires are in (§2.6).
 
 Fit-check before assembly, against `fit_report.md`: the board drops onto its ledges with 0.3 mm play per
-side (front ledges 1.0 mm wide in the gaps between the bottom parts, back ledge 3.2 mm under the test
-pads; board top 0.6 mm above the ledge); the 301012 cell (3 × 10 × 12 mm) drops into the floor pocket
+side (front ledges 1.0 mm wide outside the y 5.5–11.0 gap for the FPC-pin passives, back ledge 2.9 mm under
+the u.FL strip; board top 0.6 mm above the ledge) and its four edge notches line up with the wall on the
++y side; the 301012 cell (3 × 10 × 12 mm) drops into the floor pocket
 with 0.2 mm per side — a cell **with PCM** is longer at the tab end, check yours before the final print;
 the LRA (Ø8 × 2.5) drops into its Ø8.4 pocket and ends 0.2 mm below floor level; the camera head
 (8.5 × 8.5 mm, 5.8 mm tall incl. barrel) slides from the bay into the pod through the 9.2 × 9.8 opening
@@ -630,54 +756,67 @@ it for the FPC fold; the lid's front edge slides under the pod-roof lip and its 
 grooves. Worn with the band against the knuckle the pod front sits ~17 mm toward the PIP joint — try
 the bare shell on the finger before printing in volume.
 
-### 2.6 Mechanical assembly sequence
+### 2.6 Mechanical assembly sequence (plug-in)
 
-Pockets first, then the board, then the lid — the LRA and the cell sit **under** the board in the bay
-floor and cannot go in afterwards (`hardware/cad/README.md`, "After printing — check").
+Pockets first, then the board, then the plugs, then the lid — the LRA and the cell sit **under** the board
+in the bay floor and cannot go in afterwards (`hardware/cad/README.md`, "After printing — check"). The
+rule that makes the plug-in work: **every pigtail's plug is held up out of the bay while the board goes
+down, and its two wires lie in their notch position on the +y side so the descending board's notch slides
+over them**. The plugs (2.6 × 3.5 mm) cannot pass through the notches; only the wires can.
 
 1. **Key**: drop the printed key into the switch slot from inside the bay (flange in the counterbore,
    cap outside). It is loose until the board holds it.
-2. **Charging wires**: thread the two 30 AWG wires already soldered to PAD1w/PAD2w (§2.3) down through the
-   Ø0.9 channels that open in the bay floor beside the −Y wall — the X −1.5 channel leads to the −Y window
-   (CHG−, PAD2w), the X −3.5 channel round the bottom to the +Y window (CHG+, PAD1w) — out into the rib
-   grooves and to the windows. Tin each end to a 3 × 2 mm ENIG contact, press the contact into its 3 × 3
-   window flush with the bore (UV glue around the edge, nothing on the face), fill the grooves with resin
-   or epoxy. Both contacts flush, ≈ 8.5 mm apart (§2.8).
+2. **Charging pigtail (W2)**: lay its plug end outside the bay on the +y side and push each bare wire from
+   the floor groove's +y end along the groove — along the +y edge to x 10.25, across the floor between the
+   LRA and cell pockets, forward along the −y edge — and down the two Ø1.1 channels that open in the bay
+   floor beside the −Y wall: the X −1.5 channel leads to the −Y window (CHG−, J3 pin 2), the X −3.5 channel
+   round the bottom to the +Y window (CHG+, J3 pin 1). Out in the rib grooves, cut each wire so ≈ 3 mm of
+   bare end reaches its window, bond it to a 3 × 2 mm ENIG contact with the silver conductive pen (or have
+   the cable shop solder the contacts on beforehand), press the contact into its 3 × 3 window flush with
+   the bore (UV glue around the edge, nothing on the face), fill the grooves with resin or epoxy. Both
+   contacts flush, ≈ 8.5 mm apart (§2.8). The wires sit in the floor groove, below everything the board
+   carries; the plug waits above the J3 notch position.
 3. **LRA** into its pocket, face toward the finger, bonded to the pocket floor with 3M VHB or
-   cyanoacrylate — rigidly coupled to the shell, never floating in foam. Its leads already run to M1a/M1b.
-   **Speaker** (option): the 10 mm driver into its pocket with the diaphragm toward the sound port and a
-   ring of thin adhesive foam between its rim and the pocket floor (an unsealed front chamber loses most
-   of the little output there is); leads already on the speaker pads. Clear the port with a drill of the
-   size `hardware/cad/README.md` gives before the driver goes in.
-4. **Cell** into the floor pocket, tabs toward the −Y side in the 3 × 0.8 mm channel toward the J1 pads;
-   tape it down. Now solder the leads, with the board held above the bay: J1a BAT+, J1b GND (polarity!).
+   cyanoacrylate — rigidly coupled to the shell, never floating in foam. Its pigtail (W3) runs +y under
+   the board's edge line to the J4 notch position; plug held up.
+   **Speaker** (option): the 10 mm driver into the right-wall pocket from the top with the diaphragm toward
+   the grille and a ring of thin adhesive foam between its rim and the pocket floor (an unsealed front
+   chamber loses most of the little output there is); its pigtail (W4) comes through the wall opening into
+   the cavity and up at the J5 notch position. Clear the grille holes with a 1.0 mm drill before the driver
+   goes in.
+4. **Cell** into the floor pocket, **tabs toward the +Y side** in the 3 × 0.8 mm channel toward the wall
+   under J1; tape it down; its pigtail (W1) comes up at the J1 notch position, plug held up.
 5. **Camera head** from the bay into the pod until the barrel sits 0.4 mm into the bore, lens along the
    finger; its flex comes back out of the pod opening toward the bay.
-6. **Board**: with the board above the bay insert the flex into FPC1 (contacts facing the board — it is
-   a bottom-contact connector), close the actuator, then lower the board onto the ledges, u.FL end toward
-   the back wall, FPC1 toward the pod — the flex folds 180° behind the head as the board goes down
-   (≈ 11 mm of flex from the head's top edge to the contacts; measure the purchased head). Check: switch
-   plunger on the key's flange, D1 under the lid's LED mark, mic port where the lid tube lands, nothing
-   under the board but the cell, the LRA and the wires.
-7. **Antenna**: glue the flex antenna to the inside of the back wall in the 2 mm cavity (no metal, cell
+6. **Board**: with the board above the bay insert the flex into FPC1 — contacts facing the board (it is a
+   bottom-contact connector), flip the lock lever down — then lower the board onto the ledges, u.FL end
+   toward the back wall, FPC1 toward the pod, the four pairs of wires guided into their notches on the +y
+   edge as the board comes down; the flex folds 180° behind the head (≈ 11 mm of flex from the head's top
+   edge to the contacts; measure the purchased head). Check: switch plunger on the key's flange, D1 under
+   the lid's LED mark, mic port where the lid tube lands, four wire pairs in four notches, nothing under
+   the board but the cell, the LRA and the wires in the groove.
+7. **Plug in**: W1 → J1 (BAT+ to pin 1 — polarity!), W2 → J3 (CHG+ to pin 1), W3 → J4, W4 → J5. The
+   Pico-EZmate plugs are keyed and click past the friction locks; they sit 1.55 mm high, below the module's
+   shield, and come out again with tweezers for debugging. Dress the slack of each pigtail into its notch.
+8. **Antenna**: glue the flex antenna to the inside of the back wall in the 2 mm cavity (no metal, cell
    or LRA there); the pigtail turns down behind the board edge; cable ≤ 30 mm or the excess coiled along
-   the back wall — never over the module or across the FPC.
-8. **Touch contact**: stick the 4 × 5 mm copper foil to the lid underside under the dimple (board
+   the back wall — never over the module or across the FPC. Snap the plug onto the module's u.FL.
+9. **Touch contact**: stick the 4 × 5 mm copper foil to the lid underside under the dimple (board
    coordinates (8.1, 5.6)); set the 3 × 4 × 3.6 mm conductive-foam block (or spring finger) on TPAD1.
    The lid compresses it to 3.2 mm.
-9. **Mic seal**: a 0.3 mm foam or adhesive ring on the board around the Ø0.6 port hole at (8.1, 15.85),
-   where the lid's Ø1.8 tube lands.
-10. **Lid**: run the §2.4 checks once more (the test pads stay reachable), then slide the lid's front edge
-    under the pod-roof lip and press the back down until the beads click into the grooves — 0.1 mm of
-    engagement, a light locating click. A drop of UV glue or a strip of tape on the back edge is the real
-    retention; there are no screws or bosses.
+10. **Mic seal**: a 0.3 mm foam or adhesive ring on the board around the Ø0.6 port hole at (8.1, 15.3),
+    where the lid's Ø1.8 tube lands.
+11. **Lid**: run the §2.4 checks once more (the test pads and the four plugs stay reachable), then slide
+    the lid's front edge under the pod-roof lip and press the back down until the beads click into the
+    grooves — 0.1 mm of engagement, a light locating click. A drop of UV glue or a strip of tape on the
+    back edge is the real retention; there are no screws or bosses.
 
 ### 2.7 Sealing options
 
 | Option | When | How |
 |---|---|---|
 | None | bench and indoor tests | keep it off when washing hands |
-| Conformal coat | daily wear | acrylic spray on the board only; mask the test pads, the wire pads, SW1, FPC1, the mic port hole, the u.FL and TPAD1 |
+| Conformal coat | daily wear | acrylic spray on the board only; mask the test pads, the four Pico-EZmate headers, SW1, FPC1, the mic port hole, the u.FL and TPAD1 |
 | Lid seal | daily wear | a thin bead of neutral-cure silicone on the rebate faces before closing — the 0.15 mm rebate clearance leaves no room for a gasket sheet |
 | Potting | long-term prototype | neutral-cure silicone (e.g. Sylgard 184) into the bay with the key/switch counterbore, the mic tube landing, the FPC fold and the LRA pocket masked; **never pot the LRA** (it must move), the switch or the mic port; potting is permanent and buries the test pads |
 
@@ -691,7 +830,7 @@ size (`python3 docs/build-helpers/tuning_calc.py pads --inner-d 20 --angle 25`):
 apart across the finger** (8.73 mm along the bore), each 4.23 mm off the ring's vertical mid-plane and
 9.06 mm below the axis, pin axes tilted 25° from vertical; the two pads are **staggered 2.0 mm along the
 finger** (CHG− at X −1.5, CHG+ at X −3.5 from the band's mid-plane toward the antenna end). A 2-pin cable
-to a USB breakout: VBUS → CHG+ (PAD1/CP1), GND → CHG− (PAD2/CP2). Nothing else is in the cradle; the
+to a USB breakout: VBUS → CHG+ (J3 pin 1 / CP1), GND → CHG− (J3 pin 2 / CP2). Nothing else is in the cradle; the
 BQ25100 does the regulation (25 mA, 1 mA termination, ~1.5 h from empty for the 30 mAh cell). D3 lets a
 reversed ring survive, but key the saddle anyway. Check: TP7 `nCHG` low in the cradle; battery voltage
 rising; the pads never see more than 5.5 V (D2). `MC_FLAG_CHARGING` stays 0 until the firmware reads

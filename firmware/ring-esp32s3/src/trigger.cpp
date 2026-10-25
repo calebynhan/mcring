@@ -25,6 +25,9 @@ bool     s_touch_active = false;
 // IMU
 volatile bool s_imu_irq = false;
 uint32_t s_last_tap_ms = 0;
+#if IMU_POLL_MS > 0
+uint32_t s_imu_poll_ms = 0;   // no-solder rig: INT1 → D8 may be left off, so the (latched) tap source is also polled (config_audio.h)
+#endif
 
 void IRAM_ATTR imu_isr() { s_imu_irq = true; }
 
@@ -92,6 +95,11 @@ TriggerEvent trigger_tick() {
   }
 
   // ---- IMU double tap ------------------------------------------------------------
+#if IMU_POLL_MS > 0
+  // Without the INT1 wire the ISR never fires: read the tap source every IMU_POLL_MS instead (the LIS3DH latches
+  // the click until CLICK_SRC is read, so nothing is lost; only tap-to-wake from deep sleep needs the wire).
+  if (!s_imu_irq && imu_available() && now - s_imu_poll_ms >= IMU_POLL_MS) { s_imu_poll_ms = now; s_imu_irq = true; }
+#endif
   if ((mask & MC_TRIG_DOUBLETAP) && s_imu_irq) {
     s_imu_irq = false;
     uint8_t src = imu_read_tap_src();

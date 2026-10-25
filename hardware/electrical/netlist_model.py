@@ -336,7 +336,8 @@ class Netlist:
             g = groups.setdefault(key, {"qty": 0, "refs": [], "value": p.value, "footprint": p.footprint,
                                         "mpn": p.mpn, "manufacturer": p.manufacturer,
                                         "descriptions": [], "dnp": "DNP" if p.dnp else "",
-                                        "mount": "off-board" if p.offboard else "PCB"})
+                                        "mount": "off-board" if p.offboard else "PCB",
+                                        "lcsc": p.fields.get("LCSC", "")})
             g["qty"] += 1
             g["refs"].append(p.ref)
             if p.description and p.description not in g["descriptions"]:
@@ -351,8 +352,8 @@ class Netlist:
                 desc = ""
             rows.append({"Qty": g["qty"], "Refs": " ".join(sorted(g["refs"], key=_natkey)),
                          "Value": g["value"], "Footprint": g["footprint"], "MPN": g["mpn"],
-                         "Manufacturer": g["manufacturer"], "Description": desc, "Mount": g["mount"],
-                         "DNP": g["dnp"]})
+                         "Manufacturer": g["manufacturer"], "LCSC": g["lcsc"], "Description": desc,
+                         "Mount": g["mount"], "DNP": g["dnp"]})
         rows.sort(key=lambda r: (r["DNP"] != "", r["Mount"] != "PCB", _natkey(r["Refs"].split()[0])))
         with open(path, "w", newline="", encoding="utf-8") as fh:
             w = csv.DictWriter(fh, fieldnames=list(rows[0].keys()))

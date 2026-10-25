@@ -57,6 +57,44 @@
   #define PIN_SPEAKER_EN   -1
 #endif
 
+// ---------------------------------------------------------------------------
+// -DMCRING_XIAO_BASE — stage-0 *no-solder* variant (platformio env `xiao_esp32s3_sense_base`): the pre-soldered
+// XIAO ESP32S3 Sense seated in Seeed's Expansion Board Base for XIAO (103030356). Wiring and kit:
+// hardware/pcb/wiring_stage0_solderless.md, hardware/bom/stage0-devkit-solderless.csv, docs/07-build-guide.md §1.12.
+// The base's own parts land on the firmware's pins — user button on D1 = GPIO2, passive buzzer on A3 = D3 = GPIO4 —
+// so the two #defines below are the stock values (Seeed wiki / Zephyr shield table); they live here so that a base
+// revision that moves either part is a one-line change. What really differs from the breadboard rig:
+//   * haptics = Seeed Grove Haptic Motor 105020011 (DRV2605L + factory-attached ERM, one Grove plug) → ERM drive
+//     profile (HAPTIC_MOTOR_LRA 0); the module's EN is tied on-module, nothing to drive;
+//   * D2 = GPIO3 is the base's microSD chip-select → PIN_HAPTIC is parked so the firmware never toggles that line;
+//   * the LIS3DH's INT1 reaches D8 through a clip / press-fit pin that a bench build may skip → the tap source is
+//     also polled (IMU_POLL_MS); without the wire only tap-to-wake from deep sleep is lost;
+//   * I²S speaker pins are unchanged (D6/D7 = the base's Grove-UART socket, D10 on the breakout header); the
+//     battery sits in the base's JST socket, so PIN_BATTERY_ADC reads nothing unless the divider is built (255 % =
+//     unknown in STATUS). Everything else (camera, mic, LED, BLE) is the stock XIAO Sense map.
+// ---------------------------------------------------------------------------
+#if defined(MCRING_XIAO_BASE)
+  #if !defined(BOARD_XIAO_ESP32S3_SENSE)
+    #error "MCRING_XIAO_BASE is a variant of BOARD_XIAO_ESP32S3_SENSE (platformio env xiao_esp32s3_sense_base)"
+  #endif
+  #undef  BOARD_NAME
+  #define BOARD_NAME        "xiao-esp32s3-sense+base"
+  #undef  PIN_BUTTON
+  #define PIN_BUTTON         2     // base user button → D1 (GPIO2) to GND; RTC GPIO → EXT0 deep-sleep wake as before
+  #undef  PIN_BUZZER
+  #define PIN_BUZZER         4     // base passive buzzer → A3 = D3 (GPIO4), cuttable trace on the base
+  #undef  PIN_HAPTIC
+  #define PIN_HAPTIC        -1     // D2 (GPIO3) is the base's microSD CS; haptics are I²C-only (RTP + STANDBY), like mcring_v1
+  #define HAPTIC_MOTOR_LRA   0     // Grove Haptic Motor = ERM → drv2605_init(false) in main.cpp
+  #define IMU_POLL_MS       25     // poll the latched tap source every 25 ms (≈ 0.25 % of the I²C bus) — INT1 → D8 optional
+#endif
+#ifndef HAPTIC_MOTOR_LRA
+  #define HAPTIC_MOTOR_LRA   1     // every other build drives the 8 mm LRA closed-loop (autocal at boot)
+#endif
+#ifndef IMU_POLL_MS
+  #define IMU_POLL_MS        0     // 0 = interrupt-driven only (PIN_IMU_INT)
+#endif
+
 // Speaker present when all three I2S pins are configured (drives the SPEAKER_OK status flag).
 #define HAS_SPEAKER  ((PIN_I2S_BCLK) >= 0 && (PIN_I2S_LRCLK) >= 0 && (PIN_I2S_DOUT) >= 0)
 

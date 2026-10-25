@@ -6,12 +6,12 @@ PCB floorplan numbers in `hardware/pcb/board_params.json`. It replaces the old O
 
 | File | What |
 |---|---|
-| `mcring_stage1.py` | parametric model (band, bay + antenna cavity, ledges, snap lid with a pod lip, camera pod, cell + LRA pockets, LED window, mic port + tube, switch slot + key, charging-pad windows + wire grooves/channels, **optional speaker pocket** in the +Y wall with its grille, lead groove and lid tab) with placeholder solids, fit check, mass/envelope, exports |
+| `mcring_stage1.py` | parametric model (band, bay + antenna cavity, ledges, snap lid with a pod lip, camera pod, cell + LRA pockets, cell lead channel toward the J1 header, LED window, mic port + tube, switch slot + key, charging-pad windows + Ø1.1 wire channels + the **floor wire groove** to the J3 header, **optional speaker pocket** in the +Y wall with its grille, lead groove and lid tab) with placeholder solids (incl. the four Pico-EZmate plugs over their edge notches), fit check, mass/envelope, exports |
 | `fit_report.md` | generated: stack, speaker section, intersection volumes, clearances, wall probes, finger-contact scan, envelope, mass |
 | `out/mcring_stage1_shell.stl` | **print file 1** — band + signet bay + camera pod + speaker bump (one part) |
 | `out/mcring_stage1_lid.stl` | **print file 2** — rebated lid with detent beads, the mic tube and the speaker tab + boss |
 | `out/mcring_stage1_key.stl` | **print file 3** — side-switch button (flange + pin + cap) |
-| `out/mcring_stage1_assembly.step` | shell + lid + placeholders (PCB, module, camera head + folded FPC, cell, LRA, switch + key, LED, mic, FPC1, top/bottom parts, antenna, pigtail, speaker LS1) as one compound |
+| `out/mcring_stage1_assembly.step` | shell + lid + placeholders (PCB, module, camera head + folded FPC, cell, LRA, switch + key, LED, mic, FPC1, top/bottom parts, the four plug + wire-bend envelopes, antenna, pigtail, speaker LS1) as one compound |
 | `out/view_top.png/.svg`, `out/view_front.png/.svg`, `out/view_section.png/.svg` | sanity views: top, front along the camera axis, section through the camera axis (Y = 0) |
 | `out/view_right.png/.svg`, `out/view_section_speaker.png/.svg` | speaker views (only with the speaker): the +Y side with the grille, section through the speaker axis (X = −5.2) |
 
@@ -30,9 +30,10 @@ Needs Python ≥ 3.10, `cadquery` (2.8 tested) and `cairosvg`. The script exits 
 shell, the lid or another placeholder, if a clearance (head, FPC fold, antenna cavity, key travel, speaker ↔ antenna /
 cell / lid boss) is below its minimum, or if a wall probe is below its minimum. Everything in `default_params()` is a
 plain dict you can edit (band width, wall, clearances, pocket positions, lid rebate, pad angle, speaker grille ...);
-the pod, antenna and speaker numbers are read from `board_params.json` (`pod_mm.floor_relief_above_skin /
+the pod, antenna, speaker and plug-in numbers are read from `board_params.json` (`pod_mm.floor_relief_above_skin /
 head_clearance / fpc_fold_above_head`, `antenna_cavity_mm.depth_behind_board_edge`, `speaker_mm.diameter / thickness
-/ centre_board_xyz_mm / pocket_clearance / grille_wall`) with the same defaults in the script.
+/ centre_board_xyz_mm / pocket_clearance / grille_wall`, `connectors_top_mm`, `cell_tab_edge` + `cell_lead_channel_mm`,
+`floor_wire_groove_mm`, `pad_wire_channel_d_mm`, `front_ledge_gap_y_mm`) with the same defaults in the script.
 
 ## Coordinates
 
@@ -53,11 +54,15 @@ ring axis along the finger, so the 26.5 mm board overhangs the 12 mm band by ~7 
 | 21.6 | 12 (21.4) |
 
 Other defaults: band 12.0 wide, wall 1.2; bay = board + 0.3 clearance per side + 1.2 walls, plus a 2.0 mm antenna
-cavity behind the board's back edge → signet 31.5 × 21.0 outer, corner r 3.0; lid 1.2 thick in a 0.5 mm rebate with
+cavity behind the board's back edge → signet 31.5 × **25.8** outer (the board is 22.8 wide since the plug-in revision),
+corner r 3.0; lid 1.2 thick in a 0.5 mm rebate with
 0.15 clearance, a Ø0.5 detent bead on each long edge and a 1.0 mm pod-roof lip over its front edge; lens bore Ø4.6;
-cell pocket 10.4 × 12.4 × 3.4 (cell 10 along X, 12 across) centred 2.8 mm toward the antenna end; LRA pocket Ø8.4 × 2.9 at
+cell pocket 10.4 × 12.4 × 3.4 (cell 10 along X, 12 across, tabs toward +Y) centred 2.8 mm toward the antenna end with a
+3 × 0.8 lead channel from its +Y edge to the wall under the J1 header; LRA pocket Ø8.4 × 2.9 at
 (X 7.8, Y 3.5) under the mic side of the board; pad windows 3 × 3 at ±25° from the bottom; one 4 mm wide rib on the
-−Y side carrying two 0.9 mm grooves (X −1.5 and −3.5) that turn into Ø0.9 channels through the slab; switch slot
+−Y side carrying two 1.1 mm grooves (X −1.5 and −3.5) that turn into Ø1.1 channels through the slab, and a 1.2 × 0.8
+groove in the sub-board floor that carries the two charging wires from the channel exits round to the J3 notch (−Y edge
+→ across at X 3.0 between the cell and LRA pockets → +Y edge); switch slot
 3.4 × 1.6 with a 4.6 × 2.8 × 0.5 counterbore inside for the key's flange; mic port Ø0.8 in a Ø1.8 tube; touch dimple
 4 × 5 × 0.4 (0.8 mm resin over the lid electrode); speaker pocket Ø10.4 × 3.2 deep (speaker Ø10 × 2.9 + 0.2 radial /
 0.1 + 0.2 axial) in a 3.15 mm bump on the +Y wall, 5 × Ø1.0 grille holes through a 1.0 mm plate, 6 × 1.0 lead groove,
@@ -88,10 +93,10 @@ lid: the head alone needs 8.5 + 2 × 0.3 between the pod floor (1.2 mm wall over
 ceiling, and the 24-pin flex needs ~1 mm above the head to fold back down behind it (see "Camera FPC" below).
 `board_params.json` `stack_mm` / `pod_mm` carry these as-built numbers.
 
-Envelope: band OD 22.4 (23.8 across the pad-wire rib), signet 31.5 × 21.0 — **24.15 wide across the speaker bump**
+Envelope: band OD 22.4 (23.8 across the pad-wire rib), signet 31.5 × 25.8 — **28.95 wide across the speaker bump**
 (X −11.6..1.2 on the +Y side only), 39.8 mm long along the finger including the pod and the antenna cavity, lid 11.1 /
-pod roof 12.7 mm above the skin. Mass ≈ 7.1 g resin + 6.4 g parts ≈ **13.5 g** with the speaker (`fit_report.md`);
-6.8 g + 5.4 g ≈ 12.2 g with `--no-speaker`.
+pod roof 12.7 mm above the skin. Mass ≈ 8.6 g resin + 6.9 g parts ≈ **15.5 g** with the speaker (`fit_report.md`).
+The 4.8 mm of extra width is the connector strip on the board (`hardware/pcb/floorplan.md` §2b); the stack is unchanged.
 
 ## Finger contact
 
@@ -125,6 +130,20 @@ wall; the u.FL pigtail (Ø0.81, U.FL-LP-040) leaves the plug toward the back and
 of cable, which does not fit — order a 30 mm version or re-terminate) or a 31 mm wire monopole on a cut pigtail laid
 down the wall and along the band.
 
+## Plug-in connectors (`connectors_top_mm`, `edge_notches_mm`)
+
+The owner never solders: the cell, the charging-pad pigtail, the LRA and the speaker end in Molex Pico-EZmate plugs
+that go into four headers on the board's TOP, in the strip beside the module on the +Y side (J4 LRA at board x 7.65,
+J3 CHG 12.4, J1 BAT 17.1, J5 SPK 21.8; 1.55 mm mated, well under the 3.2 mm lid gap). Each header has a 2.4 × 1.1 mm
+notch in the board edge straight ahead of it; the two wires of a pigtail run ≈ 1 mm over the board, bend down through
+the notch and the 0.3 mm bay clearance (1.4 mm of room for Ø1.0 wire) into the sub-board cavity. The model carries the
+mated plug + bend as the `plugs` placeholder (to the wall's inner face − 0.05) and checks: no intersection with the lid,
+the mic tube or the wall; the wall gap beside each notch open from plug height to the floor; the cell lead channel and
+the three legs of the floor groove open along their length with ≥ 1.2 mm of floor under them. Assembly order
+(`docs/07-build-guide.md` §2.6): parts and their pigtails into the pockets with every plug held up out of the bay, the
+board lowered with the wires in the notches, then plug in. The plugs (2.6 × 3.5 mm) do not pass through the notches —
+only the wires do.
+
 ## Switch key
 
 The B3U-3000P plunger ends ~1.1 mm inside the 1.2 mm wall, so a printed key passes the 3.4 × 1.6 slot: a 4.4 × 2.6 × 0.33
@@ -136,7 +155,7 @@ the flange's inner face. Fit the key from the inside before the board goes in.
 ## Speaker (optional, `speaker_mm`)
 
 The optional on-ring speaker — a Ø10 × 2.9 mm 8 Ω micro speaker (PUI AS01008MR-2-R class, netlist LS1, driven by the
-MAX98357A U10 through the SPK1a/SPK1b wire pads on the board's bottom) — stands **vertically in the signet's right
+MAX98357A U10 through the J5 Pico-EZmate header on the board's top) — stands **vertically in the signet's right
 (+Y) wall**, the side away from the switch, grille facing +Y. `board_params.json` → `speaker_mm` is the source of the
 numbers (the floorplan pass chose the place: the left wall is taken by the switch key and the pad-wire channels and
 would put the magnet 0.7 mm from the antenna plane, the band wall has the finger behind it): centre board
@@ -147,7 +166,7 @@ would put the magnet 0.7 mm from the antenna plane, the band wall has the finger
   from the top** before the lid goes on. X −10.4..0, Y 9.45..12.65, bottom 1.3 mm above the slab bottom.
 * **Bump**: the +Y wall grows 3.15 mm (12.8 mm long: pocket + two 1.2 mm end walls, X −11.6..1.2, full slab height,
   vertical corners r 1.0, bottom edge r 0.6). Its top is cut down to the lid underside (a shelf at 9.9 above the skin)
-  and the 0.7 mm rebate rim is interrupted over that length. The signet is 24.15 wide there, asymmetric toward the
+  and the 0.7 mm rebate rim is interrupted over that length. The signet is 28.95 wide there, asymmetric toward the
   adjacent finger on the +Y side — try it on; if it rubs, `--no-speaker` or move the pocket (`speaker_mm`).
 * **Grille**: 5 × Ø1.0 holes (centre + 4 on a Ø5 ring at 45°) through the 1.0 mm +Y plate, 3.9 mm² open. The
   pattern is `spk_grille` in `default_params()` (hole Ø, ring radius, count); the plate thickness is
@@ -159,11 +178,13 @@ would put the magnet 0.7 mm from the antenna plane, the band wall has the finger
   **lead groove** 6 wide × 1.0 deep in its back wall (Y 8.45..9.45, from 1 mm above the pocket bottom up to the floor),
   so terminals in the lower half of the disc have room for the solder blobs and the leads. The sealed alternative in
   `speaker_mm.back_volume` (a 1.2 mm back wall with a wire slot + vents, bump 4.3) is not modelled.
-* **Leads**: two 30 AWG wires soldered to the speaker's back terminals **before** it goes in; rotate the speaker so the
-  terminals face the sub-board cavity (just above floor level, i.e. between 3 and 1 o'clock when seen from +Y) and the
-  leads run straight −Y under the board's +Y edge (board edge at Y 9.0, wall at 9.3, cavity 4.6..6.1 above the skin)
-  to SPK1a/SPK1b at board (18.8 / 20.8, 16.85) = 1.45 mm inside the board edge: ≈ 2–3 mm of wire, allow 6. Terminals
-  lower down use the lead groove. Thread the leads before the board goes onto the ledges.
+* **Leads**: the speaker's pigtail (W4, two 28 AWG wires ending in a Pico-EZmate plug, attached to the terminals by the
+  cable shop or with solder-seal sleeves — never on the board) goes on **before** the speaker goes in; rotate the
+  speaker so the terminals face the sub-board cavity (just above floor level, i.e. between 3 and 1 o'clock when seen
+  from +Y); the wires run −Y into the cavity under the board's +Y edge (board edge at Y 11.4, wall at 11.7, cavity
+  4.6..6.1 above the skin), ≈ 3.4 mm to the J5 notch at board x 21.8, and up the wall gap to the J5 header on the board
+  top (allow 10 mm). Terminals lower down use the lead groove. Hold the plug up out of the bay while the board goes
+  onto the ledges, then plug it in.
 * **Lid**: a tab X −11.3..0.9 × Y 9.65..13.5 (1.2 thick, 0.15 inside the bump face, 0.3 from its end walls) rests on
   the shelf and closes the slot; a boss X −10.1..−0.3 × Y 9.75..12.35 under it fills the slot down to 0.2 mm above the
   speaker rim — the lid holds the speaker, a 0.5 mm foam pad on the boss or a drop of silicone takes up the play. The
@@ -172,7 +193,7 @@ would put the magnet 0.7 mm from the antenna plane, the band wall has the finger
   the flex antenna ≥ 5.0 (5.45 as placed — the NdFeB magnet is "other metal" for the antenna rule), to the cell ≥ 2
   (3.55), to the LRA (4.49); probes: grille plate 1.0, slab under the pocket 1.3, end walls 1.2, bump bottom corner
   diagonal 1.35, slab between the pocket's back wall and the cell pocket 2.25 (through the lead groove) / 3.75 beside
-  it, lid tab 1.2 / tab + boss 2.4; openness: grille centre hole, lead path to SPK1a/b, slot up to the lid, lead groove.
+  it, lid tab 1.2 / tab + boss 2.4; openness: grille centre hole, lead path to the J5 notch, slot up to the lid, lead groove.
 
 ## Print settings
 
@@ -205,24 +226,26 @@ would put the magnet 0.7 mm from the antenna plane, the band wall has the finger
    grooves. The bead engagement is only 0.1 mm — the detent is a light click that locates the lid, the lip holds the
    front edge, and a drop of glue or tape is the real retention for the final build.
 3. **Cell pocket**: the 3 × 10 × 12 mm 301012 cell drops in with 0.2 mm on each side; its tabs lie in the 3 × 0.8 mm
-   channel toward the J1 pads (−Y side); the sub-board floor must sit ≥ 0.35 mm under the bottom-side parts
+   channel toward the +Y wall under the J1 header (its pigtail climbs the J1 notch); the sub-board floor must sit ≥ 0.35 mm under the bottom-side parts
    (board on the front and back ledges, bottom parts ≤ 1.15 mm). **Open item**: a 301012 *with PCM* is longer than
    12 mm at the tab end — model the pocket from the cell drawing before the final print.
-4. Board on the ledges (front 1.0 mm wide in the two gaps between bottom parts, back 3.2 mm under the test pads):
-   board top 0.6 mm above the ledge; switch plunger on the key's flange; mic tube over the T3902 port at (8.1, 15.85)
-   with a 0.3 mm foam/adhesive ring between the tube end and the board; LED ring over D1.
+4. Board on the ledges (front 1.0 mm wide outside the y 5.5–11.0 gap for the FPC-pin passives, back 2.9 mm under the
+   u.FL strip): board top 0.6 mm above the ledge; switch plunger on the key's flange; mic tube over the T3902 port at
+   (8.1, 15.3) with a 0.3 mm foam/adhesive ring between the tube end and the board; LED ring over D1; the four edge
+   notches against the +Y wall with a pigtail in each.
 5. Charging-pad windows (3 × 3) open through the band at ±25°; the two grooves on the −Y rib (X −1.5 and −3.5) run into
-   Ø0.9 channels that surface under the board at Y ≈ −8.3, 0.65 mm (channel B, X −3.5, +Y window → PAD1w CHG+) and
-   2.7 / 4.7 mm (channel A, X −1.5, −Y window → PAD2w CHG−, running along the board edge) from the pads — thread the
-   wires before fitting the cell. Fill the grooves with resin/epoxy afterwards (they face the palm; an enclosed tunnel
-   this size would not print clean or thread).
+   Ø1.1 channels that surface under the board beside the −Y wall at board x 14.75 / 16.75 (channel B, X −3.5, +Y window
+   → CHG+ = J3 pin 1; channel A, X −1.5, −Y window → CHG− = J3 pin 2), where the 1.2 × 0.8 floor groove picks the two
+   wires up and carries them round to the J3 notch — thread the W2 pigtail's bare ends through the groove and the
+   channels before fitting the cell, with the plug held up out of the bay. Fill the rib grooves with resin/epoxy
+   afterwards (they face the palm; an enclosed tunnel this size would not print clean or thread).
 6. Antenna: glue the flex antenna to the inside of the back wall in the 2 mm cavity, route the pigtail down behind the
    board edge; keep both away from the cell and the LRA.
 7. **Speaker** (if fitted): the Ø10 × 2.9 disc drops into the U-slot in the +Y wall from the top with 0.2 mm all round
    and seats in the semicircle (its back face 0.1 mm off the pocket's back wall below the floor, its front 0.2 mm off
    the grille plate); the five grille holes are clear; the slot's back is open to the bay above the floor and the
-   6 × 1.0 lead groove is open below it. Solder the two leads first, drop the speaker in with the terminals toward the
-   bay (just above floor level), lead the wires under the board edge to SPK1a/b, then the board, then the lid — its
+   6 × 1.0 lead groove is open below it. Fit the pigtail first, drop the speaker in with the terminals toward the
+   bay (just above floor level), lead the wires under the board edge to the J5 notch, then the board, plug in, then the lid — its
    boss should end 0.2 mm above the speaker rim (add a foam pad or a drop of silicone). The speaker's magnet is 5.45 mm
    from the antenna placeholder; keep the antenna glued where the model puts it. **Open item**: the PUI drawing
    (terminal position, max thickness 2.9 from a distributor listing, venting) sets the final pocket depth and whether
@@ -231,7 +254,8 @@ would put the magnet 0.7 mm from the antenna plane, the band wall has the finger
 ## What the placeholders assume
 
 OV2640 head 8.5 × 8.5 × 1.3 + Ø4.5 × 4.5 barrel with a 0.2 mm thick flex (8.5 wide neck, 12.5 wide contact end); ESP32-S3-
-MINI-1U 15.4 × 15.4 × 2.4 with a 2.5 × 2.5 × 2.9 mated u.FL at the back-left; 301012 cell 3 × 10 × 12 (no PCM); INEED
+MINI-1U 15.4 × 15.4 × 2.4 with a 2.5 × 2.5 × 2.9 mated u.FL at the back-left; four Pico-EZmate headers 4.2 × 4.5 × 1.55 (mated)
+with 2.6 × ~1.3 × 1.55 plug/wire-bend boxes over the notches; 301012 cell 3 × 10 × 12 (no PCM); INEED
 LRA0825BC Ø8 × 2.5; Omron B3U-3000P 3.0 × 2.5 × 1.2 with a plunger reaching 0.1 mm past the wall's inner face; WS2812B-
 2020 2 × 2 × 0.9; TDK T3902 3.5 × 2.65 × 0.98 on the bottom; FPC1 4 × 16 × 2.0; every other top- and bottom-side part
 from `board_params.json` as a box; flex antenna 15 × 5 × 0.25; pigtail Ø0.9; speaker LS1 a plain Ø10 × 2.9 disc (no

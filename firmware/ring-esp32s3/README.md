@@ -51,6 +51,31 @@ stubs (`g++ -fsyntax-only` per `src/*.cpp`, see the repo's CI notes).
 The on-board user LED (GPIO21) is the light channel. Everything except the button is optional:
 missing I²C devices are detected at boot and the corresponding status flags are cleared.
 
+### No-solder wiring (XIAO in the Expansion Board Base) — `pio run -e xiao_esp32s3_sense_base`
+
+For an owner who does not want to solder, the same firmware runs the **pre-soldered** XIAO ESP32S3
+Sense (Seeed 102010635) seated in Seeed's **Expansion Board Base for XIAO** (103030356 / Adafruit
+5033). Drawing and connection table: `hardware/pcb/wiring_stage0_solderless.md`; kit:
+`hardware/bom/stage0-devkit-solderless.csv`; step-by-step: `docs/07-build-guide.md` §1.12.
+
+| Signal | Where it comes from | Note |
+|---|---|---|
+| Button → GND | **the base's user button**, already on D1 (GPIO2) | nothing to wire |
+| Buzzer | **the base's passive buzzer**, already on A3 = D3 (GPIO4) | nothing to wire |
+| Haptics | **Grove – Haptic Motor** (Seeed 105020011) in Grove I²C socket #1 | DRV2605L 0x5A + factory-attached **ERM** → `HAPTIC_MOTOR_LRA 0`; EN tied on-module |
+| IMU | **LIS3DH STEMMA QT** (Adafruit 2809 / SparkFun SEN-29529) via a Grove→STEMMA QT cable (Adafruit 4528) in Grove I²C socket #2 | WHO_AM_I 0x33; `imu_init()` picks the LIS2DW12 or LIS3DH back-end at boot (`src/imu_lis3dh.cpp`) |
+| IMU INT1 | LIS3DH `INT` hole → male-male jumper → base breakout header **D8** (GPIO7) | press-fit / hammer-header pin / IC hook on the breakout side. **Optional**: the build polls the latched click source every 25 ms (`IMU_POLL_MS`); only tap-to-wake from deep sleep needs the wire |
+| Battery | LiPo **≥ 400 mAh** JST-PH into the base's JST 2.0 socket | the base charges at ≤ 460 mA (too fast for the 100 mAh ring cell). No A0 divider → `batt` reads 255 % (unknown) |
+| Speaker (optional) | MAX98357A breakout: `BCLK`/`LRC`/`VIN`/`GND` from the base's **Grove UART** socket (D7/D6/3V3/GND) through a Grove-to-jumper cable, `DIN` from breakout header D10, `SD` → `VIN` | the amp's 7 header holes are the one unsoldered thing on the kit: press-fit pins, 5 joints at a makerspace, or defer to stage 1 |
+
+`-DMCRING_XIAO_BASE` (`src/config_audio.h`) restates `PIN_BUTTON`/`PIN_BUZZER` at the base's pins (today
+identical to the stock map), parks `PIN_HAPTIC` (D2 = the base's microSD chip-select), selects the ERM
+drive profile and enables tap polling; `BOARD_NAME` becomes `xiao-esp32s3-sense+base` so the boot log
+says which build is running. Leave the base's microSD slot empty (SPI on D8/D9/D10) and never plug a
+UART Grove *device* into the UART socket (D6/D7 are I²S). Not verified from the base's schematic: whether
+its charger output reaches the XIAO's `BAT` pads or only the 5V/VIN pin — the XIAO's own `BAT` pads are
+unused either way.
+
 ### Speaker (optional, `HAS_SPEAKER`)
 
 Adafruit-style **MAX98357A** I2S class-D breakout + **8 Ω 10 mm speaker**:
@@ -115,8 +140,9 @@ src/cues.*          listening / answer-ready / error / ok cues honouring CUES_MA
 src/feedback.*      non-blocking ON/OFF pattern player on 4 channels; MORSE_UNITS reassembly (legacy)
 src/audio_out.*     ADPCM block queue → decoder → volume → I2S1 TX (MAX98357A); prebuffer, underrun, drain
 src/audio_mod.*     PDM mic → PCM → IMA-ADPCM (I2S0)
-src/drv2605.*       DRV2605L RTP mode (LRA), autocal
-src/imu_lis2dw12.*  LIS2DW12 double-tap on INT1
+src/drv2605.*       DRV2605L RTP mode (LRA, or ERM with HAPTIC_MOTOR_LRA 0), autocal
+src/imu_lis2dw12.*  LIS2DW12 double-tap on INT1 (imu_* API header; the .cpp is compiled through imu_lis3dh.cpp)
+src/imu_lis3dh.*    LIS3DH double-click on INT1 (latched) + run-time dispatch of the imu_* API between the two chips
 src/power.*         battery ADC, idle deep sleep, EXT0/EXT1 wake
 src/settings.*      NVS-persisted config (SET_CONFIG keys 1..11)
 src/config.h        board pin maps + behavioural defaults;  src/config_audio.h  speaker pins, cue/mic defaults

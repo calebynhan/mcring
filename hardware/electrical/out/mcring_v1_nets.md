@@ -1,6 +1,6 @@
 # mcring v1 (stage 1) — net listing
 
-92 parts (90 populated, 6 off-board / wired — marked with \*), 313 pins, 65 nets, 299 nodes, 10 power nets.
+96 parts (94 populated, 11 off-board / wired — marked with \*), 323 pins, 65 nets, 309 nodes, 10 power nets.
 
 ## Nets
 
@@ -11,10 +11,10 @@
 | `CAM_2V8` | yes | 4 | U3.2 (VOUT), C11.1 (1), C13.1 (1), FPC1.4 (AVDD) |
 | `CAM_3V3` | yes | 9 | U2.A2 (VOUT), C10.1 (1), C24.1 (1), U3.3 (VIN), U4.3 (VIN), FPC1.11 (DOVDD), R5.1 (1), R6.1 (1), R16.1 (1) |
 | `CHG_IN` | yes | 3 | D3.1 (K), U7.A1 (IN), C7.1 (1) |
-| `CHG_PAD` | yes | 4 | PAD1.1 (PAD), CP1\*.1 (PAD), D2.1 (1), D3.2 (A) |
-| `GND` | yes | 96 | U1.1 (GND), U1.2 (GND), U1.43 (GND), U1.44 (GND), U1.46 (GND), U1.47 (GND), U1.48 (GND), U1.49 (GND), U1.50 (GND), U1.51 (GND), U1.52 (GND), U1.53 (GND), U1.54 (GND), U1.55 (GND), U1.56 (GND), U1.57 (GND), U1.58 (GND), U1.59 (GND), U1.60 (GND), U1.61 (GND), U1.62 (GND), U1.63 (GND), U1.64 (GND), U1.65 (GND), C4.2 (2), C5.2 (2), C6.2 (2), TP5.1 (1), R17.2 (2), R18.2 (2), SW2.2 (2), J1.2 (BAT-), BT1\*.2 (-), PAD2.1 (PAD), CP2\*.1 (PAD), D2.2 (2), U7.C2 (VSS), C7.2 (2), C8.2 (2), R10.2 (2), R11.2 (2), U8.2 (GND), U8.5 (STOP), U8.6 (MODE), C1.2 (2), C2.2 (2), C3.2 (2), R12.2 (2), R9.2 (2), C23.2 (2), U2.B2 (GND), C9.2 (2), C10.2 (2), C24.2 (2), C11.2 (2), C13.2 (2), C12.2 (2), C14.2 (2), U3.1 (VSS), U4.1 (VSS), FPC1.2 (AGND), FPC1.15 (DGND), FPC1.8 (PWDN), U5.7 (GND), U5.4 (IN/TRIG), C15.2 (2), C16.2 (2), U6.5 (RES), U6.6 (GND), U6.7 (GND), U6.8 (GND), U6.3 (SA0/SDO), C17.2 (2), C18.2 (2), MK1.2 (GND), MK1.6 (GND), MK1.5 (SELECT), C19.2 (2), SW1.2 (2), C22.2 (2), U9.B2 (GND), C21.2 (2), C20.2 (2), D1.3 (GND), BZ1.2 (GND), PZ1\*.2 (-), Q1.2 (S), R14.2 (2), U11.B2 (GND), U10.3 (GND), U10.11 (GND), U10.15 (GND), U10.17 (EP), C25.2 (2), C26.2 (2), R20.2 (2) |
+| `CHG_PAD` | yes | 5 | J3.1 (CHG+), W2\*.1 (CHG+), CP1\*.1 (PAD), D2.1 (1), D3.2 (A) |
+| `GND` | yes | 98 | U1.1 (GND), U1.2 (GND), U1.43 (GND), U1.44 (GND), U1.46 (GND), U1.47 (GND), U1.48 (GND), U1.49 (GND), U1.50 (GND), U1.51 (GND), U1.52 (GND), U1.53 (GND), U1.54 (GND), U1.55 (GND), U1.56 (GND), U1.57 (GND), U1.58 (GND), U1.59 (GND), U1.60 (GND), U1.61 (GND), U1.62 (GND), U1.63 (GND), U1.64 (GND), U1.65 (GND), C4.2 (2), C5.2 (2), C6.2 (2), TP5.1 (1), R17.2 (2), R18.2 (2), SW2.2 (2), J1.2 (BAT-), W1\*.2 (BAT-), BT1\*.2 (-), J3.2 (CHG-), W2\*.2 (CHG-), CP2\*.1 (PAD), D2.2 (2), U7.C2 (VSS), C7.2 (2), C8.2 (2), R10.2 (2), R11.2 (2), U8.2 (GND), U8.5 (STOP), U8.6 (MODE), C1.2 (2), C2.2 (2), C3.2 (2), R12.2 (2), R9.2 (2), C23.2 (2), U2.B2 (GND), C9.2 (2), C10.2 (2), C24.2 (2), C11.2 (2), C13.2 (2), C12.2 (2), C14.2 (2), U3.1 (VSS), U4.1 (VSS), FPC1.2 (AGND), FPC1.15 (DGND), FPC1.8 (PWDN), U5.7 (GND), U5.4 (IN/TRIG), C15.2 (2), C16.2 (2), U6.5 (RES), U6.6 (GND), U6.7 (GND), U6.8 (GND), U6.3 (SA0/SDO), C17.2 (2), C18.2 (2), MK1.2 (GND), MK1.6 (GND), MK1.5 (SELECT), C19.2 (2), SW1.2 (2), C22.2 (2), U9.B2 (GND), C21.2 (2), C20.2 (2), D1.3 (GND), BZ1.2 (GND), PZ1\*.2 (-), Q1.2 (S), R14.2 (2), U11.B2 (GND), U10.3 (GND), U10.11 (GND), U10.15 (GND), U10.17 (EP), C25.2 (2), C26.2 (2), R20.2 (2) |
 | `VAMP` | yes | 7 | U11.A2 (VOUT), U10.7 (VDD), U10.8 (VDD), U10.4 (SD_MODE), C25.1 (1), C26.1 (1), R21.2 (2) |
-| `VBAT` | yes | 10 | J1.1 (BAT+), BT1\*.1 (+), U7.A2 (OUT), C8.1 (1), U8.3 (VIN), U8.4 (EN), C1.1 (1), TP8.1 (1), R8.1 (1), J2.1 (VBAT) |
+| `VBAT` | yes | 11 | J1.1 (BAT+), W1\*.1 (BAT+), BT1\*.1 (+), U7.A2 (OUT), C8.1 (1), U8.3 (VIN), U8.4 (EN), C1.1 (1), TP8.1 (1), R8.1 (1), J2.1 (VBAT) |
 | `VLED` | yes | 4 | U9.A2 (VOUT), C21.1 (1), C20.1 (1), D1.1 (VDD) |
 | `AMP_BCLK` |  | 2 | R22.2 (2), U10.16 (BCLK) |
 | `AMP_DIN` |  | 2 | R24.2 (2), U10.1 (DIN) |
@@ -52,8 +52,8 @@
 | `IO0` |  | 4 | U1.4 (IO0), R2.2 (2), TP1.1 (1), SW2.1 (1) |
 | `ISET` |  | 2 | U7.C1 (ISET), R10.1 (1) |
 | `LED_PWR_EN` |  | 3 | U1.27 (IO33), R18.1 (1), U9.B1 (ON) |
-| `LRA_N` |  | 2 | U5.8 (OUT-), M1.2 (-) |
-| `LRA_P` |  | 2 | U5.9 (OUT+), M1.1 (+) |
+| `LRA_N` |  | 4 | U5.8 (OUT-), J4.2 (LRA-), W3\*.2 (LRA-), M1\*.2 (-) |
+| `LRA_P` |  | 4 | U5.9 (OUT+), J4.1 (LRA+), W3\*.1 (LRA+), M1\*.1 (+) |
 | `MCU_EN` |  | 4 | U1.45 (EN), R1.2 (2), C6.1 (1), TP2.1 (1) |
 | `PDM_CLK` |  | 2 | MK1.3 (CLK), U1.36 (IO42) |
 | `PDM_DATA` |  | 2 | MK1.4 (DATA), U1.35 (IO41) |
@@ -62,8 +62,8 @@
 | `RGB_DIN` |  | 2 | R7.2 (2), D1.4 (DIN) |
 | `SCL` |  | 4 | U1.10 (IO6), R4.2 (2), U5.2 (SCL), U6.1 (SCL/SPC) |
 | `SDA` |  | 4 | U1.9 (IO5), R3.2 (2), U5.3 (SDA), U6.4 (SDA/SDI/SDO) |
-| `SPK_N` |  | 3 | U10.10 (OUTN), SPK1.2 (OUTN), LS1\*.2 (-) |
-| `SPK_P` |  | 3 | U10.9 (OUTP), SPK1.1 (OUTP), LS1\*.1 (+) |
+| `SPK_N` |  | 4 | U10.10 (OUTN), J5.2 (OUTN), W4\*.2 (OUTN), LS1\*.2 (-) |
+| `SPK_P` |  | 4 | U10.9 (OUTP), J5.1 (OUTP), W4\*.1 (OUTP), LS1\*.1 (+) |
 | `SW_NODE` |  | 2 | U8.1 (SW), L1.1 (1) |
 | `TOUCH` |  | 2 | R13.1 (1), U1.12 (IO8) |
 | `TOUCH_PAD` |  | 2 | R13.2 (2), TPAD1.1 (PAD) |
@@ -110,15 +110,16 @@
 | D1 | WS2812B-2020 | WS2812B-2020 | `LED_SMD:LED_WS2812B-2020_PLCC4_2.0x2.0mm` | 4 | Outputs |
 | D2 | PESD5V0S1BB | PESD5V0S1BB,115 | `Diode_SMD:D_SOD-523` | 2 | Power |
 | D3 | PMEG2005EB | PMEG2005EB,115 | `Diode_SMD:D_SOD-523` | 2 | Power |
-| FPC1 | FPC-24-0.5mm-bottom | F32R-1A7H1-11024 | `Connector_FFC-FPC:Hirose_FH12-24S-0.5SH_1x24-1MP_P0.50mm_Horizontal` | 24 | Camera |
-| J1 | BAT pads |  | `mcring:PAD_Wire_2x1.5mm_P2.0mm` | 2 | Power |
+| FPC1 | FH12-24S-0.5SH(55) | FH12-24S-0.5SH(55) | `Connector_FFC-FPC:Hirose_FH12-24S-0.5SH_1x24-1MP_P0.50mm_Horizontal` | 24 | Camera |
+| J1 | Pico-EZmate 2p BAT | 78171-0002 | `Connector_Molex:Molex_Pico-EZmate_78171-0002_1x02-1MP_P1.20mm_Vertical` | 2 | Power |
 | J2 | AUX |  | `mcring:PAD_Aux_1x2` | 2 | Outputs |
+| J3 | Pico-EZmate 2p CHG | 78171-0002 | `Connector_Molex:Molex_Pico-EZmate_78171-0002_1x02-1MP_P1.20mm_Vertical` | 2 | Power |
+| J4 | Pico-EZmate 2p LRA | 78171-0002 | `Connector_Molex:Molex_Pico-EZmate_78171-0002_1x02-1MP_P1.20mm_Vertical` | 2 | Sensors |
+| J5 | Pico-EZmate 2p SPK | 78171-0002 | `Connector_Molex:Molex_Pico-EZmate_78171-0002_1x02-1MP_P1.20mm_Vertical` | 2 | Outputs |
 | L1 | 2.2uH | DFE201610E-2R2M=P2 | `Inductor_SMD:L_0806_2016Metric` | 2 | Power |
 | LS1 \*off-board | AS01008MR-2-R | AS01008MR-2-R | `offboard:Speaker_10mm_x2.9mm` | 2 | Outputs |
-| M1 | LRA0825BC-0167F | LRA0825BC-0167F | `mcring:LRA_8mm_2pad` | 2 | Sensors |
+| M1 \*off-board | LRA0825BC-0167F | LRA0825BC-0167F | `offboard:LRA_8x2.5mm` | 2 | Sensors |
 | MK1 | T3902 | T3902 | `mcring:MIC_TDK_T3902_3.5x2.65mm` | 6 | Sensors |
-| PAD1 | CHG+ pad |  | `mcring:PAD_Wire_1x1.5mm` | 1 | Power |
-| PAD2 | CHG- pad |  | `mcring:PAD_Wire_1x1.5mm` | 1 | Power |
 | PZ1 (DNP) \*off-board | PKMCS0909E4000-R1 | PKMCS0909E4000-R1 | `offboard:Piezo_9x9x1.9mm` | 2 | Outputs |
 | Q1 | AO3400A | AO3400A | `Package_TO_SOT_SMD:SOT-23` | 3 | Outputs |
 | R1 | 10k | RC0402FR-0710KL | `Resistor_SMD:R_0402_1005Metric` | 2 | MCU |
@@ -145,7 +146,6 @@
 | R22 | 1k | RC0402FR-071KL | `Resistor_SMD:R_0402_1005Metric` | 2 | Outputs |
 | R23 | 1k | RC0402FR-071KL | `Resistor_SMD:R_0402_1005Metric` | 2 | Outputs |
 | R24 | 1k | RC0402FR-071KL | `Resistor_SMD:R_0402_1005Metric` | 2 | Outputs |
-| SPK1 | SPEAKER pads |  | `mcring:PAD_Wire_2x1.5mm_P2.0mm` | 2 | Outputs |
 | SW1 | B3U-3000P | B3U-3000P | `mcring:SW_Omron_B3U-3000P` | 2 | Sensors |
 | SW2 (DNP) | B3U-1000P | B3U-1000P | `mcring:SW_Omron_B3U-1000P` | 2 | MCU |
 | TP1 | TP_IO0 |  | `TestPoint:TestPoint_Pad_D1.0mm` | 1 | MCU |
@@ -159,15 +159,19 @@
 | TPAD1 | TOUCH |  | `mcring:PAD_Touch_3x4mm` | 1 | Sensors |
 | U1 | ESP32-S3-MINI-1U-N4R2 | ESP32-S3-MINI-1U-N4R2 | `RF_Module:ESP32-S3-MINI-1U` | 65 | MCU |
 | U2 | TPS22916CYFPR | TPS22916CYFPR | `mcring:TPS22916_DSBGA-4_YFP` | 4 | Camera |
-| U3 | XC6206P282MR | XC6206P282MR | `Package_TO_SOT_SMD:SOT-23` | 3 | Camera |
+| U3 | XC6206P282MR | XC6206P282MR-G | `Package_TO_SOT_SMD:SOT-23` | 3 | Camera |
 | U4 | XC6206P122MR | XC6206P122MR | `Package_TO_SOT_SMD:SOT-23` | 3 | Camera |
-| U5 | DRV2605LDGS | DRV2605LDGSR | `Package_SO:VSSOP-10_3x3mm_P0.5mm` | 10 | Sensors |
+| U5 | DRV2605LDGS | DRV2605LDGST | `Package_SO:VSSOP-10_3x3mm_P0.5mm` | 10 | Sensors |
 | U6 | LIS2DW12TR | LIS2DW12TR | `Package_LGA:LGA-12_2x2mm_P0.5mm` | 12 | Sensors |
 | U7 | BQ25100AYFPR | BQ25100AYFPR | `mcring:BQ25100_DSBGA-6_YFP` | 6 | Power |
 | U8 | TPS62840DLCR | TPS62840DLCR | `Package_TO_SOT_SMD:SOT-583-8` | 8 | Power |
 | U9 | TPS22916CYFPR | TPS22916CYFPR | `mcring:TPS22916_DSBGA-4_YFP` | 4 | Outputs |
 | U10 | MAX98357AETE+T | MAX98357AETE+T | `Package_DFN_QFN:QFN-16-1EP_3x3mm_P0.5mm_EP1.7x1.7mm` | 17 | Outputs |
 | U11 | TPS22916CYFPR | TPS22916CYFPR | `mcring:TPS22916_DSBGA-4_YFP` | 4 | Outputs |
+| W1 \*off-board | Pico-EZmate 2-ckt pigtail | 36920-0201 (cut in half) | `offboard:Pigtail_PicoEZmate_2ckt` | 2 | Power |
+| W2 \*off-board | Pico-EZmate 2-ckt pigtail | 36920-0201 (cut in half) | `offboard:Pigtail_PicoEZmate_2ckt` | 2 | Power |
+| W3 \*off-board | Pico-EZmate 2-ckt pigtail | 36920-0201 (cut in half) | `offboard:Pigtail_PicoEZmate_2ckt` | 2 | Sensors |
+| W4 \*off-board | Pico-EZmate 2-ckt pigtail | 36920-0201 (cut in half) | `offboard:Pigtail_PicoEZmate_2ckt` | 2 | Outputs |
 
 ## Pin-by-pin
 
@@ -180,7 +184,7 @@
 | 3 | GND | GND |
 | 4 | DIN | RGB_DIN |
 
-### FPC1 — FPC-24-0.5mm-bottom
+### FPC1 — FH12-24S-0.5SH(55)
 
 | Pin | Name | Net |
 |---|---|---|

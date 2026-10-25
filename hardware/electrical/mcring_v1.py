@@ -17,9 +17,17 @@ u.FL end pointing away from the camera.  Nets follow firmware/ring-esp32s3/src/c
 
 Review fixes folded in (see README §1): DRV2605L EN tied high, /CHG on IO3, LED_PWR_EN moved
 off RXD0 to IO33, WS2812 fed from 3V3 through U9 with a 1 k data resistor, battery divider
-1 M/1 M, R12 = 267 k (TPS62840 3.3 V code), wire-pad footprints for the cell / piezo / charging
-pads with the cell, piezo element, band contacts and the u.FL flex antenna as off-board BOM
-lines, series Schottky + bidirectional TVS on the charging input.
+1 M/1 M, R12 = 267 k (TPS62840 3.3 V code), series Schottky + bidirectional TVS on the charging input.
+
+Design for assembly (README §1 item 21, docs/10-ordering-assembled-boards.md): the board is ordered
+ASSEMBLED and the owner never solders. The former wire pads for the cell (J1), charging leads (PAD1/PAD2),
+LRA (M1 pads) and speaker (SPK1 pads) are four 2-pin Molex Pico-EZmate 78171-0002 headers J1 (BAT),
+J3 (CHG), J4 (LRA), J5 (SPK) on the TOP side of the 4.8 mm wider board (floorplan right strip); the cell
+BT1, the band contacts CP1/CP2, the LRA M1 and the speaker LS1 are off-board parts whose leads end in a
+Pico-EZmate plug (pigtails W1-W4, off-board BOM lines). FPC1 is the Hirose FH12-24S-0.5SH(55) flip-lock
+ZIF (bottom contact, the land pattern this design always used); the piezo pads BZ1 (optional, DNP piezo)
+and the aux pads J2 (bench experiment) stay bare pads. Parts carry an "LCSC" field where the C-number is
+known (export_cpl.py in hardware/pcb writes the JLCPCB BOM/CPL from it).
 
 Voice-first addition (README §1 item 20): the OPTIONAL on-ring speaker — U10 MAX98357A I2S
 class-D amp (16-TQFN), U11 TPS22916 gating its 3V3 rail (VAMP) from IO34, 10 uF + 100 nF on VAMP,
@@ -131,23 +139,58 @@ SOD523 = "Diode_SMD:D_SOD-523"
 # (1.7 vs 1.75/1.8 variants in the library) against the Maxim drawing before ordering.
 TQFN16 = "Package_DFN_QFN:QFN-16-1EP_3x3mm_P0.5mm_EP1.7x1.7mm"
 TP = "TestPoint:TestPoint_Pad_D1.0mm"
-# Wire pads (custom 'mcring' footprints): sizes/pitches match hardware/pcb/board_params.json
-# "wire_pads_bottom_mm" (J1a/J1b and PAD1w/PAD2w 1.5 mm, BZ1a/BZ1b 1.2 mm, 2.0 mm pitch).
-PAD2x15 = "mcring:PAD_Wire_2x1.5mm_P2.0mm"
+# Bare wire pads (custom 'mcring' footprint): BZ1a/BZ1b 1.2 mm, 2.0 mm pitch — matches
+# hardware/pcb/board_params.json "wire_pads_bottom_mm" (only BZ1 and J2 remain as pads).
 PAD2x12 = "mcring:PAD_Wire_2x1.2mm_P2.0mm"
-PAD1x15 = "mcring:PAD_Wire_1x1.5mm"
+# Plug-in headers: Molex Pico-EZmate 78171-0002, 1.20 mm pitch, 2 circuits, vertical SMT, side friction
+# locks, 1.55 mm mated height (Molex). KiCad 7/8 ships the land pattern under this name (VERIFY in the
+# installed library); the floorplan budgets a 4.2 x 4.5 mm outline (from the published 3-ckt 5.4 x 4.5) with
+# the plug's wires leaving toward the board edge — confirm both on the Molex drawing. Mates with the
+# 78172-0002 housing; the 36920-0201 cable (100 mm, 28 AWG, plug both ends) cut in half gives two pigtails.
+# Alternative family with the same role (different land pattern): JST ACH BM02B-ACHSS-GAN-ETF, 1.4 mm.
+CONN2 = "Connector_Molex:Molex_Pico-EZmate_78171-0002_1x02-1MP_P1.20mm_Vertical"
+CONN2_MPN, CONN2_MFR = "78171-0002", "Molex"
+CONN2_FIELDS = {"Alt MPN": "BM02B-ACHSS-GAN-ETF (JST ACH, 1.4 mm; re-footprint)", "Mates": "78172-0002 housing / 36920-0201 cable",
+                "Sourcing": "not on LCSC — consign to the assembler (DigiKey/Mouser) or JLCPCB Global Sourcing"}
+PIGTAIL = "offboard:Pigtail_PicoEZmate_2ckt"
 
 PASSIVE_PINS = {"1": "1", "2": "2"}
+# LCSC C-numbers that the research / BOM / a distributor listing confirmed (hardware/pcb/export_cpl.py puts them in
+# the JLCPCB BOM; everything without one is flagged there as "match in the JLC BOM tool" or "consign").
+LCSC = {
+    "RC0402FR-0710KL": "C60490", "RC0402FR-074K7L": "C105871",
+    "GRM155R71C104KA88": "C71629 (LCSC: not recommended for new designs — let the JLC BOM tool substitute a basic 0402 100 nF X7R 16 V)",
+    "GRM155R61A105KE15": "C76999", "GRM188R60J106ME47": "C77041",
+}
+
+
+def _lcsc(mpn: str) -> dict:
+    c = LCSC.get(mpn)
+    return {"LCSC": c.split(" ")[0]} if c else {}
 
 
 def R(ref, value, mpn, desc, sheet):
     return Part(ref, value, R0402, mpn=mpn, pins=PASSIVE_PINS, description=desc,
-                manufacturer="Yageo", sheet=sheet)
+                manufacturer="Yageo", sheet=sheet, fields=_lcsc(mpn))
 
 
 def C(ref, value, fp, mpn, desc, sheet):
     return Part(ref, value, fp, mpn=mpn, pins=PASSIVE_PINS, description=desc,
-                manufacturer="Murata", sheet=sheet)
+                manufacturer="Murata", sheet=sheet, fields=_lcsc(mpn))
+
+
+def CONN(ref, short, pins, desc, sheet):
+    """One of the four Pico-EZmate plug-in headers (TOP side, floorplan right strip)."""
+    return Part(ref, f"Pico-EZmate 2p {short}", CONN2, mpn=CONN2_MPN, manufacturer=CONN2_MFR, pins=pins,
+                fields=dict(CONN2_FIELDS), description=desc, sheet=sheet)
+
+
+def PIGTAIL_PART(ref, short, pins, desc, sheet):
+    """Off-board 2-wire pigtail ending in the 78172-0002 plug: half of a 36920-0201 cable (bare end to the part)."""
+    return Part(ref, "Pico-EZmate 2-ckt pigtail", PIGTAIL, mpn="36920-0201 (cut in half)", manufacturer="Molex",
+                pins=pins, offboard=True, sheet=sheet,
+                fields={"Alt MPN": "68801-4146 (152 mm pigtail, one plug) / ASACHSACH28W102 for the JST ACH alternative"},
+                description=f"{short}: 28 AWG pre-crimped pigtail, plug into {desc}")
 
 
 def TPAD(ref, name, sheet):
@@ -240,27 +283,31 @@ def build() -> Netlist:
     nl.connect("ANT_RF", "ANT1", "RF")
 
     # ---------------------------------------------------------------- Power
-    # Cell: two 1.5 mm wire pads on the board (floorplan J1a/J1b); the 4.25 mm-tall JST SH header of the
-    # earlier netlist fits neither side of the board (top 2.9 / bottom 1.15 mm). The cell is BT1 (off-board).
-    nl.add(Part("J1", "BAT pads", PAD2x15, pins={"1": "BAT+", "2": "BAT-"},
-                description="two 1.5 mm wire pads, 2.0 mm pitch, bottom side, for the cell leads (cell = BT1)",
-                sheet="Power"))
+    # Cell: J1 is a Pico-EZmate header on the TOP side (floorplan right strip, 1.55 mm mated; the 4.25 mm JST SH
+    # of the first netlist fits neither side, and no connector fits the 1.15 mm bottom). The cell BT1 (off-board)
+    # lies in the floor pocket with its tabs toward +y; its leads end in the W1 pigtail's plug.
+    nl.add(CONN("J1", "BAT", {"1": "BAT+", "2": "BAT-"},
+                "cell header (top side, right strip; wire notch in the right edge beside it); pin 1 = BAT+ — "
+                "mark the silkscreen, the Pico-EZmate plug is polarised", "Power"))
     nl.add(Part("BT1", "301012 LiPo 30 mAh", "offboard:Cell_301012_3x10x12mm", mpn="301012 (30 mAh, with PCM)",
                 manufacturer="generic — see hardware/bom/stage1-ring.csv", pins={"1": "+", "2": "-"}, offboard=True,
-                description="3 x 10 x 12 mm LiPo cell with PCM, 1C max charge; leads soldered to J1 (last step)",
+                description="3 x 10 x 12 mm LiPo cell with PCM, 1C max charge; leads terminated in the W1 Pico-EZmate plug "
+                            "(cable shop / solder-seal sleeve, docs/10) and plugged into J1 — no solder on the board",
                 sheet="Power"))
-    # Charging pads: the inner-band contacts (CP1/CP2, off-board) are wired to two 1.5 mm pads on the board
-    # (PAD1/PAD2 = floorplan PAD1w/PAD2w). PAD1 is also the bring-up VBUS entry point (README §4).
-    nl.add(Part("PAD1", "CHG+ pad", PAD1x15, pins={"1": "PAD"},
-                description="1.5 mm wire pad (bottom) -> CP1 inner-band contact (+5 V pogo); bring-up VBUS entry",
-                sheet="Power"))
-    nl.add(Part("PAD2", "CHG- pad", PAD1x15, pins={"1": "PAD"},
-                description="1.5 mm wire pad (bottom) -> CP2 inner-band contact (GND return)", sheet="Power"))
+    nl.add(PIGTAIL_PART("W1", "BAT", {"1": "BAT+", "2": "BAT-"}, "J1; bare end to the cell's two leads", "Power"))
+    # Charging pads: J3 is the second Pico-EZmate header; its pigtail W2 runs down the right-edge notch, through the
+    # floor wire groove to the two Ø1.1 channels in the band and ends on the inner-band contacts CP1/CP2 (off-board).
+    # J3 pin 1 (CHG_PAD) is also the bring-up VBUS entry point (README §4).
+    nl.add(CONN("J3", "CHG", {"1": "CHG+", "2": "CHG-"},
+                "charging-pad header (top side, right strip); pin 1 = CHG_PAD (+5 V from the cradle, bring-up VBUS entry), "
+                "pin 2 = GND return", "Power"))
+    nl.add(PIGTAIL_PART("W2", "CHG", {"1": "CHG+", "2": "CHG-"}, "J3; bare ends to CP1/CP2 through the band channels", "Power"))
     for ref, net_desc in (("CP1", "+5 V from the pogo cradle"), ("CP2", "GND return")):
         nl.add(Part(ref, "charging contact 3x2 mm ENIG", "offboard:Pad_ENIG_3x2mm", pins={"1": "PAD"}, offboard=True,
                     manufacturer="PCB coupon or brass insert", mpn="",
                     description=f"inner-band pogo contact, 3 x 2 mm ENIG, flush, >= 3 mm from the other pad; "
-                                f"{net_desc}; wire to {'PAD1' if ref == 'CP1' else 'PAD2'}", sheet="Power"))
+                                f"{net_desc}; the W2 pigtail's bare end is bonded to it with silver conductive pen "
+                                f"(<= 25 mA path) or soldered by the cable shop (docs/10)", sheet="Power"))
     # Charging input protection: D3 (series Schottky) blocks a ring seated the wrong way round in a 2-pin
     # cradle (CHG_PAD = -5 V would otherwise forward-bias a unidirectional TVS and drive the BQ25100 IN to
     # -0.7 V, abs. min -0.3 V); D2 is therefore the BIDIRECTIONAL 5 V TVS so it does not conduct at -5 V.
@@ -277,7 +324,7 @@ def build() -> Netlist:
     # the BQ25101 is the TS variant with fixed 10 % termination.
     nl.add(Part("U7", "BQ25100AYFPR", "mcring:BQ25100_DSBGA-6_YFP", mpn="BQ25100AYFPR", manufacturer="TI",
                 pins={"A1": "IN", "A2": "OUT", "B1": "nCHG", "B2": "PRE_TERM", "C1": "ISET", "C2": "VSS"},
-                power_pins={"A1", "A2", "C2"}, is_ic=True,
+                power_pins={"A1", "A2", "C2"}, is_ic=True, fields={"LCSC": "C2871910"},
                 description="Li-ion charger 10-250 mA, 1 mA termination; ball map VERIFY", sheet="Power"))
     nl.add(C("C7", "1u", C0402, "GRM155R61A105KE15", "charger IN", "Power"))
     nl.add(C("C8", "1u", C0402, "GRM155R61A105KE15", "charger OUT / VBAT", "Power"))
@@ -290,7 +337,7 @@ def build() -> Netlist:
     # TPS62840 in SOT-583 (DLC): pin numbers VERIFY (SLVSE12 pin configuration).
     nl.add(Part("U8", "TPS62840DLCR", "Package_TO_SOT_SMD:SOT-583-8", mpn="TPS62840DLCR", manufacturer="TI",
                 pins={"1": "SW", "2": "GND", "3": "VIN", "4": "EN", "5": "STOP", "6": "MODE", "7": "VSET", "8": "VOS"},
-                power_pins={"2", "3"}, is_ic=True,
+                power_pins={"2", "3"}, is_ic=True, fields={"LCSC": "C2071859"},
                 description="750 mA buck, 60 nA IQ, Vout set by VSET resistor (3.3 V code); pins VERIFY",
                 sheet="Power"))
     nl.add(Part("L1", "2.2uH", "Inductor_SMD:L_0806_2016Metric", mpn="DFE201610E-2R2M=P2", manufacturer="Murata",
@@ -303,13 +350,13 @@ def build() -> Netlist:
     nl.add(R("R9", R_DIVIDER, rc("1M"), "battery divider bottom (BATTERY_DIVIDER = 2.0 unchanged)", "Power"))
     nl.add(C("C23", "100n", C0402, "GRM155R71C104KA88", "battery sense hold capacitor (ADC sample bursts)", "Power"))
 
-    nl.connect_many("VBAT", ("J1", "BAT+"), ("BT1", "+"), ("U7", "OUT"), ("C8", "1"), ("U8", "VIN"), ("U8", "EN"),
+    nl.connect_many("VBAT", ("J1", "BAT+"), ("W1", "1"), ("BT1", "+"), ("U7", "OUT"), ("C8", "1"), ("U8", "VIN"), ("U8", "EN"),
                     ("C1", "1"), ("TP8", "1"), ("R8", "1"))
-    nl.connect_many("GND", ("J1", "BAT-"), ("BT1", "-"), ("PAD2", "1"), ("CP2", "1"), ("D2", "2"), ("U7", "VSS"),
-                    ("C7", "2"), ("C8", "2"),
+    nl.connect_many("GND", ("J1", "BAT-"), ("W1", "2"), ("BT1", "-"), ("J3", "CHG-"), ("W2", "2"), ("CP2", "1"), ("D2", "2"),
+                    ("U7", "VSS"), ("C7", "2"), ("C8", "2"),
                     ("R10", "2"), ("R11", "2"), ("U8", "GND"), ("U8", "STOP"), ("U8", "MODE"), ("C1", "2"),
                     ("C2", "2"), ("C3", "2"), ("R12", "2"), ("R9", "2"), ("C23", "2"))
-    nl.connect_many("CHG_PAD", ("PAD1", "1"), ("CP1", "1"), ("D2", "1"), ("D3", "A"))
+    nl.connect_many("CHG_PAD", ("J3", "CHG+"), ("W2", "1"), ("CP1", "1"), ("D2", "1"), ("D3", "A"))
     nl.connect_many("CHG_IN", ("D3", "K"), ("U7", "IN"), ("C7", "1"))
     nl.connect_many("ISET", ("U7", "ISET"), ("R10", "1"))
     nl.connect_many("PRETERM", ("U7", "PRE_TERM"), ("R11", "1"))
@@ -327,15 +374,18 @@ def build() -> Netlist:
            "8": "PWDN", "9": "HREF", "10": "DVDD", "11": "DOVDD", "12": "Y9", "13": "XCLK", "14": "Y8",
            "15": "DGND", "16": "Y7", "17": "PCLK", "18": "Y6", "19": "Y2", "20": "Y5", "21": "Y3",
            "22": "Y4", "23": "Y1", "24": "Y0"}
-    # Connector: BOTTOM-contact back-flip horizontal, as hardware/bom/stage1-ring.csv and board_params.json
-    # (fpc_connector_mm) assume — the flex's contacts face the board, the lens faces away. The KiCad
-    # FH12-24S-0.5SH footprint is the industry-standard 24-pin 0.5 mm back-flip land pattern the F32R
-    # series copies (24 pads + 2 mounting pads); confirm the land pattern against the F32R drawing.
-    nl.add(Part("FPC1", "FPC-24-0.5mm-bottom", "Connector_FFC-FPC:Hirose_FH12-24S-0.5SH_1x24-1MP_P0.50mm_Horizontal",
-                mpn="F32R-1A7H1-11024", manufacturer="XKB Connectivity (LCSC)",
-                fields={"Alt MPN": "FH12-24S-0.5SH(55) (Hirose) — confirm BOTTOM contact before substituting"},
+    # Connector: Hirose FH12-24S-0.5SH(55) — 0.5 mm, 24 positions, BOTTOM contact, horizontal, 2.0 mm, ZIF with a
+    # rotating flip-lock actuator (no slider to tug, no solder: the flex drops in and the lever clicks), LCSC C202112
+    # (JLCPCB extended part). Its KiCad land pattern is the one this design always used. The flex's contacts face
+    # the board, the lens faces away (hardware/pcb/board_params.json fpc_connector_mm). Alternate with the same land
+    # pattern and pinout: Amphenol FCI F32R-1A7H1-11024 (0.5 mm right-angle ZIF with SLIDER, bottom contact, 2.0 mm;
+    # earlier text calling it an "XKB back-flip" was wrong — the back-flip/dual-contact sibling is the F32D series).
+    nl.add(Part("FPC1", "FH12-24S-0.5SH(55)", "Connector_FFC-FPC:Hirose_FH12-24S-0.5SH_1x24-1MP_P0.50mm_Horizontal",
+                mpn="FH12-24S-0.5SH(55)", manufacturer="Hirose",
+                fields={"LCSC": "C202112",
+                        "Alt MPN": "F32R-1A7H1-11024 (Amphenol FCI, slider ZIF, bottom contact, 2.0 mm, same land pattern)"},
                 pins=fpc, power_pins={"2", "4", "10", "11", "15"}, nc_pins={"1", "23", "24"},
-                description="OV2640 24-pin 0.5 mm FPC, bottom-contact back-flip, horizontal, 2.0 mm tall "
+                description="OV2640 24-pin 0.5 mm FPC, bottom contact, flip-lock ZIF, horizontal, 2.0 mm tall "
                             "(Arducam M0031 pin order VERIFY)", sheet="Camera"))
     # TPS22916 DSBGA-4 ball map VERIFY (A1 VIN, A2 VOUT, B1 ON, B2 GND).
     def tps22916(ref, desc):
@@ -343,9 +393,9 @@ def build() -> Netlist:
                     pins={"A1": "VIN", "A2": "VOUT", "B1": "ON", "B2": "GND"}, power_pins={"A1", "B2"},
                     is_ic=True, description=desc, sheet="Camera" if ref == "U2" else "Outputs")
     nl.add(tps22916("U2", "camera rail load switch (3V3 -> CAM_3V3); ball map VERIFY"))
-    nl.add(Part("U3", "XC6206P282MR", SOT23, mpn="XC6206P282MR", manufacturer="Torex",
-                pins={"1": "VSS", "2": "VOUT", "3": "VIN"}, power_pins={"1", "3"}, is_ic=True,
-                description="2.8 V LDO for OV2640 AVDD", sheet="Camera"))
+    nl.add(Part("U3", "XC6206P282MR", SOT23, mpn="XC6206P282MR-G", manufacturer="Torex",
+                pins={"1": "VSS", "2": "VOUT", "3": "VIN"}, power_pins={"1", "3"}, is_ic=True, fields={"LCSC": "C2891263"},
+                description="2.8 V LDO for OV2640 AVDD (-G = halogen-free suffix of the same part)", sheet="Camera"))
     nl.add(Part("U4", "XC6206P122MR", SOT23, mpn="XC6206P122MR", manufacturer="Torex",
                 pins={"1": "VSS", "2": "VOUT", "3": "VIN"}, power_pins={"1", "3"}, is_ic=True,
                 description="1.2 V LDO for OV2640 DVDD (DNP if the module regulates DVDD itself)",
@@ -382,24 +432,30 @@ def build() -> Netlist:
     # only ACKs on I2C — no register reads/writes (datasheet "Operation with EN control") — so a GPIO-driven
     # EN that the firmware holds low until after drv2605_init() made the part "not found". Idle power is the
     # register STANDBY bit (drv2605_standby(), default state at power-up): < 4 uA.
-    nl.add(Part("U5", "DRV2605LDGS", "Package_SO:VSSOP-10_3x3mm_P0.5mm", mpn="DRV2605LDGSR", manufacturer="TI",
+    nl.add(Part("U5", "DRV2605LDGS", "Package_SO:VSSOP-10_3x3mm_P0.5mm", mpn="DRV2605LDGST", manufacturer="TI",
                 pins={"1": "REG", "2": "SCL", "3": "SDA", "4": "IN/TRIG", "5": "EN", "6": "VDD", "7": "GND",
                       "8": "OUT-", "9": "OUT+", "10": "NC"},
                 power_pins={"6", "7"}, nc_pins={"10"}, is_ic=True,
+                fields={"LCSC": "C425927", "Alt MPN": "DRV2605LDGSR (2500-pc reel, LCSC C527464) — same part, the DGST is the 250-pc reel"},
                 description="haptic driver, I2C 0x5A, LRA closed loop, EN tied to 3V3 (standby via I2C); pin numbers VERIFY",
                 sheet="Sensors"))
     nl.add(C("C15", "1u", C0402, "GRM155R61A105KE15", "DRV2605L VDD", "Sensors"))
     nl.add(C("C16", "1u", C0402, "GRM155R61A105KE15", "DRV2605L REG", "Sensors"))
-    nl.add(Part("M1", "LRA0825BC-0167F", "mcring:LRA_8mm_2pad", mpn="LRA0825BC-0167F", manufacturer="INEED",
-                pins={"1": "+", "2": "-"},
+    # LRA: J4 header on the top (right strip, front); the motor M1 is off-board in the floor pocket under the
+    # front-right of the board, its two leads terminated in the W3 pigtail's plug.
+    nl.add(CONN("J4", "LRA", {"1": "LRA+", "2": "LRA-"},
+                "LRA header (top side, right strip, front); OUT+/OUT- from U5 as a 0.3 mm pair", "Sensors"))
+    nl.add(Part("M1", "LRA0825BC-0167F", "offboard:LRA_8x2.5mm", mpn="LRA0825BC-0167F", manufacturer="INEED",
+                pins={"1": "+", "2": "-"}, offboard=True,
                 description="8 x 2.5 mm coin LRA, 240 Hz, 1.25 Vrms max (set RATED_V/OD_CLAMP for 1.25 Vrms @ 240 Hz, "
-                            "docs/07-build-guide.md §1.8); leads to two bottom-side pads (floorplan M1a/M1b)",
+                            "docs/07-build-guide.md §1.8); off-board in the floor pocket, leads -> W3 plug -> J4",
                 sheet="Sensors"))
+    nl.add(PIGTAIL_PART("W3", "LRA", {"1": "LRA+", "2": "LRA-"}, "J4; bare end to the LRA's two leads", "Sensors"))
     # LIS2DW12 LGA-12 pin numbers VERIFY (DS12303 Table 2); pins 5-8 all tie to GND regardless.
     nl.add(Part("U6", "LIS2DW12TR", "Package_LGA:LGA-12_2x2mm_P0.5mm", mpn="LIS2DW12TR", manufacturer="ST",
                 pins={"1": "SCL/SPC", "2": "CS", "3": "SA0/SDO", "4": "SDA/SDI/SDO", "5": "RES", "6": "GND",
                       "7": "GND", "8": "GND", "9": "VDD", "10": "VDD_IO", "11": "INT2", "12": "INT1"},
-                power_pins={"6", "7", "8", "9", "10"}, nc_pins={"11"}, is_ic=True,
+                power_pins={"6", "7", "8", "9", "10"}, nc_pins={"11"}, is_ic=True, fields={"LCSC": "C189624"},
                 description="accelerometer, I2C 0x18 (SA0=GND), CS=VDD_IO for I2C; pins VERIFY",
                 sheet="Sensors"))
     nl.add(C("C17", "100n", C0402, "GRM155R71C104KA88", "LIS2DW12 VDD", "Sensors"))
@@ -426,8 +482,8 @@ def build() -> Netlist:
     nl.connect_many("SDA", ("U5", "SDA"), ("U6", "SDA/SDI/SDO"))
     nl.connect_many("SCL", ("U5", "SCL"), ("U6", "SCL/SPC"))
     nl.connect_many("DRV_REG", ("U5", "REG"), ("C16", "1"))
-    nl.connect_many("LRA_P", ("U5", "OUT+"), ("M1", "+"))
-    nl.connect_many("LRA_N", ("U5", "OUT-"), ("M1", "-"))
+    nl.connect_many("LRA_P", ("U5", "OUT+"), ("J4", "LRA+"), ("W3", "1"), ("M1", "+"))
+    nl.connect_many("LRA_N", ("U5", "OUT-"), ("J4", "LRA-"), ("W3", "2"), ("M1", "-"))
     nl.connect_many("IMU_INT1", ("U6", "INT1"), ("U1", f"IO{GPIO['IMU_INT1']}"))
     nl.connect_many("PDM_CLK", ("MK1", "CLK"), ("U1", f"IO{GPIO['PDM_CLK']}"))
     nl.connect_many("PDM_DATA", ("MK1", "DATA"), ("U1", f"IO{GPIO['PDM_DATA']}"))
@@ -446,7 +502,7 @@ def build() -> Netlist:
     # WS2812B-2020 pad order VERIFY (1 VDD, 2 DOUT, 3 GND, 4 DIN per Worldsemi drawing).
     nl.add(Part("D1", "WS2812B-2020", "LED_SMD:LED_WS2812B-2020_PLCC4_2.0x2.0mm", mpn="WS2812B-2020",
                 manufacturer="Worldsemi", pins={"1": "VDD", "2": "DOUT", "3": "GND", "4": "DIN"},
-                power_pins={"1", "3"}, nc_pins={"2"}, is_ic=True,
+                power_pins={"1", "3"}, nc_pins={"2"}, is_ic=True, fields={"LCSC": "C965555"},
                 description="RGB LED under the white-resin window, VLED = 3.3 V (below the 3.7 V datasheet min: "
                             "bench VERIFY; alt. 3.3 V-rated 2020 RGB per hardware/bom/stage1-ring.csv); pad order VERIFY",
                 sheet="Outputs"))
@@ -464,12 +520,13 @@ def build() -> Netlist:
                             "9 x 9 x 2 pocket (none in the current CAD); any 2-wire piezo element also works",
                 sheet="Outputs"))
     nl.add(R("R15", "100", rc("100R"), "piezo drive series", "Outputs"))
-    nl.add(Part("Q1", "AO3400A", SOT23, mpn="AO3400A", manufacturer="Alpha & Omega",
+    nl.add(Part("Q1", "AO3400A", SOT23, mpn="AO3400A", manufacturer="Alpha & Omega", fields={"LCSC": "C20917"},
                 pins={"1": "G", "2": "S", "3": "D"}, description="aux low-side N-MOSFET (air-puff driver enable / any load)",
                 sheet="Outputs"))
     nl.add(R("R14", "100k", rc("100K"), "aux gate pull-down", "Outputs"))
     nl.add(Part("J2", "AUX", "mcring:PAD_Aux_1x2", pins={"1": "VBAT", "2": "DRAIN"},
-                description="aux actuator pads: VBAT + open-drain return (Q1)", sheet="Outputs"))
+                description="aux actuator pads (bare 1.2 mm pads, bench experiment only): VBAT + open-drain return (Q1)",
+                sheet="Outputs"))
 
     nl.connect("VBAT", "J2", "VBAT")
     nl.connect("3V3", "U9", "VIN")           # C2/C3 (10 u + 100 u) sit on the same net next to the buck
@@ -529,17 +586,17 @@ def build() -> Netlist:
                                            "to <= 2.6 mA while VAMP is off", "Outputs"))
     nl.add(R("R23", R_I2S_SERIES, rc("1K"), "I2S LRCLK series at U10 (same role as R22)", "Outputs"))
     nl.add(R("R24", R_I2S_SERIES, rc("1K"), "I2S DIN series at U10 (same role as R22)", "Outputs"))
-    nl.add(Part("SPK1", "SPEAKER pads", PAD2x15, pins={"1": "OUTP", "2": "OUTN"},
-                description="two 1.5 mm wire pads, 2.0 mm pitch, bottom side (floorplan SPK1a/SPK1b), for the "
-                            "off-board speaker LS1; keep the OUTP/OUTN pair tight (filterless class D)",
-                sheet="Outputs"))
+    nl.add(CONN("J5", "SPK", {"1": "OUTP", "2": "OUTN"},
+                "speaker header (top side, right strip, back); OUTP/OUTN from U10 as a 0.3 mm pair (filterless class D); "
+                "fitted even without the amp group so the speaker can be added later", "Outputs"))
     nl.add(Part("LS1", "AS01008MR-2-R", "offboard:Speaker_10mm_x2.9mm", mpn="AS01008MR-2-R",
                 manufacturer="PUI Audio", pins={"1": "+", "2": "-"}, offboard=True,
                 fields={"Alt MPN": "any 10 mm 8 ohm 0.3-0.5 W micro speaker (0.5-1 W oval speakers for the bench)"},
                 description="10 mm x 2.9 mm (max) 8 ohm micro speaker, 300 mW rated / 500 mW max, 86 dB, top port, "
                             "NdFeB magnet, solder pads; in the enclosure's speaker pocket (board_params.json "
-                            "speaker_mm), 30 AWG leads to SPK1; polarity irrelevant (single driver)",
+                            "speaker_mm), its leads -> W4 plug -> J5; polarity irrelevant (single driver)",
                 sheet="Outputs"))
+    nl.add(PIGTAIL_PART("W4", "SPK", {"1": "OUTP", "2": "OUTN"}, "J5; bare end to the speaker's two terminals", "Outputs"))
 
     nl.connect("3V3", "U11", "VIN")          # bulk C2/C3 sit on the same net next to the buck
     nl.connect_many("GND", ("U11", "GND"), ("U10", "3"), ("U10", "11"), ("U10", "15"), ("U10", "EP"),
@@ -554,8 +611,8 @@ def build() -> Netlist:
     nl.connect_many("AMP_BCLK", ("R22", "2"), ("U10", "BCLK"))     # amp side of the 1k series resistors
     nl.connect_many("AMP_LRCLK", ("R23", "2"), ("U10", "LRCLK"))
     nl.connect_many("AMP_DIN", ("R24", "2"), ("U10", "DIN"))
-    nl.connect_many("SPK_P", ("U10", "OUTP"), ("SPK1", "OUTP"), ("LS1", "+"))
-    nl.connect_many("SPK_N", ("U10", "OUTN"), ("SPK1", "OUTN"), ("LS1", "-"))
+    nl.connect_many("SPK_P", ("U10", "OUTP"), ("J5", "OUTP"), ("W4", "1"), ("LS1", "+"))
+    nl.connect_many("SPK_N", ("U10", "OUTN"), ("J5", "OUTN"), ("W4", "2"), ("LS1", "-"))
     return nl
 
 

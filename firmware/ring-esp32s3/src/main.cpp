@@ -359,8 +359,8 @@ void setup() {
   cues_init();
 
   Wire.begin(PIN_I2C_SDA, PIN_I2C_SCL, 400000);
-  imu_init();
-  drv2605_init(true);
+  imu_init();                              // LIS2DW12 or LIS3DH, whichever answers (imu_lis3dh.cpp)
+  drv2605_init(HAPTIC_MOTOR_LRA);          // 1 = 8 mm LRA (default); 0 = ERM, e.g. the Grove Haptic Motor of the no-solder kit (config_audio.h)
   if (drv2605_available()) { drv2605_autocal(); drv2605_standby(true); }
 
   camera_probe();

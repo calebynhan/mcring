@@ -1,13 +1,15 @@
 #!/usr/bin/env python3
 """mcring stage-1 ring enclosure — parametric CadQuery model.
 
-Reads  hardware/pcb/board_params.json  (board size, part positions, stack, pod, antenna cavity, speaker) and builds
+Reads  hardware/pcb/board_params.json  (board size, part positions, stack, pod, antenna cavity, speaker, plug-in
+connectors + edge notches, cell lead channel, floor wire groove, front-ledge gap) and builds
   * the printable SHELL  (band + signet bay + camera pod + the optional speaker pocket in the +Y wall, one SLA part)
   * the printable LID    (rebated plate with a detent bead, Ø0.8 mic port + tube, LED window, touch dimple, and the
                           tab + boss that close the speaker slot)
   * the printable KEY    (side-switch button: flange + pin + cap)
   * PLACEHOLDER solids   (PCB, ESP32-S3-MINI-1U, OV2640 head + barrel + folded FPC, cell, LRA, switch, LED,
-                          mic, FPC1, bottom-side parts, flex antenna + u.FL pigtail, speaker LS1)
+                          mic, FPC1, bottom-side parts, top-side parts incl. the four Pico-EZmate headers and their
+                          mated plugs over the edge notches, flex antenna + u.FL pigtail, speaker LS1)
 then runs a programmatic fit check (pairwise intersections must be 0, clearances, wall probes, finger-contact
 scan), prints the envelope and a mass estimate, writes fit_report.md and exports STL / STEP / SVG+PNG views.
 
@@ -33,7 +35,7 @@ PARAMS_JSON = os.path.normpath(os.path.join(HERE, "..", "pcb", "board_params.jso
 OUT_DIR = os.path.join(HERE, "out")
 
 RESIN_G_PER_CC = 1.15
-COMPONENT_MASS_G = {"module": 1.5, "cell": 0.9, "LRA": 1.2, "PCB": 0.5, "camera": 0.6, "antenna": 0.2, "misc": 0.5}
+COMPONENT_MASS_G = {"module": 1.5, "cell": 0.9, "LRA": 1.2, "PCB": 0.6, "camera": 0.6, "antenna": 0.2, "connectors+pigtails": 0.4, "misc": 0.5}
 
 
 # ----------------------------------------------------------------------------------------------
@@ -71,9 +73,14 @@ def default_params():
         key=dict(flange=(4.4, 2.6, 0.33), pin=(3.2, 1.4), standoff=0.3, cap=(4.4, 2.6, 0.6)),
         pad_window=(3.0, 3.0), # charging pad window: 3 along X, 3 around the band
         pad_angle=25.0,        # ± from the bottom
-        rib_x=(-1.5, -3.5),    # rib / groove / channel centres along X (A: -Y pad, B: +Y pad); next to PAD1w/PAD2w
-        pad_rib_w=2.0, pad_rib_h=0.7, pad_groove_w=0.9, pad_groove_d=0.5,
-        wire_r=0.45,           # wire channel radius (30 AWG wire-wrap / PTFE wire, <= 0.7 mm OD)
+        rib_x=(-1.5, -3.5),    # rib / groove / channel centres along X (A: -Y pad, B: +Y pad); the channels surface
+                               # beside the -Y wall at board x 14.75 / 16.75, where the floor groove to J3 starts
+        pad_rib_w=2.0, pad_rib_h=0.7, pad_groove_w=1.1, pad_groove_d=0.5,
+        wire_r=0.55,           # wire channel radius: Ø1.1 for the 28 AWG Pico-EZmate pigtail (<= 1.0 mm OD); JSON
+                               # pad_wire_channel_d_mm overrides
+        front_ledge_gap=(2.6, 8.4),   # board y range left open between the two front ledges (JSON front_ledge_gap_y_mm overrides)
+        cell_lead_channel=(3.0, 0.8), # cell-tab channel from the pocket edge to the wall: width (X), depth; JSON overrides
+        floor_groove=True,     # cut the charging-wire groove in the sub-board floor when the JSON describes one
         led_mark_d=3.0,        # engraved ring marking the LED window (wall stays lid_t over the LED)
         touch_dimple=(4.0, 5.0, 0.4),
         mic_hole_d=0.8,
@@ -232,6 +239,14 @@ class Model:
         self.tpad = (self.bx(bp["touchpad_xy_mm"][0]), self.by(bp["touchpad_xy_mm"][1]))
         self.rib_x = tuple(p["rib_x"])
         self.placeholders = {}
+        # design-for-assembly inputs (floorplan.py writes them; older JSONs fall back to the script defaults)
+        self.wire_r = bp.get("pad_wire_channel_d_mm", 2 * p["wire_r"]) / 2
+        self.ledge_gap = tuple(bp.get("front_ledge_gap_y_mm", p["front_ledge_gap"]))
+        self.conns = bp.get("connectors_top_mm", {})          # ref -> header/plug/notch geometry (board frame)
+        self.cell_tab_edge = bp.get("cell_tab_edge", "-y")
+        self.cell_chan = bp.get("cell_lead_channel_mm")
+        self.groove = bp.get("floor_wire_groove_mm") if p["floor_groove"] else None
+        self.notch_probe_pts = {}
         # optional speaker (speaker_mm): a Ø d x t disc standing in the +Y (right) signet wall, grille facing +Y.
         # The pocket is a U-slot (semicircle below the speaker axis, straight walls above it up to the lid's underside) so
         # the speaker drops in from the top before the lid goes on; the lid's tab + boss close the slot.
@@ -325,12 +340,32 @@ class Model:
         gz = self.z_lid_bot + p["lid_t"] / 2
         for sy in (+1, -1):
             cuts.append(cyl_x(p["bead_r"] + 0.05, -9.5, 9.5, sy * (self.Wi / 2 + reb), gz))
-        # cell pocket (recess in the sub-board floor) and its lead channel toward the J1 pads (-Y side)
+        # cell pocket (recess in the sub-board floor) and its lead channel: with the tabs toward +Y (design for
+        # assembly) the channel runs from the pocket's +Y edge to the bay wall under the J1 header, where the cell's
+        # pigtail climbs the wall gap / edge notch; the legacy -Y layout ran it to the J1a wire pad
         cl, cw, ch = p["cell_pocket"]
         cx = p["cell_cx"]
         cuts.append(box(cx - cl / 2, cx + cl / 2, -cw / 2, cw / 2, self.z_floor - ch, self.z_floor + 0.5))
-        j1y = self.by(self.bp["wire_pads_bottom_mm"]["J1a"][1])
-        cuts.append(box(cx - 1.5, cx + 1.5, j1y - 0.6, -cw / 2 + 0.5, self.z_floor - 0.8, self.z_floor + 0.5))
+        if self.cell_tab_edge == "+y" and self.cell_chan:
+            ccw, ccd = self.cell_chan.get("width", p["cell_lead_channel"][0]), self.cell_chan.get("depth", p["cell_lead_channel"][1])
+            ccx = self.bx(self.cell_chan["at_board_x"])
+            self.cell_chan_box = (ccx - ccw / 2, ccx + ccw / 2, cw / 2 - 0.5, self.Wi / 2 + 0.01, self.z_floor - ccd, self.z_floor + 0.5)
+            cuts.append(box(*self.cell_chan_box))
+        else:
+            j1y = self.by(self.bp["wire_pads_bottom_mm"]["J1a"][1])
+            self.cell_chan_box = (cx - 1.5, cx + 1.5, j1y - 0.6, -cw / 2 + 0.5, self.z_floor - 0.8, self.z_floor + 0.5)
+            cuts.append(box(*self.cell_chan_box))
+        # charging-wire groove in the sub-board floor (floorplan floor_wire_groove_mm): axis-aligned legs, each a box
+        # width x depth below the floor; the corner squares come free from the overlapping boxes
+        self.groove_boxes = []
+        if self.groove:
+            gw, gd = self.groove["width"], self.groove["depth"]
+            pts = [(self.bx(x), self.by(y)) for x, y in self.groove["path"]]
+            for (xa, ya), (xb, yb) in zip(pts, pts[1:]):
+                b = (min(xa, xb) - gw / 2, max(xa, xb) + gw / 2, min(ya, yb) - gw / 2, max(ya, yb) + gw / 2,
+                     self.z_floor - gd, self.z_floor + 0.5)
+                self.groove_boxes.append(b)
+                cuts.append(box(*b))
         # LRA pocket
         lx, ly = p["lra_xy"]
         cuts.append(cyl_z(p["lra_d"] / 2 + p["lra_pocket_clear"], self.z_floor - p["lra_pocket_depth"], self.z_floor + 0.5, lx, ly))
@@ -362,7 +397,7 @@ class Model:
             p0 = (wx, -8.75, self.z_slab0 + 0.4)
             p1 = (wx, -(self.Wi / 2 - 1.0), self.z_floor + 0.4)
             self.chan[wx] = (p0, p1)
-            cuts.append(cyl_between(p["wire_r"], p0, p1))
+            cuts.append(cyl_between(self.wire_r, p0, p1))
         # speaker pocket in the +Y wall bump (speaker_mm): a U-slot Ø(d + 2 cl) about the speaker axis (along Y), straight
         # above the axis up to the lid underside so the speaker drops in from the top; depth t + 0.3. Above the sub-board
         # floor the slot's back is open to the bay (the lidded bay is the back volume and the leads pass straight through
@@ -427,8 +462,8 @@ class Model:
         zb = self.z_board_bot
         f0, f1 = self.bx(0.7), self.Li / 2 + 0.01
         ledges = [
-            box(f0, f1, -self.Wi / 2 - 0.01, self.by(2.6), self.z_floor - 0.01, zb),
-            box(f0, f1, self.by(8.4), self.Wi / 2 + 0.01, self.z_floor - 0.01, zb),
+            box(f0, f1, -self.Wi / 2 - 0.01, self.by(self.ledge_gap[0]), self.z_floor - 0.01, zb),
+            box(f0, f1, self.by(self.ledge_gap[1]), self.Wi / 2 + 0.01, self.z_floor - 0.01, zb),
             box(-self.Li / 2, self.bx(23.6), -self.Wi / 2 - 0.01, self.Wi / 2 + 0.01, self.z_floor - 0.01, zb),
         ]
         self.ledges = ledges
@@ -565,6 +600,15 @@ class Model:
                 for q in bp["parts"] if q["side"] == "top" and q["height"] > 0 and q["ref"] not in modelled]
         if tops:
             ph["top_parts"] = fuse_all(tops)
+        # the mated Pico-EZmate plug + the wire bend over each edge notch: from the header's +y end to just inside the
+        # bay wall (the pigtail turns down there), mated height tall — must clear the lid, the mic tube and the wall
+        plugs = []
+        for ref, c in self.conns.items():
+            pm = c["plug_mm"]
+            plugs.append(box(self.bx(pm["x1"]), self.bx(pm["x0"]), self.by(pm["y0"]), min(self.by(pm["y1"]), self.Wi / 2 - 0.05),
+                             zt, zt + pm["height"]))
+        if plugs:
+            ph["plugs"] = fuse_all(plugs)
         # 2.4 GHz flex antenna glued to the back wall + u.FL pigtail leaving the plug toward -X and turning down
         ay, az, at = p["antenna"]
         ph["antenna"] = box(self.x_back_in + 0.05, self.x_back_in + 0.05 + at, -ay / 2, ay / 2, self.z_floor + 0.1, self.z_floor + 0.1 + az)
@@ -733,10 +777,35 @@ class Model:
                 ("lid: tab + boss over the speaker (X=spk, Y=spk) (lid part)", (gx, gy, self.spk_boss_z0 - 0.5), (gx, gy, self.z_top + 1), 1.2, "lid"),
                 ("lid: tab over the bump shelf (X=spk, Y=bump face-0.5) (lid part)", (gx, yo - 0.5, self.z_lid_bot - 0.5), (gx, yo - 0.5, self.z_top + 1), 1.2, "lid"),
             ]
-            pads = self.bp["wire_pads_bottom_mm"]
-            for pad in ("SPK1a", "SPK1b"):
-                px, py = self.bx(pads[pad][0]), self.by(pads[pad][1])
-                opens.append((f"speaker lead path: pocket back above the floor -> {pad} under the board", (gx, gy - s['t'] / 2 - 0.05, zf + 0.7), (px, py, self.z_board_bot - 0.1)))
+            if "J5" in self.conns:
+                n = self.conns["J5"]["notch"]
+                px, py = self.bx(n["cx"]), self.Wi / 2 - 0.15
+                opens.append(("speaker lead path: pocket back above the floor -> cavity under the J5 notch", (gx, gy - s['t'] / 2 - 0.05, zf + 0.7), (px, py, zf + 0.7)))
+            else:
+                pads = self.bp["wire_pads_bottom_mm"]
+                for pad in ("SPK1a", "SPK1b"):
+                    px, py = self.bx(pads[pad][0]), self.by(pads[pad][1])
+                    opens.append((f"speaker lead path: pocket back above the floor -> {pad} under the board", (gx, gy - s['t'] / 2 - 0.05, zf + 0.7), (px, py, self.z_board_bot - 0.1)))
+        # plug-in connectors: each pigtail drops from the header's plug, past the board edge (0.3 bay clearance + the
+        # edge notch), into the sub-board cavity — the wall gap must be open from above the board to the floor
+        for ref, c in self.conns.items():
+            n = c["notch"]
+            px, py = self.bx(n["cx"]), self.Wi / 2 - 0.15
+            self.notch_probe_pts[ref] = (px, py)
+            opens.append((f"{ref} pigtail drop beside the right board edge (notch at board x {n['cx']}): plug height -> floor", (px, py, self.z_board_top + c["mated_height"]), (px, py, zf + 0.2)))
+        if self.cell_tab_edge == "+y" and self.cell_chan:
+            b = self.cell_chan_box
+            opens.append(("cell lead channel open from the pocket's +Y edge to the wall (under J1)", ((b[0] + b[1]) / 2, b[2] + 0.2, zf - 0.4), ((b[0] + b[1]) / 2, b[3] - 0.3, zf - 0.4)))
+            probes.append(("floor under the cell lead channel (X=J1, Y=channel mid)", ((b[0] + b[1]) / 2, (b[2] + b[3]) / 2, zf - self.cell_chan.get("depth", 0.8) - 0.05), ((b[0] + b[1]) / 2, (b[2] + b[3]) / 2, self.z_slab0 - 1), 1.2))
+        if self.groove:
+            gd = self.groove["depth"]
+            for i, b in enumerate(self.groove_boxes):
+                xm, ym = (b[0] + b[1]) / 2, (b[2] + b[3]) / 2
+                along_x = (b[1] - b[0]) > (b[3] - b[2])
+                a0 = (b[0] + 0.3, ym, zf - gd / 2) if along_x else (xm, b[2] + 0.3, zf - gd / 2)
+                a1 = (b[1] - 0.3, ym, zf - gd / 2) if along_x else (xm, b[3] - 0.3, zf - gd / 2)
+                opens.append((f"floor wire groove leg {i + 1} open along its length", a0, a1))
+                probes.append((f"floor under wire groove leg {i + 1} (mid-leg, down to the bore / slab bottom)", (xm, ym, zf - gd - 0.05), (xm, ym, self.R - 0.5 if abs(ym) < self.R - 1 else self.z_slab0 - 1), 1.2))
             opens.append(("speaker grille centre hole open (X=spk, Z=spk)", (gx, yf - 0.5, gz_), (gx, yo + 1, gz_)))
             opens.append(("speaker slot open from the speaker rim up to the lid underside (X=spk, Y=spk)", (gx, gy, spk.zmax + 0.05), (gx, gy, self.z_lid_bot - 0.05)))
             opens.append(("speaker lead groove open at the floor (X=spk, Y=groove centre)", (gx, (yb + self.spk_groove[2]) / 2, self.spk_groove[3] + 0.5), (gx, (yb + self.spk_groove[2]) / 2, zf + 0.3)))
@@ -796,7 +865,7 @@ def write_report(m, path, args):
     L.append("The wall probes are line samples at the places listed below, not a global thickness analysis. Known spots "
              "thinner than the 1.2 mm wall rule, by design: the 0.4 / 0.7 mm rebate rim under the lid detent groove, the "
              "0.7 mm wall around the switch key's counterbore, the first ~1.3 mm of each wire channel where it leaves the "
-             "open groove at the slab's bottom corner, "
+             "open groove at the slab's bottom corner, the floor beside the charging-wire groove where it skims the cell- and LRA-pocket rims, "
              + (f"the 0.8 mm resin over the touch pad, and the {m.spk['gw']:.1f} mm speaker grille plate (the pocket's +Y face, "
                 f"{len(m.spk_holes)} × Ø{m.p['spk_grille']['hole_d']:.1f} holes)." if m.spk else "and the 0.8 mm resin over the touch pad.") + "\n")
     L.append("## Stack (Z above the finger skin, mm)\n")
@@ -825,11 +894,10 @@ def write_report(m, path, args):
         s = m.spk
         g = m.p["spk_grille"]
         open_area = len(m.spk_holes) * math.pi * (g["hole_d"] / 2) ** 2
-        pads = m.bp["wire_pads_bottom_mm"]
         lead = []
-        for pad in ("SPK1a", "SPK1b"):
-            px, py = m.bx(pads[pad][0]), m.by(pads[pad][1])
-            lead.append(math.dist((s["X"], s["Y"] - s["t"] / 2, m.z_floor + 0.7), (px, py, m.z_board_bot)))
+        if "J5" in m.conns:
+            px, py = m.notch_probe_pts["J5"]
+            lead.append(math.dist((s["X"], s["Y"] - s["t"] / 2, m.z_floor + 0.7), (px, py, m.z_floor + 0.7)))
         L.append("## Speaker LS1 (optional, `speaker_mm`)\n")
         L.append(f"* part: {s['part']}; placeholder Ø{s['d']:.1f} × {s['t']:.1f} mm disc standing in the XZ plane, axis along Y, "
                  f"centre board ({s['board'][0]}, {s['board'][1]}, {s['board'][2]} from the board top) = world X {s['X']:.2f}, Y {s['Y']:.2f}, "
@@ -848,9 +916,10 @@ def write_report(m, path, args):
                  f"lidded bay (~1.4 cm³ minus parts) is the back volume and the terminals/leads pass straight through; below the floor the pocket is a "
                  f"recess in the solid slab with a lead groove {m.p['spk_lead_groove'][0]:.0f} wide × {m.p['spk_lead_groove'][1]:.1f} deep in its "
                  f"back wall (Y {m.spk_groove[2]:.2f}..{s['y_back']:.2f}, Z {m.spk_groove[3] - R:.1f}..floor) for terminals in the lower half of the disc")
-        L.append(f"* leads: two 30 AWG wires from the speaker's back terminals into the sub-board cavity (Z {m.z_floor - R:.1f}..{m.z_board_bot - R:.1f} above "
-                 f"the skin, under the board's +Y edge) to SPK1a/SPK1b on the board bottom at board ({pads['SPK1a'][0]}, {pads['SPK1a'][1]}) / "
-                 f"({pads['SPK1b'][0]}, {pads['SPK1b'][1]}): ≈ {lead[0]:.1f} / {lead[1]:.1f} mm straight-line from the pocket's back at floor level (allow 6 mm)")
+        if lead:
+            L.append(f"* leads: the speaker's pigtail (two 28 AWG wires ending in a Pico-EZmate plug) leaves the back terminals into the sub-board "
+                     f"cavity (Z {m.z_floor - R:.1f}..{m.z_board_bot - R:.1f} above the skin, under the board's +Y edge), runs ≈ {lead[0]:.1f} mm to the "
+                     f"J5 edge notch at board x {m.conns['J5']['notch']['cx']} and climbs the wall gap to the J5 header on the board top (allow 10 mm)")
         L.append(f"* lid: tab X {m.spk_tab[0]:.1f}..{m.spk_tab[1]:.1f} × Y {(m.Wi + 2 * m.p['lid_rebate'] - 2 * m.p['lid_clear']) / 2:.2f}..{m.spk_tab[2]:.2f} "
                  f"({m.p['lid_t']:.1f} thick, {s['y_out'] - m.spk_tab[2]:.2f} inside the bump face, {m.spk_tab[0] - s['bx0']:.1f} from the bump's end walls) rests on the shelf; "
                  f"boss X {m.spk_boss[0]:.1f}..{m.spk_boss[1]:.1f} × Y {m.spk_boss[2]:.2f}..{m.spk_boss[3]:.2f} under it fills the slot down to "
@@ -858,6 +927,26 @@ def write_report(m, path, args):
                  f"a foam pad or a drop of glue takes up the play). The +Y detent groove is interrupted over the bump (X {s['bx0']:.1f}..{s['bx1']:.1f}).")
         L.append(f"* antenna: 3-D gap speaker ↔ flex antenna placeholder {m.spk_antenna_gap:.2f} mm (keep-out {m.bp.get('antenna_keepout_beyond_edge_mm', 5.0):.1f}); "
                  f"mass +{s['mass']:.1f} g speaker")
+        L.append("")
+    if m.conns:
+        L.append("## Plug-in connectors (`connectors_top_mm`, `edge_notches_mm`)\n")
+        L.append("The owner solders nothing: the cell, the charging-pad pigtail, the LRA and the speaker plug into four Molex Pico-EZmate "
+                 "headers on the board TOP (right strip), and each pigtail drops through a notch in the board's right edge into the "
+                 "sub-board cavity. Checked here: the mated plug + wire bend (placeholder `plugs`) clears the lid, the mic tube and the wall; "
+                 "the wall gap beside each notch is open from plug height to the floor; the cell lead channel and the charging-wire floor groove "
+                 "are open along their length and keep >= 1.2 mm of floor under them.\n")
+        L.append("| header | feeds | header centre (board x, y) | notch (board x, right edge) | plug/bend envelope (world X, Y, Z) | wire path |\n|---|---|---|---|---|---|")
+        paths = {
+            "J1": f"cell tabs toward +Y, 3 x 0.8 lead channel from the pocket's +Y edge to the wall at X {m.cell_chan_box[0] + 1.5:.2f}" if m.cell_tab_edge == "+y" else "cell lead channel (-Y)",
+            "J3": (f"two Ø{2 * m.wire_r:.1f} channels from the band ribs surface beside the -Y wall, then the {m.groove['width']} x {m.groove['depth']} floor groove "
+                   f"({len(m.groove_boxes)} legs) to the notch") if m.groove else "floor groove not modelled",
+            "J4": f"LRA pocket at X {m.p['lra_xy'][0]}, Y {m.p['lra_xy'][1]} -> +Y under the board edge -> notch",
+            "J5": "speaker pocket (right wall, back open to the bay above the floor) -> cavity -> notch",
+        }
+        for ref, c in m.conns.items():
+            pm = c["plug_mm"]
+            L.append(f"| {ref} ({c['short']}) | {c['feeds']} | {c['cx']}, {c['cy']} | x {c['notch']['cx']}, {c['notch']['w']} x {c['notch']['d']} | "
+                     f"X {m.bx(pm['x1']):.2f}..{m.bx(pm['x0']):.2f}, Y {m.by(pm['y0']):.2f}..{min(m.by(pm['y1']), m.Wi / 2 - 0.05):.2f}, Z {m.z_board_top - R:.2f}..{m.z_board_top + pm['height'] - R:.2f} above the skin | {paths.get(ref, '')} |")
         L.append("")
     L.append("## Placeholder vs shell / lid intersection volumes (mm³, must be 0)\n")
     L.append("| placeholder | ∩ shell | ∩ lid |\n|---|---|---|")
