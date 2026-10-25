@@ -47,6 +47,13 @@ The owner solders nothing: the cell, the charging-pad pigtail, the LRA and the s
 | J1 (BAT) | cell BT1 (301012, tabs toward +y, lead channel from the pocket's +y edge) | 17.1, 19.45 | x 17.1, 2.4 x 1.1 | X -5.15..-2.55, Y 10.30..11.65, Z 6.70..8.25 above the skin | cell tabs toward +Y, 3 x 0.8 lead channel from the pocket's +Y edge to the wall at X -3.85 |
 | J5 (SPK) | speaker LS1 in the right-wall pocket (its back is open to the bay above the floor) | 21.8, 19.45 | x 21.8, 2.4 x 1.1 | X -9.85..-7.25, Y 10.30..11.65, Z 6.70..8.25 above the skin | speaker pocket (right wall, back open to the bay above the floor) -> cavity -> notch |
 
+**Charging pigtail (W2) wire runs** along the modelled path, window centre → mated J3 plug, no slack (band rib groove + slab channel + floor groove + climb up the notch to the header top):
+
+* -Y pad (rib A): 21.4 + 7.8 + 27.6 + 4.5 = **61.3 mm**
+* +Y pad (rib B, round the bottom): 31.6 + 7.8 + 29.6 + 4.5 = **73.5 mm**
+
+Cut W2 to **≥ 85 mm per wire** (longest run + 10 mm for the bend into the plug and the trim at the window). Half of a 100 mm 36920-0201 (≈ 50 mm) does not reach; half of a 300 mm 36920-0203 (≈ 150 mm) does.
+
 ## Placeholder vs shell / lid intersection volumes (mm³, must be 0)
 
 | placeholder | ∩ shell | ∩ lid |

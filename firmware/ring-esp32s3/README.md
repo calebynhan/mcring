@@ -64,13 +64,14 @@ Sense (Seeed 102010635) seated in Seeed's **Expansion Board Base for XIAO** (103
 | Buzzer | **the base's passive buzzer**, already on A3 = D3 (GPIO4) | nothing to wire |
 | Haptics | **Grove – Haptic Motor** (Seeed 105020011) in Grove I²C socket #1 | DRV2605L 0x5A + factory-attached **ERM** → `HAPTIC_MOTOR_LRA 0`; EN tied on-module |
 | IMU | **LIS3DH STEMMA QT** (Adafruit 2809 / SparkFun SEN-29529) via a Grove→STEMMA QT cable (Adafruit 4528) in Grove I²C socket #2 | WHO_AM_I 0x33; `imu_init()` picks the LIS2DW12 or LIS3DH back-end at boot (`src/imu_lis3dh.cpp`) |
-| IMU INT1 | LIS3DH `INT` hole → male-male jumper → base breakout header **D8** (GPIO7) | press-fit / hammer-header pin / IC hook on the breakout side. **Optional**: the build polls the latched click source every 25 ms (`IMU_POLL_MS`); only tap-to-wake from deep sleep needs the wire |
-| Battery | LiPo **≥ 400 mAh** JST-PH into the base's JST 2.0 socket | the base charges at ≤ 460 mA (too fast for the 100 mAh ring cell). No A0 divider → `batt` reads 255 % (unknown) |
+| IMU INT1 | LIS3DH `INT` hole → male-male jumper → base breakout header **D8** (GPIO7) | press-fit / hammer-header pin / IC hook on the breakout side. **Optional**: the build polls the latched click source every 25 ms (`IMU_POLL_MS`) and parks `PIN_IMU_INT` (D8 floats without the wire — it is also the SD clock — and would wake the ring at random), so it wakes on the button only. Tap-to-wake from deep sleep needs the wire **and** `pio run -e xiao_esp32s3_sense_base_tapwake` (`-DMCRING_IMU_INT_WIRED`) |
+| Battery | LiPo **≥ 400 mAh** JST-PH into the base's JST 2.0 socket | the base charges at ≤ 460 mA (too fast for the 100 mAh ring cell). No A0 divider and `PIN_BATTERY_ADC` parked (an open A0 reads noise) → `batt` reads 255 % (unknown); `-DMCRING_BATT_DIVIDER_WIRED` reads a divider you add |
 | Speaker (optional) | MAX98357A breakout: `BCLK`/`LRC`/`VIN`/`GND` from the base's **Grove UART** socket (D7/D6/3V3/GND) through a Grove-to-jumper cable, `DIN` from breakout header D10, `SD` → `VIN` | the amp's 7 header holes are the one unsoldered thing on the kit: press-fit pins, 5 joints at a makerspace, or defer to stage 1 |
 
 `-DMCRING_XIAO_BASE` (`src/config_audio.h`) restates `PIN_BUTTON`/`PIN_BUZZER` at the base's pins (today
 identical to the stock map), parks `PIN_HAPTIC` (D2 = the base's microSD chip-select), selects the ERM
-drive profile and enables tap polling; `BOARD_NAME` becomes `xiao-esp32s3-sense+base` so the boot log
+drive profile, enables tap polling and parks `PIN_IMU_INT` and `PIN_BATTERY_ADC` (see the table);
+`BOARD_NAME` becomes `xiao-esp32s3-sense+base` (`+base+tapwake` for the tap-wake env) so the boot log
 says which build is running. Leave the base's microSD slot empty (SPI on D8/D9/D10) and never plug a
 UART Grove *device* into the UART socket (D6/D7 are I²S). Not verified from the base's schematic: whether
 its charger output reaches the XIAO's `BAT` pads or only the 5V/VIN pin — the XIAO's own `BAT` pads are

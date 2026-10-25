@@ -44,7 +44,10 @@ enum : uint8_t {
 //   TIME_LIMIT   16 × 2.5 ms = 40 ms   over-threshold pulse must end within this (LIS2DW12 SHOCK = 2 → 40 ms)
 //   TIME_LATENCY  8 × 2.5 ms = 20 ms   dead time after the first click           (LIS2DW12 QUIET = 2 → 20 ms)
 //   TIME_WINDOW 224 × 2.5 ms = 560 ms  the second click must start inside this   (LIS2DW12 LATENCY = 7 → 560 ms)
-constexpr uint8_t ODR_400HZ_XYZ   = 0x77;   // ODR = 0111 (400 Hz), normal mode (LPen = 0), X/Y/Z enabled (~185 µA)
+constexpr uint8_t ODR_400HZ_XYZ   = 0x77;   // ODR = 0111 (400 Hz), normal mode (LPen = 0), X/Y/Z enabled: ~73 µA typ.
+                                            // (datasheet current table; 185 µA is the 1.344 kHz normal-mode figure).
+                                            // It stays at this rate through deep sleep only in the tap-wake build;
+                                            // 200 Hz normal (~38 µA) or low-power mode is the sleep-current follow-up.
 constexpr uint8_t HP_ON_CLICK     = 0x84;   // HPM = 10 (normal), HPCF = 00 (~8 Hz at 400 Hz), HPCLICK = 1: gravity out of the click data
 constexpr uint8_t I1_CLICK        = 0x80;   // CTRL_REG3: click interrupt on INT1 (active high, CTRL_REG6 INT_POLARITY = 0)
 constexpr uint8_t BDU_FS2G        = 0x80;   // CTRL_REG4: block update, ±2 g, 10-bit normal mode

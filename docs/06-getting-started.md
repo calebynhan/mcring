@@ -33,6 +33,8 @@ No `OPENAI_API_KEY`? Either `pip install faster-whisper` and set `MCRING_STT_PRO
 
 ## B. Stage-0 bench rig
 
+**No soldering iron?** Order `hardware/bom/stage0-devkit-solderless.csv` instead: a pre-soldered XIAO in Seeed's expansion base with plug-in haptic and accelerometer boards. Build it with `pio run -e xiao_esp32s3_sense_base -t upload` and follow `docs/07-build-guide.md` §1.12 and `hardware/pcb/out/wiring_stage0_solderless.png`. Only the optional speaker amp still needs its header pins fitted (press-fit hammer headers avoid solder).
+
 1. Order `hardware/bom/stage0-devkit.csv`. For the ring-speaker path add an Adafruit-style
    MAX98357A I2S breakout and an 8 Ω 10 mm speaker (optional; the headphone path needs nothing).
 2. Wire per `firmware/ring-esp32s3/README.md` — the button on D1 is enough to start; the speaker

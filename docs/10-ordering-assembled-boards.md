@@ -52,14 +52,15 @@ ordering:
 | Extended-part fee | $3 per unique extended part | feeder loading charged on all lines (sources disagree on the rate — read the live quote) | in the quote |
 | Consigned parts | no | **yes** | yes, plus cable/harness assembly on request |
 
-Two parts on this board are 0.4 mm-pitch DSBGAs — the three TPS22916 load switches (U2, U9, U11) and the
-BQ25100 charger (U7) — and 67 of the 73 placed parts are on the **bottom** with the module, FPC1, switch,
-LED, bulk cap and the four headers on the top. That rules Economic out twice over (pitch and single side), so
+Four parts on this board are 0.4 mm-pitch DSBGAs (two part types) — the three TPS22916 load switches (U2, U9,
+U11) and the BQ25100 charger (U7) — and 63 of the 73 placed parts are on the **bottom**, the other 10 on the top
+(the module, FPC1, the switch, the LED D1 and its resistor R7, the bulk cap C3 and the four headers; counts from
+`out/mcring_v1_cpl.csv`). That rules Economic out twice over (pitch and single side), so
 the order is **Standard PCBA, both sides**. The fine-pitch rules the board needs anyway (0.1/0.1 mm,
 0.2 mm drills, ENIG) are JLCPCB "advanced" PCB options; tick them.
 
 Could it be single-sided to use the cheap tier? Not with the 15.4 mm module and the 16 mm FPC connector on
-top and 67 parts underneath on a 26.5 × 22.8 mm board — and 0.4 mm BGAs are out on Economic regardless.
+top and 63 parts underneath on a 26.5 × 22.8 mm board — and 0.4 mm BGAs are out on Economic regardless.
 If you ever change the TPS22916 to the SOT-23-5 TPS22917DBV (same nets, `hardware/electrical/README.md`
 §5), the BGA constraint goes away but the double-side one stays.
 
@@ -104,7 +105,7 @@ headers. Keep the DigiKey/Mouser packing list — it goes in the parcel.
    preview if needed (the uploaded rotation is 0 for all ICs/connectors; JLCPCB re-aligns to its library
    footprint and shows the result).
 7. **Remarks** box (DFM): *"0.4 mm pitch DSBGA on U2/U7/U9/U11: please keep the stencil apertures 1:1 with the
-   pads, do not shrink; ENIG; parts under U1 none. Four consigned part types will ship separately."*
+   pads, do not shrink; ENIG; parts under U1 none. Three consigned part types will ship separately."*
 8. Save to cart, review the quote (§6), pay. JLCPCB emails a DFM review within 1–2 days; answer any question
    about the DSBGAs or the notches (they are just outline features).
 9. **Consignment parcel**: on the order page open the consigned-parts instructions, print the label with the
@@ -122,9 +123,11 @@ working days). Two things PCBWay does that JLCPCB does not:
 
 * **X-ray inspection of BGAs** on request — worth asking for on the DSBGAs.
 * **Cable / harness assembly**: ask them to price "attach the supplied Pico-EZmate pigtails to the supplied
-  cell, LRA and speaker and solder the two ENIG coupons to the charging pigtail" (8 joints + 2 coupons per
-  ring). If they take it, the ring is 100 % solder-free on your side, with no cable shop and no solder-seal
-  sleeves (§7). Send the parts with the consignment.
+  cell, LRA and speaker" (6 joints per ring) and attach the harness table from §7 with the lengths. The
+  charging pigtail stays bare: it is threaded through the band's Ø1.1 channels before its two contacts go on,
+  so those are silver-pen joints you make in the ring (§7). If they take it, the ring is 100 % solder-free
+  on your side, with no cable shop and no solder-seal sleeves (§7). Send the parts with the consignment; ship
+  the cells as the courier's lithium-battery rules require (or have PCBWay source cells to your spec).
 
 ## 6. What five boards cost (estimate, October 2026 list prices)
 
@@ -140,8 +143,10 @@ working days). Two things PCBWay does that JLCPCB does not:
 | Shipping back (DHL) + tax | $25–45 |
 | **Total for 5 assembled boards** | **≈ $300–490**, i.e. $60–100 per board; the research report's own bracket was $330–420 |
 
-Not in that table, bought separately per ring: cell $1–2.5, LRA $3–5, speaker $1.5–3, 2 pigtail cables
-$4.60 (36920-0201, cut in half), flex antenna $3–5, OV2640 head $1–4, enclosure print $2–15, copper foil +
+Not in that table, bought separately per ring: cell $1–2.5 (more if the seller fits the plug), LRA $3–5,
+speaker $1.5–3, 2 pigtail cables ≈ $5 (36920-0203, 300 mm, cut in half — £1.87 each at DigiKey UK in an
+October 2026 search; the 100 mm 36920-0201 is too short for the charging pigtail, §7) or the cable shop's
+harness price, flex antenna $3–5, OV2640 head $1–4, enclosure print $2–15, copper foil +
 foam, two ENIG coupons, the silver pen ($46, one tube does many rings) — ≈ $20–40 per ring.
 
 ## 7. What is still yours to do, and how to do it without an iron
@@ -152,29 +157,64 @@ The board arrives with **nothing to solder on it**. What remains are the off-boa
 |---|---|
 | Camera head | push the flex into FPC1, flip the lock down (bottom contact: contacts toward the board) |
 | Antenna | press the MHF1 plug straight onto the module's u.FL until it clicks; glue the flex to the back wall |
-| Cell → J1 | the cell's two leads must end in a Pico-EZmate plug (W1 pigtail); plug it into J1 |
+| Cell → J1 | the cell **arrives** with its Pico-EZmate plug on (W1, made by the cell seller, a cable shop or PCBWay — never by you with heat, see the warning below); plug it into J1 |
 | LRA → J4 | same, W3 pigtail |
 | Speaker → J5 | same, W4 pigtail (optional) |
-| Charging pads → J3 | the W2 pigtail's bare ends go through the band's two Ø1.1 channels to the 3 × 2 mm ENIG coupons in the windows |
+| Charging pads → J3 | the W2 pigtail's bare ends (**≥ 85 mm per wire**) go through the band's two Ø1.1 channels to the 3 × 2 mm ENIG coupons in the windows |
 | Touch | copper foil on the lid underside, foam block on TPAD1 |
 | Close | lid on, key in, mechanical sequence in `docs/07-build-guide.md` §2.6 |
 
 The **8 wire joints per ring** (two leads each on the cell, LRA, speaker, and the two band contacts) are the
-only joints left anywhere. Three ways to have them made without touching a soldering iron, in order of
-preference:
+only joints left anywhere.
 
-1. **Have the parts delivered terminated.** A cable/harness shop (the research found Pico-EZmate harnesses
-   listed by small shops such as Hoohaa; any "custom wire harness" seller takes a drawing: *28 AWG, 50 mm,
-   78172-0002 housing one end, bare 3 mm tinned the other*) will crimp the pigtails and solder them to the
-   cell, LRA and speaker leads for a few dollars per harness at the 5–10 piece level. PCBWay's harness
-   service (§5) does the same inside the board order.
-2. **Solder-seal heat-shrink sleeves** (white, 26–30 AWG size, $5–10 per 50): slide a sleeve over the joint
-   of the pre-crimped pigtail and the part's lead, heat with a heat gun (or a lighter at a distance) until
-   the solder ring flows and the sleeve shrinks. No iron, no flux, no skill; the joint is insulated. For the
-   two band contacts use the **silver conductive pen** (MG Chemicals 842AR-P) to bond the bare wire end to
-   the ENIG coupon, UV-glue the coupon into its window — the charge current is ≤ 25 mA, so the pen's
-   0.3–0.8 Ω/cm is irrelevant there (never use it on the speaker or LRA path).
-3. **A makerspace / a friend with an iron**: 8 joints, ten minutes. Bring the pigtails cut to length.
+> **LiPo warning — the cell joint is never yours to heat.** The W1 joint sits ≈ 25 mm from a 30 mAh pouch cell.
+> A solder-seal sleeve's solder ring has to reach ≈ 140–150 °C, which takes a heat gun blowing much hotter air at
+> it for several seconds; a LiPo pouch is rated to about 60 °C, and hot air or a flame that close can swell,
+> vent or ignite it. So **no sleeve, heat gun, lighter or other flame on the cell, ever**: the cell arrives with
+> its plug already on (route 1 below). Whoever makes that joint should work with the cell at its as-shipped
+> storage charge (≈ 3.7–3.85 V, never straight off a charger), the pouch shielded and held clear of the heat, one
+> lead at a time with the other insulated so the bare ends can never touch. A cell that comes back puffy, dented
+> or warm is scrap: tape its leads and take it to a battery drop-off, do not fit it. If the only cells you can
+> get carry another micro plug (JST SH 1.0 or Molex PicoBlade 1.25 are common factory fits), a cable shop can make
+> a plug-to-Pico-EZmate adapter lead with no work near the pouch — but that mated pair is not modelled in the bay,
+> so it is a bench-only answer until the CAD carries it.
+
+**The harness, per ring** (the drawing to send; 28 AWG, Molex 78172-0002 housing on the plug end; lengths are
+plug face → far end of the wire, the far end bare and tinned 3 mm unless the supplier makes the joint):
+
+| Pigtail | Plug into | Length | Far end |
+|---|---|---|---|
+| W1 cell | J1 (pin 1 = BAT+) | ≈ 25 mm from the cell's tab edge | joined to the cell's leads **by the supplier** (cell seller, cable shop or PCBWay) |
+| W2 charging | J3 (pin 1 = CHG+, the +Y window) | **≥ 85 mm per wire** — the modelled runs are ≈ 61 mm (−Y window) and ≈ 73.5 mm (+Y window, round the bottom of the band), `hardware/cad/fit_report.md` | bare and tinned; threaded through the band channels first, then bonded to the ENIG coupons with the silver pen (a coupon fitted beforehand cannot pass the Ø1.1 channels) |
+| W3 LRA | J4 | ≈ 25 mm | joined to the LRA's leads by the supplier, or bare for a sleeve (route 2) |
+| W4 speaker | J5 | ≈ 15 mm | soldered to the speaker's pads by the supplier — the AS01008MR-2-R has solder pads, not leads |
+
+If you cut the pigtails yourself: two **Molex 36920-0203** (300 mm, plug both ends) per ring, each cut in half,
+give four 150 mm pigtails to trim to the table. Half of the 100 mm 36920-0201 (≈ 50 mm) is long enough for W1,
+W3 and W4 but **not for W2**; the 152 mm single-plug 68801-4146 or half of a JST ASACHSACH28W305 (JST ACH
+variant) also reach.
+
+Who makes the joints, without you touching a soldering iron, in order of preference:
+
+1. **Have the parts delivered terminated** — the only route for the cell, the easiest for everything. A
+   cable/harness shop (the research found Pico-EZmate harnesses listed by small shops such as Hoohaa; any "custom
+   wire harness" seller takes the table above) crimps the pigtails and joins them to the cell, LRA and speaker for
+   a few dollars per harness at the 5–10 piece level; ask the cell seller too — some small-cell sellers fit a
+   connector to order (Pico-EZmate is unusual, so give them the 78172-0002 housing number or send pigtails).
+   PCBWay's harness service (§5) does the same inside the board order.
+2. **Solder-seal heat-shrink sleeves — LRA only** (and a speaker variant with flying leads, e.g. AS01008MR-3-LW100-R;
+   check its thickness against the 2.9 mm pocket first): white, 26–30 AWG size, $5–10 per 50. Twist the
+   pigtail's bare end onto the part's lead, slide a sleeve over the joint and heat it with a **heat gun** (not a
+   lighter: a flame soots the sleeve and cannot be kept off the part) until the solder ring flows and the sleeve
+   shrinks. Keep the part's body out of the air stream — make the joint at the end of the lead and shade the LRA
+   with a fold of aluminium foil (its magnet and coil do not like that heat either). No iron, no flux; the joint is
+   insulated. **Never on the cell** (warning above), and not on the speaker's solder pads. For the two band
+   contacts use the **silver conductive pen** (MG Chemicals 842AR-P) to bond the bare wire end to the ENIG coupon,
+   UV-glue the coupon into its window — the charge current is ≤ 25 mA, so the pen's 0.3–0.8 Ω/cm is irrelevant
+   there (never use it on the speaker or LRA path).
+3. **A makerspace / a friend with an iron**: 8 joints, ten minutes. Bring the pigtails cut to the table. The cell
+   only with someone who has soldered LiPo leads before, under the warning above (temperature-controlled iron,
+   pouch shielded, one lead at a time).
 
 Keep the board itself out of all of this: there is nothing on it to touch, and the four plugs come out again
 for debugging (the test pads stay reachable with the board seated and the lid off).
@@ -187,4 +227,4 @@ for debugging (the test pads stay reachable with the board seated and the lid of
 - [ ] placement preview: U1 u.FL end at the back edge, FPC1 mouth at the front edge, headers' wire exit toward the notches, D1/D2/D3/IC pin 1
 - [ ] DFM remark about 1:1 DSBGA apertures
 - [ ] consignment parcel booked with the order number; attrition quantities met
-- [ ] separately ordered: cells, LRAs, speakers, 2 × 36920-0201 per ring (or a terminated harness set), antennas, OV2640 heads, foil + foam, ENIG coupons, silver pen or solder-seal sleeves, enclosure prints
+- [ ] separately ordered: cells **with the W1 plug already fitted** (never sleeve or heat-gun the cell, §7), LRAs, speakers, 2 × 36920-0203 (300 mm) per ring or a terminated harness set to the §7 table (W2 ≥ 85 mm per wire), antennas, OV2640 heads, foil + foam, ENIG coupons, silver pen, solder-seal sleeves (LRA only), enclosure prints

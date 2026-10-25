@@ -1,4 +1,4 @@
-# hardware/pcb — stage-1 floorplan and stage-0 bench wiring
+# hardware/pcb — stage-1 floorplan and stage-0 bench wiring (soldered and no-solder)
 
 Pure-Python SVG/PNG generators (no KiCad / OpenSCAD needed; `cairosvg` renders the PNGs).
 
@@ -14,9 +14,13 @@ Pure-Python SVG/PNG generators (no KiCad / OpenSCAD needed; `cairosvg` renders t
 | `wiring_stage0.py` | stage-0 bench wiring diagram for the Seeed XIAO ESP32S3 Sense (incl. the optional MAX98357A amp breakout + 10 mm speaker on D7/D6/D10) |
 | `wiring_stage0.md` | connection table, parts and the check-before-power-on list |
 | `out/wiring_stage0.svg/.png` | the diagram |
-| `svgkit.py` | tiny SVG writer shared by both scripts |
+| `wiring_stage0_solderless.py` | stage-0 **no-solder** bench wiring: the pre-soldered XIAO ESP32S3 Sense seated in Seeed's Expansion Board Base, Grove Haptic Motor, LIS3DH STEMMA QT breakout on a Grove→QT cable, JST LiPo, and the optional MAX98357A amp as the one item with unsoldered header holes (pin map `BOARD_XIAO_ESP32S3_SENSE` + `MCRING_XIAO_BASE`) |
+| `wiring_stage0_solderless.md` | its connection table, kit (`hardware/bom/stage0-devkit-solderless.csv`), joint count and checks — the page to follow for a bench rig without an iron (`docs/07-build-guide.md` §1.12) |
+| `out/wiring_stage0_solderless.svg/.png` | the no-solder diagram |
+| `svgkit.py` | tiny SVG writer shared by the scripts |
 
-Regenerate: `python3 floorplan.py && python3 export_cpl.py && python3 wiring_stage0.py` (Python ≥ 3.10, `pip install cairosvg`).
+Regenerate: `python3 floorplan.py && python3 export_cpl.py && python3 wiring_stage0.py && python3 wiring_stage0_solderless.py`
+(Python ≥ 3.10, `pip install cairosvg`).
 
 ## Coordinate convention used by `board_params.json`
 

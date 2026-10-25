@@ -59,12 +59,26 @@ void power_deep_sleep_now() {
   digitalWrite(PIN_RGB_PWR, LOW);        // belt and braces: the load switch must be off in sleep
 #endif
 #if PIN_IMU_INT >= 0
+  bool tap_wake = false;
   if (imu_available()) {
-    imu_wake();  // tap-to-wake costs ~1 µA; INT1 (RTC GPIO) wakes us via EXT1
-    esp_sleep_enable_ext1_wakeup(1ULL << PIN_IMU_INT, ESP_EXT1_WAKEUP_ANY_HIGH);
-  } else {
-    imu_sleep();
+    imu_wake();  // IMU stays on in sleep (LIS2DW12 ~90 µA, LIS3DH ~73 µA at 400 Hz; §1.11); also clears a latched INT1
+    // Every EXT1 wake starts an ask (main.cpp), so arm it only on a line that really idles low: with the pull-down on,
+    // a missing INT wire (floating pin) reads low and is then held low in sleep by the RTC pull-down; a line pulled
+    // or stuck high would wake us at once and is skipped (the button still wakes the ring).
+    pinMode(PIN_IMU_INT, INPUT_PULLDOWN);
+    delayMicroseconds(100);
+    if (digitalRead(PIN_IMU_INT) == LOW) {
+      rtc_gpio_pullup_dis((gpio_num_t)PIN_IMU_INT);
+      rtc_gpio_pulldown_en((gpio_num_t)PIN_IMU_INT);
+      esp_sleep_pd_config(ESP_PD_DOMAIN_RTC_PERIPH, ESP_PD_OPTION_ON);   // keeps the RTC pull-down alive in sleep
+      esp_sleep_enable_ext1_wakeup(1ULL << PIN_IMU_INT, ESP_EXT1_WAKEUP_ANY_HIGH);
+      tap_wake = true;
+    } else {
+      LOGW(TAG, "IMU INT (GPIO%d) high with the latch cleared: no tap-to-wake this time", PIN_IMU_INT);
+      Serial.flush();
+    }
   }
+  if (!tap_wake) imu_sleep();
 #else
   imu_sleep();
 #endif

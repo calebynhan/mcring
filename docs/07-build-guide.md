@@ -75,7 +75,7 @@ install one, or ignore (the text is printed anyway). Tests to run once: `docs/06
 
 > **No soldering iron?** §1.12 builds the same rig from parts that plug together (pre-soldered XIAO in
 > Seeed's Expansion Board Base, Grove haptic module, STEMMA QT accelerometer) — zero joints, same
-> firmware, same §1.4–§1.7 steps. Read §1.1–§1.3 for the parts' roles, then jump there.
+> firmware (env `xiao_esp32s3_sense_base`), same §1.4–§1.7 steps. Read §1.1–§1.3 for the parts' roles, then jump there.
 
 From `hardware/bom/stage0-devkit.csv` (≈ $40–55):
 
@@ -175,8 +175,8 @@ mcring talk --backend http://localhost:8000   # the real loop (backend from §0 
 **Observe:** `scan` prints `AA:BB:CC:DD:EE:FF  mcring-7a3f  rssi=-55` (macOS shows a UUID instead
 of the MAC). Both `events` and `talk` print `I mcring.ring: scanning for mcring* (10s)…`,
 `connected; MTU 517 (3 audio block(s)/write)` (Linux/BlueZ; macOS reports 185 → 1 block/write) and
-a `status: idle batt=0mV(255%) flags=0x42 ...` line (255 % = no divider fitted; `0x42` =
-camera_ok + **speaker_ok**, the XIAO build always claims a speaker). Press the button in `events`:
+a `status: idle batt=0mV(255%) flags=0x4a speaker ...` line (255 % = no divider fitted; `0x4a` =
+camera_ok + mic_ok + **speaker_ok**, the XIAO build always claims the PDM mic and a speaker). Press the button in `events`:
 `event BUTTON_DOWN  t=12.3s`, `event BUTTON_UP held 0.2 s (photo)`, `event CAPTURE_STARTED`,
 `event CAPTURE_DONE queued=1`, `transfer type=1 11234 B in 0.35 s`. `talk` prints
 `talk — Enter: start recording · Enter: stop & ask · c: photo · t <text>: ask by text · q: quit` and
@@ -415,9 +415,9 @@ Motor** (DRV2605L with its motor already attached) and a **LIS3DH STEMMA QT** bo
 cable. The base already carries the button on D1 (= `PIN_BUTTON`), a passive buzzer on A3 = D3
 (= `PIN_BUZZER`) and a JST LiPo socket with a charger, so nothing from §1.2's table is wired by hand.
 The firmware runs the same loop (`pio run -e xiao_esp32s3_sense_base`). The one part that keeps
-unsoldered holes is the optional speaker amp (§1.12.5). For stage 1 the equivalent answer is *order the
-board assembled* (JLCPCB Standard PCBA, parts and costs in `docs/research/04-no-solder-sourcing.md`
-§B–C) — that design change is not made yet, see the end of this section.
+unsoldered holes is the optional speaker amp (§1.12.5). Stage 1 needs no iron either: its 26.5 × 22.8 mm
+board is *ordered assembled* and every off-board part plugs into it (§2, `docs/10-ordering-assembled-boards.md`;
+summary at the end of this section).
 
 Drawing: `hardware/pcb/out/wiring_stage0_solderless.png`; connection table, the `MCRING_XIAO_BASE`
 build deltas and the check list: `hardware/pcb/wiring_stage0_solderless.md`. Prices are October-2026
@@ -427,29 +427,33 @@ search snippets; the research report marks what it could not verify.
 
 | Qty | Part | Replaces (§1.1) | Note |
 |---|---|---|---|
-| 1 | XIAO ESP32S3 Sense, **pre-soldered** — Seeed 102010635 ($14.90–19.95) | the bare XIAO + its 14 header joints | pins point down into the base; Sense board stays on top. Fallback if out of stock: the unsoldered board + a press-fit "hammer header" (Adafruit 3662; fit in the XIAO's holes unverified) |
+| 1 | XIAO ESP32S3 Sense, **pre-soldered** — Seeed 102010635 ($14.90–19.95) | the bare XIAO + its 14 header joints | header side **unverified** (`docs/research/04` §A1): before ordering, check on the 102010635 product photo that the pins come out of the side *opposite* the Sense board, so the camera faces up, away from the base; the photo check after seating is in §1.12.2. Fallback if out of stock: the unsoldered board + a press-fit "hammer header" (Adafruit 3662; fit in the XIAO's holes unverified) |
 | 1 | Expansion Board Base for XIAO — Seeed 103030356 / Adafruit 5033 ($17.95) | breadboard, tactile switch, piezo, battery wiring | button on D1, buzzer on A3/D3, JST 2.0 LiPo + charger (≤ 460 mA), 2 × Grove I²C, Grove UART, Grove A0/D0, OLED 0x3C, RTC 0x51, microSD (CS D2) |
 | 1 | Grove – Haptic Motor — Seeed 105020011 (≈ $7.50–15) | DRV2605L breakout + LRA + 2 motor joints | DRV2605L 0x5A with an **ERM** attached; the LRA feel comes back on the stage-1 board |
 | 1 | LIS3DH STEMMA QT — Adafruit 2809 ($4.95) *or* SparkFun Micro LIS3DH Qwiic SEN-29529 ($5.95) | LIS2DW12 module + 4–5 wires | WHO_AM_I 0x33, detected at boot; no LIS2DW12 breakout with a QT/Qwiic plug exists (SparkFun's is retired) |
 | 1 | Grove → STEMMA QT / Qwiic cable — Adafruit 4528 or SparkFun PRT-15109 ($1.95) | — | base Grove I²C #2 → LIS3DH |
-| — | male-male jumpers; optionally one hammer-header strip (Adafruit 3662, $2.25) or an alligator-to-jumper set (Adafruit 3255, $7.95) | — | the LIS3DH `INT` → D8 jumper (optional) and, with the speaker, D10 → `DIN` |
+| — | male-male jumpers; optionally one hammer-header strip (Adafruit 3662, $2.25) or an alligator-to-jumper set (Adafruit 3255, $7.95) | — | the LIS3DH `INT` → D8 jumper (optional; only the `_tapwake` env uses it, §1.12.4) and, with the speaker, D10 → `DIN` |
 | 1 | LiPo **≥ 400 mAh**, JST-PH, with PCM — Adafruit 3898 or 1578 ($6.95–7.95) | the 100 mAh cell on the BAT pads | the base's charger is up to 460 mA: 4.6 C for the 100 mAh ring cell, so keep that cell for the soldered rig / stage 1 |
-| opt. | MAX98357A breakout (Adafruit 3006, $5.95) + 10 mm 8 Ω speaker + a "Grove to 4-pin male jumper" cable (Seeed 110990210) | the same amp | see §1.12.5 — the amp's 7 header holes are the one unsoldered thing |
+| opt. | MAX98357A breakout (Adafruit 3006, $5.95) + an 8 Ω speaker with leads (Adafruit 3923, $1.95) + a "Grove to 4-pin male jumper" cable (Seeed 110990210, ≈ $2.90): ≈ $11–13 | the same amp and speaker | see §1.12.5 — the amp's 7 header holes are the one unsoldered thing; the 10 mm PUI speaker of §1.10 has solder pads (stage-1 part) |
 
 Not needed from §1.1: the tactile switch, the piezo, the divider resistors, the breadboard.
 
 #### 1.12.2 Seat and flash
 
 1. Push the XIAO into the base's socket: USB-C toward the base's USB end, `D0` at the base's `D0`
-   silkscreen; the Sense board stays clicked on top. Leave the base's microSD slot empty (its CS is D2
-   and its SPI shares D8/D9/D10 with the IMU interrupt, touch and I²S DIN).
+   silkscreen; the Sense board should end up on top with the camera facing away from the base. That
+   header side is **unverified** for the pre-soldered board: once flashed, the first photo (§1.5) must
+   show the room, not the base's PCB — if it shows the base, stop; the camera is sandwiched and this
+   seating cannot work for photos. Leave the base's microSD slot empty (its CS is D2 and its SPI shares
+   D8/D9/D10 with the IMU interrupt, touch and I²S DIN).
 2. `cd firmware/ring-esp32s3 && pio run -e xiao_esp32s3_sense_base -t upload` (same boot/reset dance as
    §1.3 if the port is missing).
 
 **Observe:** the §1.3 log with `mcring fw 0.1.0 (xiao-esp32s3-sense+base)` on the first line — the
 `+base` means `-DMCRING_XIAO_BASE` is in: ERM haptic profile, `PIN_HAPTIC` parked (D2 is the SD chip
-select), tap-source polling on. Press the base's own button: `event BUTTON_DOWN` / `BUTTON_UP` in
-`mcring events`, exactly as in §1.4–§1.7 — the button and the buzzer need no wiring at all.
+select), tap-source polling on, `PIN_IMU_INT` (D8) and `PIN_BATTERY_ADC` (A0) parked. Press the
+base's own button: `event BUTTON_DOWN` / `BUTTON_UP` in `mcring events`, exactly as in §1.4–§1.7 — the
+button and the buzzer need no wiring at all.
 
 **If not:** the first line says `(xiao-esp32s3-sense)` without `+base` → you flashed the stock env; it
 still boots but drives the ERM with the LRA profile (`autocal FAILED`) and toggles D2. A dead board →
@@ -472,12 +476,19 @@ free-floating board taps itself) and tap it twice ~150 ms apart: `I trig: double
 DOUBLE_TAP` → the hands-free ask of §1.9. **No interrupt wire is needed for this**: the build polls the
 chip's latched click source every 25 ms, which adds at most 25 ms of latency.
 
-The interrupt jumper is only for **tap-to-wake from deep sleep** (EXT1): push a male jumper pin into
-the breakout's `INT` through-hole at a slight angle (friction fit), or tap in one hammer-header pin,
-or use an IC-hook clip, and plug the other end into the base's breakout header hole **D8**. Test:
-`mcring config idle_sleep_s 10`, disconnect, wait, double-tap → `I pwr: woke from deep sleep, cause 3`
-(`ESP_SLEEP_WAKEUP_EXT1`) and `I main: wake by tap -> ask`. Without the wire the ring wakes on the
-button only.
+The interrupt jumper is only for **tap-to-wake from deep sleep** (EXT1), and it takes two steps.
+(1) Push a male jumper pin into the breakout's `INT` through-hole at a slight angle (friction fit), or
+tap in one hammer-header pin, or use an IC-hook clip, and plug the other end into the base's breakout
+header hole **D8**. (2) Flash `pio run -e xiao_esp32s3_sense_base_tapwake -t upload`
+(`-DMCRING_IMU_INT_WIRED`; the boot line says `+base+tapwake`). The default `xiao_esp32s3_sense_base`
+build ignores D8 on purpose: without the wire nothing drives that pin (it is also the microSD clock of
+the base and the Sense board), a floating EXT1 pin would wake the ring at random, and every EXT1 wake
+starts an ask. So that build powers the LIS3DH down in deep sleep and **wakes on the button only**.
+Test with the tap-wake build: `mcring config idle_sleep_s 10`, disconnect, wait, double-tap →
+`I pwr: woke from deep sleep, cause 3` (`ESP_SLEEP_WAKEUP_EXT1`) and `I main: wake by tap -> ask`.
+Before sleeping the firmware clears the click latch, arms EXT1 only if D8 then reads low with its
+pull-down on (`W pwr: IMU INT (GPIO7) high …` otherwise) and holds it low in sleep, so a jumper that
+falls out does not cause random wakes; the LIS3DH stays at 400 Hz in sleep (~73 µA typ.).
 
 Tuning is §1.9's, in the same units: the firmware keeps the tap threshold in 62.5 mg steps for both
 chips (`imu_set_tap_threshold(9)` ≈ 0.56 g; the LIS3DH driver scales it ×4 into its 7-bit `CLICK_THS`),
@@ -495,7 +506,9 @@ would.
 *Battery:* plug a **≥ 400 mAh** JST-PH cell into the base's JST 2.0 socket — check red = `+` on the
 base silkscreen first (a Seeed forum thread reports reversed pigtails on early units; never force a
 plug) — and the base's charge LED lights while USB is in. `batt` in STATUS reads `0mV(255%)` = unknown:
-the A0 divider of §1.11 is not built on this rig (the cell's `+` is only on the JST pigtail). For the
+the A0 divider of §1.11 is not built on this rig (the cell's `+` is only on the JST pigtail), and the
+base build parks `PIN_BATTERY_ADC` so an open A0 cannot report a bogus low battery (a divider you build
+on A0 is read again with `-DMCRING_BATT_DIVIDER_WIRED` added to the env's `build_flags`). For the
 §1.11 current measurements put the meter in series through a JST-PH extension cable cut open; the
 deep-sleep numbers are not meaningful here (OLED, RTC and charger on the base, no camera power gate).
 Not verified from the base's schematic: whether its charger reaches the XIAO's BAT pads or only the
@@ -508,28 +521,30 @@ hammer-header pins (Adafruit 3662) into the amp's holes and use female jumpers; 
 makerspace / a friend with an iron; (c) defer — the amp is SMT on the stage-1 board. Wiring for (a) or
 (b): a "Grove to 4-pin male jumper" cable in the base's **Grove UART** socket gives `BCLK` (D7),
 `LRC` (D6), `VIN` (3V3) and `GND` in one plug (which Grove pin is D6 and which D7: base silkscreen —
-swap `BCLK`/`LRC` if silent), a jumper from breakout header D10 to `DIN`, `SD` → `VIN`, `GAIN` open;
-then §1.10 as written. Headphones need none of this.
+swap `BCLK`/`LRC` if silent), a jumper from breakout header D10 to `DIN`, `SD` → `VIN`, `GAIN` open.
+Speaker: Adafruit 3923 (8 Ω 1 W oval) — snip the PicoBlade plug off its leads and strip ~5 mm of each
+(wire stripper, no solder) into the amp's screw terminal; the 10 mm PUI AS01008MR-2-R of §1.10 has solder
+pads and stays a stage-1 part. Then §1.10 as written. Headphones need none of this.
 
 #### 1.12.6 Which §1 steps change
 
 | § | Soldered rig | No-solder rig |
 |---|---|---|
 | 1.1 / 1.2 | `stage0-devkit.csv`, `wiring_stage0.md` | `stage0-devkit-solderless.csv`, `wiring_stage0_solderless.md` |
-| 1.3 | `-e xiao_esp32s3_sense` | `-e xiao_esp32s3_sense_base`; boot line says `+base` |
-| 1.4–1.7 | tactile switch on D1 | the base's button — otherwise identical |
+| 1.3 | `-e xiao_esp32s3_sense` | `-e xiao_esp32s3_sense_base` (`…_base_tapwake` with the INT jumper); boot line says `+base` |
+| 1.4–1.7 | tactile switch on D1 | the base's button — otherwise identical; the §1.5 photo also proves the header side |
 | 1.8 | DRV2605L + LRA, rated-voltage tuning | Grove Haptic Motor (ERM): `ready (ERM)`, autocal, `haptic_strength` only |
-| 1.9 | LIS2DW12 + INT1 wire | LIS3DH, polled; INT jumper only for deep-sleep tap-wake; same thresholds/units |
+| 1.9 | LIS2DW12 + INT1 wire | LIS3DH, polled; deep-sleep tap-wake needs the INT jumper **and** the `_tapwake` env; same thresholds/units |
 | 1.10 | amp header soldered | press-fit pins, a makerspace, or defer |
 | 1.11 | cell on BAT pads + divider | cell in the base's JST; no `batt` reading; no sleep figures |
 
-*Stage 1 without an iron:* order the board as **JLCPCB Standard PCBA** (Economic cannot place the
-0.4 mm DSBGAs or a double-sided board), with wire-to-board headers under 1.6 mm (Molex Pico-EZmate
-78171-0002 or JST ACH) for the cell, LRA and speaker so the off-board parts arrive on pigtails; the
-remaining 4–6 joints at the pigtail/part junctions go to a cable shop or spring-contact parts. Costs,
-LCSC part numbers and the open questions are in `docs/research/04-no-solder-sourcing.md` §B–C; the
-header footprints are **not** in `hardware/electrical/mcring_v1.py` / `floorplan.py` yet (the top side
-is full — a floorplan check comes first).
+*Stage 1 without an iron* is in the design (§2, `docs/10-ordering-assembled-boards.md`): the
+26.5 × 22.8 mm board is ordered as **JLCPCB Standard PCBA** (Economic cannot place the 0.4 mm DSBGAs or
+a double-sided board), and the cell, the charging-pad pigtail, the LRA and the optional speaker plug into
+four 2-pin Molex Pico-EZmate headers on its top (J1, J3, J4, J5; `hardware/electrical/mcring_v1.py`,
+`hardware/pcb/floorplan.py`). The 8 wire joints that remain are at the far ends of the pigtails (two each
+on the cell, LRA and speaker, plus the two band contacts) and are made without an iron (`docs/10` §7).
+The sourcing research behind it is `docs/research/04-no-solder-sourcing.md` §B–C.
 
 ---
 
@@ -546,7 +561,8 @@ the charging-pad pigtail, the LRA and the optional speaker go into four 2-pin Mo
 the board's top (J1 BAT, J3 CHG, J4 LRA, J5 SPK, each with a wire notch in the board edge beside it), the
 camera flex into a flip-lock ZIF (FPC1), the antenna onto the module's u.FL. The eight wire joints that
 remain are at the far ends of the four pigtails (cell, LRA, speaker leads and the two band contacts) and are
-made without an iron — pre-terminated harnesses, solder-seal sleeves or the silver pen (`docs/10` §7).
+made without an iron — pre-terminated harnesses (always for the cell), solder-seal sleeves on the LRA's leads,
+the silver pen on the band contacts (`docs/10` §7).
 
 ### 2.1 Before ordering anything
 
@@ -587,8 +603,10 @@ made without an iron — pre-terminated harnesses, solder-seal sleeves or the si
    antenna (34.9 × 9 mm, MHF1/u.FL pigtail — the stock 50 mm cable must be shortened or coiled, the cavity
    is 2 mm deep, `hardware/cad/README.md` "Antenna"); the OV2640 head; the 301012 cell, the INEED LRA and
    (speaker option) the PUI AS01008MR-2-R-class 8 Ω 10 mm speaker — each **terminated with a Pico-EZmate
-   plug**: two Molex 36920-0201 cables per ring cut in half give the four 28 AWG pigtails W1–W4, joined to
-   the parts' leads by a cable shop, by solder-seal sleeves or by PCBWay's harness service (`docs/10` §7);
+   plug**: two Molex 36920-0203 (300 mm) cables per ring cut in half give the four 28 AWG pigtails W1–W4
+   (the charging pigtail needs ≥ 85 mm per wire, so halves of the 100 mm 36920-0201 are too short), joined to
+   the parts by the cell seller, a cable shop or PCBWay's harness service to the harness table in `docs/10` §7
+   — the cell **arrives terminated**: never a solder-seal sleeve, heat gun or flame on it (LiPo warning there);
    copper foil with conductive adhesive (3M 1181 class) for the 4 × 5 mm lid electrode and a 3 × 4 × 3.6 mm
    conductive-foam block (or SMT spring finger) for TPAD1; two 3 × 2 mm ENIG contacts for the band (a scrap
    of ENIG board) and the MG 842AR silver conductive pen that bonds the charging pigtail's bare ends to them;
@@ -619,7 +637,7 @@ The full click-by-click procedure, the consigned parts and the cost of a 5-board
 | DNP decisions | U4 (1.2 V LDO) DNP if the OV2640 head regulates DVDD; the speaker group U10/U11/C25/C26/R20–R24 in or out (J5 stays) |
 
 Nothing for soldering goes on the shopping list. Tools for the rest of §2: tweezers, 0.8 / 1.1 / 4.5 mm drill
-bits for the printed parts, UV-cure glue, a heat gun or lighter if you use solder-seal sleeves (`docs/10` §7),
+bits for the printed parts, UV-cure glue, a heat gun (no lighter) if you sleeve the LRA's leads — never the cell's (`docs/10` §7),
 a multimeter, and a USB microscope is still nice for the incoming inspection.
 
 ### 2.3 Incoming inspection of the assembled boards, and the pigtails
@@ -652,11 +670,13 @@ landing and the eight test pads TP1–TP8. Before anything else:
    XCLK) → R5 / R6 / U1 (buzz against `floorplan.md` §7); J1 pin 1 → TP8; J3 pin 1 → D2.
 
 **Pigtails (the only wire work, and none of it on the board).** Each off-board part needs a Pico-EZmate
-plug on its leads: W1 cell, W2 charging contacts, W3 LRA, W4 speaker — half of a Molex 36920-0201 cable
-each (plug one end, bare the other). Have them made (`docs/10` §7: cable shop, PCBWay harness service, or
-solder-seal sleeves with a heat gun); lengths: cell ≈ 25 mm from the tabs, LRA ≈ 25 mm, speaker ≈ 15 mm
-(polarity irrelevant for one driver), charging pigtail ≈ 60 mm per wire (it runs through the floor groove
-and the band channels; trimmed at the windows). J2 and BZ1 are bare pads for the bench only. Snap the
+plug on its leads: W1 cell, W2 charging contacts, W3 LRA, W4 speaker — half of a Molex 36920-0203 (300 mm)
+cable each (plug one end, bare the other). Have them made (`docs/10` §7: cell seller, cable shop or PCBWay
+harness service; a solder-seal sleeve with a heat gun only on the LRA — **never on the cell**, whose joint is
+≈ 25 mm from the pouch); lengths: cell ≈ 25 mm from the tabs, LRA ≈ 25 mm, speaker ≈ 15 mm (polarity
+irrelevant for one driver), charging pigtail **≥ 85 mm per wire** (the modelled runs through the floor groove,
+the slab channels and round the band are ≈ 61 and ≈ 73.5 mm, `hardware/cad/fit_report.md`; trimmed at the
+windows, and left bare — a contact soldered on beforehand cannot pass the Ø1.1 channels). J2 and BZ1 are bare pads for the bench only. Snap the
 antenna's u.FL plug onto the module for the §2.4 BLE checks (press straight down until it clicks; the mated
 plug is the 2.9 mm tallest part).
 
@@ -771,8 +791,8 @@ over them**. The plugs (2.6 × 3.5 mm) cannot pass through the notches; only the
    LRA and cell pockets, forward along the −y edge — and down the two Ø1.1 channels that open in the bay
    floor beside the −Y wall: the X −1.5 channel leads to the −Y window (CHG−, J3 pin 2), the X −3.5 channel
    round the bottom to the +Y window (CHG+, J3 pin 1). Out in the rib grooves, cut each wire so ≈ 3 mm of
-   bare end reaches its window, bond it to a 3 × 2 mm ENIG contact with the silver conductive pen (or have
-   the cable shop solder the contacts on beforehand), press the contact into its 3 × 3 window flush with
+   bare end reaches its window, bond it to a 3 × 2 mm ENIG contact with the silver conductive pen (a contact
+   soldered on beforehand would not pass the Ø1.1 channel), press the contact into its 3 × 3 window flush with
    the bore (UV glue around the edge, nothing on the face), fill the grooves with resin or epoxy. Both
    contacts flush, ≈ 8.5 mm apart (§2.8). The wires sit in the floor groove, below everything the board
    carries; the plug waits above the J3 notch position.

@@ -9,8 +9,12 @@ Pin assignments are BOARD_XIAO_ESP32S3_SENSE + MCRING_XIAO_BASE (firmware/ring-e
 platformio env xiao_esp32s3_sense_base):
   D1 = GPIO2 button (the base's user button), D3 = GPIO4 buzzer (the base's passive buzzer on A3), D4/D5 = GPIO5/6 I²C
   (the base's two Grove I²C sockets), D8 = GPIO7 IMU INT1 (jumper from the LIS3DH's INT hole, optional — the firmware
-  also polls), D2 = GPIO3 is the base's microSD CS → PIN_HAPTIC parked (-1), D6/D7 = GPIO43/44 I²S LRC/BCLK (= the base's
-  Grove-UART socket), D10 = GPIO9 I²S DIN. Battery sense (A0) is not built on this rig → battery % reads "unknown".
+  polls; the default base build parks PIN_IMU_INT because D8 floats without the jumper, and only the
+  xiao_esp32s3_sense_base_tapwake env arms tap-to-wake on it), D2 = GPIO3 is the base's microSD CS → PIN_HAPTIC parked
+  (-1), D6/D7 = GPIO43/44 I²S LRC/BCLK (= the base's Grove-UART socket), D10 = GPIO9 I²S DIN. Battery sense (A0) is not
+  built on this rig and PIN_BATTERY_ADC is parked → battery % reads "unknown".
+Header orientation of the pre-soldered XIAO (pins on the side opposite the Sense board) is UNVERIFIED — the drawing
+and the .md say so and give the check.
 Sources for the base's pin use: Seeed wiki (Expansion Board Base for XIAO), Zephyr `seeed_xiao_expansion_board` shield
 table, docs/research/04-no-solder-sourcing.md §A2. Not verified from the base's schematic (fetch blocked): whether its
 charger output reaches the XIAO's BAT pads or only the 5V/VIN pin, and the exact SD SPI pins (assumed D8/D9/D10).
@@ -32,7 +36,7 @@ C_3V3, C_GND, C_BAT, C_SDA, C_SCL, C_SIG, C_INT, C_LRA, C_OPT, C_I2S, C_GROVE = 
     "#5d6d7e")
 
 # ---- geometry ---------------------------------------------------------------------------------------------
-W, H = 1700, 1110
+W, H = 1700, 1140
 BX0, BX1, BY0, BY1 = 330, 1150, 110, 650           # Expansion Board Base outline
 XX0, XX1, XY0, XY1 = 660, 840, 180, 520            # XIAO body (seated in the base's socket)
 PIN_Y = [215 + 45 * i for i in range(7)]           # breakout header rows (same order as the XIAO header)
@@ -41,7 +45,7 @@ RHX0, RHX1 = 910, 942                              # right breakout header
 LPIN_X, RPIN_X = 540, 940                          # where a jumper plugs in (drawn attachment points)
 
 # (name, GPIO, short tag beside the header, long use for the markdown table)
-LEFT = [("D0 / A0", "GPIO1", "bat. sense: n/c", "battery sense — not built on this rig (A0/D0 Grove socket)"),
+LEFT = [("D0 / A0", "GPIO1", "bat. sense: n/c", "battery sense — not built on this rig (A0/D0 Grove socket); `PIN_BATTERY_ADC` parked at −1"),
         ("D1", "GPIO2", "base button", "BUTTON = the base's user button"),
         ("D2", "GPIO3", "SD CS (parked)", "the base's microSD CS — PIN_HAPTIC parked at −1"),
         ("D3", "GPIO4", "base buzzer", "BUZZER = the base's passive buzzer (A3)"),
@@ -53,7 +57,7 @@ RIGHT = [("5V", "VBUS", "do not use", "do not use"),
          ("3V3", "3V3", "3.3 V out", "3.3 V out"),
          ("D10", "GPIO9", "I²S DIN (jumper)", "I²S DIN — male-male jumper to the optional amp"),
          ("D9", "GPIO8", "touch: n/c", "touch — n/c (the base's SD MISO)"),
-         ("D8", "GPIO7", "IMU INT1 (jumper)", "IMU INT1 ← LIS3DH INT (male-male jumper, optional)"),
+         ("D8", "GPIO7", "IMU INT1 (jumper)","IMU INT1 ← LIS3DH INT (male-male jumper, optional; read only by the `_tapwake` env)"),
          ("D7 / RX", "GPIO44", "I²S BCLK (UART)", "I²S BCLK — the Grove UART socket (optional amp)")]
 
 # Grove sockets on the base's bottom edge: (x0, label, sub-label)
@@ -92,6 +96,7 @@ wire(C_GROVE, [(g2, GROVE_Y1), (g2, 705), (740, 705), (740, LIS_Y0)], "Grove →
 # LIS3DH INT → D8 (press-fit pin / clip + male-male jumper into the right breakout header)
 wire(C_INT, [(LIS_X1, 840), (INT_X, 840), (INT_X, PIN_Y[5]), (RPIN_X, PIN_Y[5])],
      "INT → D8 / GPIO7 (tap-wake) — optional", (INT_X + 10, 846))
+INT_NOTE = "only read by -e xiao_esp32s3_sense_base_tapwake"   # second label line under the INT wire label
 # JST LiPo
 wire(C_BAT, [(JST_X + 46, 198), (LIPO_X0, 198)], "BAT+", (1187, 188), anchor="middle")
 wire(C_GND, [(JST_X + 46, 224), (LIPO_X0, 224)], "BAT−", (1187, 240), anchor="middle")
@@ -133,7 +138,7 @@ def draw() -> None:
     svg.rect(lx - 6, ly - 18, 296, 190, fill="#fdfefe", stroke="#bbb", sw=1, rx=6)
     svg.text(lx, ly, "Wire / cable colours", size=11, weight="bold")
     for i, (c, t) in enumerate([(C_GROVE, "Grove cable / Grove→STEMMA QT cable (I²C + 3V3 + GND)"),
-                                (C_INT, "LIS3DH INT → D8 / GPIO7 (jumper; optional)"),
+                                (C_INT, "LIS3DH INT → D8 / GPIO7 (optional; tap-wake env)"),
                                 (C_BAT, "BAT+ (JST-PH, red)"), (C_GND, "GND / BAT− (black)"),
                                 (C_3V3, "3V3 (amp VIN, SD)"), (C_I2S, "I²S to the optional amp (D7 BCLK, D6 LRC, D10 DIN)"),
                                 (C_LRA, "speaker pair (pre-soldered terminal block)"),
@@ -144,9 +149,7 @@ def draw() -> None:
 
     # ---- build / flash box (left) ----
     bx, by = 20, 380
-    svg.rect(bx - 6, by - 18, 296, 196, fill="#eef5fb", stroke="#7fa6c8", sw=1, rx=6)
-    svg.text(bx, by, "Build, flash, expect", size=11, weight="bold", fill="#1b4f72")
-    label_rows(svg, bx, by + 18, [
+    build_rows = [
         "cd firmware/ring-esp32s3",
         "pio run -e xiao_esp32s3_sense_base -t upload",
         "pio device monitor -b 115200",
@@ -154,13 +157,19 @@ def draw() -> None:
         "boot log: fw … (xiao-esp32s3-sense+base)",
         "  I imu: LIS3DH ready at 0x18 (double click -> INT1 …)",
         "  I drv: DRV2605L ready (ERM) · autocal ok",
-        "  status flags 0x56 = camera+IMU+haptic+speaker",
+        "  status flags 0x5e = camera+IMU+mic+haptic+speaker",
         "  batt=0mV(255%) — no divider on this rig",
         "button = the base's own button (D1), beep = base buzzer",
         "double-tap the LIS3DH board → hands-free ask",
-        "no INT jumper? taps still work (25 ms poll),",
-        "  only tap-to-wake from deep sleep is lost",
-    ], size=8.5, lh=13, fill="#1b4f72")
+        "no INT jumper? taps still work (25 ms poll); the",
+        "  ring then wakes from deep sleep on the button only",
+        "tap-to-wake: fit the INT jumper AND flash",
+        "  -e xiao_esp32s3_sense_base_tapwake (+tapwake)",
+    ]
+    lh = 13
+    svg.rect(bx - 6, by - 18, 296, 18 + 18 + len(build_rows) * lh + 4, fill="#eef5fb", stroke="#7fa6c8", sw=1, rx=6)
+    svg.text(bx, by, "Build, flash, expect", size=11, weight="bold", fill="#1b4f72")
+    label_rows(svg, bx, by + 18, build_rows, size=8.5, lh=lh, fill="#1b4f72")
 
     # ---- Expansion Board Base ----
     svg.rect(BX0, BY0, BX1 - BX0, BY1 - BY0, fill="#e8f0e8", stroke="#2e5e2e", sw=2, rx=12)
@@ -185,14 +194,14 @@ def draw() -> None:
 
     # XIAO + Sense seated in the socket
     svg.rect(XX0 - 15, XY0 - 14, (XX1 - XX0) + 30, (XY1 - XY0) + 28, fill="none", stroke="#555", sw=1.2, dash="6 4", rx=8)
-    svg.text((XX0 + XX1) / 2, XY0 - 20, "Sense board on top (B2B): OV2640, PDM mic GPIO41/42, its microSD unused",
+    svg.text((XX0 + XX1) / 2, XY0 - 20, "Sense board (B2B) expected on top — UNVERIFIED, see check 2: OV2640, PDM mic, its microSD unused",
              size=9, anchor="middle", fill="#555", italic=True)
     svg.rect(XX0, XY0, XX1 - XX0, XY1 - XY0, fill="#1b2631", stroke="#000", sw=2, rx=10)
     svg.rect(720, 170, 60, 24, fill="#95a5a6", stroke="#333", sw=1, rx=4)
     svg.text(750, 182, "USB-C", size=9, anchor="middle", fill="#111", weight="bold")
     svg.text(750, 212, "XIAO ESP32S3 Sense", size=12.5, anchor="middle", fill="#fff", weight="bold")
     svg.text(750, 226, "PRE-SOLDERED (Seeed 102010635)", size=8.5, anchor="middle", fill="#f9e79f", weight="bold")
-    svg.text(750, 238, "pins point DOWN into the base's socket", size=8, anchor="middle", fill="#f9e79f")
+    svg.text(750, 238, "pins DOWN into the socket (check photo)", size=8, anchor="middle", fill="#f9e79f")
     svg.rect(720, 252, 60, 60, fill="#2c3e50", stroke="#aab7b8", sw=1, rx=6)
     svg.circle(750, 282, 19, fill="#111", stroke="#aab7b8", sw=1.5)
     svg.text(750, 326, "OV2640 (on Sense)", size=8.5, anchor="middle", fill="#ddd")
@@ -239,7 +248,9 @@ def draw() -> None:
             svg.rect(x0 + 12 + k * 18, GROVE_Y0 + 6, 8, 8, fill="#bbb", stroke="#333", sw=0.6)
         svg.text(x0 + GROVE_W / 2, GROVE_Y0 + 24, lab, size=8.5, anchor="middle", weight="bold", fill="#2e5e2e")
         svg.text(x0 + GROVE_W / 2, GROVE_Y0 + 34, sub, size=7, anchor="middle", fill="#444")
-    svg.text(grove_cx(3), GROVE_Y0 - 12, "n/c (A0: divider if you build one)", size=7.5, anchor="middle", fill="#555", italic=True)
+    # two short lines so the caption stays left of the purple INT wire (x = INT_X)
+    svg.text(grove_cx(3), GROVE_Y0 - 24, "n/c (A0 battery", size=7.5, anchor="middle", fill="#555", italic=True)
+    svg.text(grove_cx(3), GROVE_Y0 - 13, "sense: not built)", size=7.5, anchor="middle", fill="#555", italic=True)
     svg.text(grove_cx(2), GROVE_Y0 - 12, "no UART Grove *device* here: D6/D7 = I²S", size=7.5, anchor="middle", fill="#555", italic=True)
 
     # JST LiPo socket on the right edge
@@ -296,7 +307,7 @@ def draw() -> None:
     svg.text((LIS_X0 + LIS_X1) / 2, LIS_Y0 + 138, "INT is a bare through-hole. Solderless options: a male jumper pin pushed", size=7.6, anchor="middle", fill="#555")
     svg.text((LIS_X0 + LIS_X1) / 2, LIS_Y0 + 150, "in at an angle (friction), a tapped-in hammer-header pin (Adafruit 3662),", size=7.6, anchor="middle", fill="#555")
     svg.text((LIS_X0 + LIS_X1) / 2, LIS_Y0 + 162, "an IC-hook clip — or skip it: the base build polls (no deep-sleep tap-wake)", size=7.6, anchor="middle", fill="#555")
-    svg.text((LIS_X0 + LIS_X1) / 2, LIS_Y0 + 174, "other end: male-male jumper into the base's breakout header hole D8", size=7.6, anchor="middle", fill="#555")
+    svg.text((LIS_X0 + LIS_X1) / 2, LIS_Y0 + 174, "other end: jumper into header hole D8; then flash the _tapwake env", size=7.6, anchor="middle", fill="#555")
 
     # ---- optional MAX98357A + speaker ----
     svg.rect(AMP_X0, AMP_Y0, AMP_X1 - AMP_X0, AMP_Y1 - AMP_Y0, fill="#fdf2e9", stroke="#b9770e", sw=1.5, rx=6, dash="6 4")
@@ -323,9 +334,9 @@ def draw() -> None:
     svg.circle(1380, 630, 28, fill="#d7bde2", stroke="#4a235a", sw=1.5)
     svg.circle(1380, 630, 17, fill="none", stroke="#4a235a", sw=1)
     svg.text(1380, 627, "speaker", size=9, anchor="middle", weight="bold")
-    svg.text(1380, 639, "Ø10 · 8 Ω", size=8, anchor="middle")
-    svg.text(1380, 672, "PUI AS01008MR-2-R (stage-1 part) or Adafruit 3923", size=7.5, anchor="middle")
-    svg.text(1380, 684, "bare leads into the screw terminal · polarity irrelevant", size=7.5, anchor="middle")
+    svg.text(1380, 639, "8 Ω · 1 W", size=8, anchor="middle")
+    svg.text(1380, 672, "Adafruit 3923: snip its PicoBlade plug, strip the leads", size=7.5, anchor="middle")
+    svg.text(1380, 684, "→ screw terminal · polarity irrelevant (PUI 10 mm = stage 1)", size=7.5, anchor="middle")
     svg.text(1240, 760, "Grove UART socket → 'Grove to 4-pin male jumper' cable (Seeed 110990210): D7, D6, 3V3, GND in one plug;", size=7.6, fill="#555")
     svg.text(1240, 772, "which Grove pin is D6 and which D7 → base silkscreen; swap BCLK/LRC if there is no sound", size=7.6, fill="#555")
 
@@ -341,28 +352,31 @@ def draw() -> None:
 
     # ---- check list (bottom right) ----
     cx, cy = 1250, 815
-    svg.rect(cx - 10, cy - 18, 440, 300, fill="#fef9e7", stroke="#b7950b", sw=1.2, rx=6)
+    svg.rect(cx - 10, cy - 18, 440, 330, fill="#fef9e7", stroke="#b7950b", sw=1.2, rx=6)
     svg.text(cx, cy, "Check before power-on (no iron, so no shorts to make — but still:)", size=11.5, weight="bold", fill="#7d6608")
     checks = [
         "1. XIAO seated the right way round (USB-C toward the base's USB end;",
         "   pin 1 / D0 at the base's D0 silkscreen) — reversed = dead board.",
-        "2. Sense board clicked onto both B2B connectors; camera FPC latched.",
+        "2. Sense board clicked on, FPC latched; header side UNVERIFIED: the §1.5",
+        "   photo must not show the base PCB (camera must face away from it).",
         "3. LiPo: red = + on the base's JST silkscreen. ≥ 400 mAh (charger 460 mA).",
         "4. Grove Haptic Motor and Grove→QT cable in the two I²C sockets — NOT",
         "   in the UART or A0/D0 socket (UART pins are I²S D6/D7).",
-        "5. LIS3DH INT → D8 only (never 3V3/5V). Skipping it is allowed (polling).",
+        "5. LIS3DH INT → D8 only (never 3V3/5V); optional (taps are polled) — with",
+        "   it, flash -e xiao_esp32s3_sense_base_tapwake for tap-to-wake.",
         "6. microSD slot empty: its CS is D2 and its SPI shares D8/D9/D10.",
         "7. Nothing on the 5V header pin. Amp VIN = 3V3 (never 5V); SD → VIN.",
         "8. Speaker leads only in the amp's +/− terminal, never to GND/3V3.",
         "9. First power from USB with the cell unplugged; then plug the cell:",
         "   the base's charge LED lights. Boot log lists 0x5A (drv) and 0x18/19 (imu).",
-        "10. Status flags 0x56 (camera+IMU+haptic+speaker); batt reads 255 % = no divider.",
+        "10. Status flags 0x5e (camera+IMU+mic+haptic+speaker); batt 255 % = unknown.",
         "11. Deep sleep with the Sense board and the base fitted is milliamps (OLED,",
         "    RTC, charger, no camera power gate) — the bench kit is not for sleep numbers.",
-        "12. Build with -e xiao_esp32s3_sense_base; the stock env still runs but drives",
-        "    the ERM as an LRA (autocal FAILED) and toggles D2 = the base's SD CS.",
+        "12. Build with -e xiao_esp32s3_sense_base(_tapwake); the stock env still runs",
+        "    but drives the ERM as an LRA (autocal FAILED) and toggles D2 = SD CS.",
     ]
     svg.multiline(cx, cy + 20, checks, size=8.6, lh=15.5)
+    svg.text(INT_X + 10, 858, INT_NOTE, size=8, fill=C_INT)
     svg.text(20, H - 14, "wire crossings without a dot are NOT connected · dashed = optional · generated by hardware/pcb/wiring_stage0_solderless.py",
              size=9, fill="#555", italic=True)
 
@@ -371,20 +385,20 @@ def draw() -> None:
 
 def write_md() -> None:
     rows = [
-        ("XIAO ESP32S3 Sense (pre-soldered, Seeed 102010635)", "Expansion Board Base socket", "pins point down into the base's two 7-pin female headers; USB-C toward the base's USB end; Sense board stays on top", "—"),
+        ("XIAO ESP32S3 Sense (pre-soldered, Seeed 102010635)", "Expansion Board Base socket", "pins down into the base's two 7-pin female headers; USB-C toward the base's USB end; Sense board (camera) expected on top, facing away from the base — **unverified**: before ordering, confirm on the 102010635 product photo that the headers are on the side *opposite* the Sense board; after seating, the §1.5 first photo must not be of the base PCB", "—"),
         ("Base user button", "D1 (GPIO2) = `PIN_BUTTON`", "already wired on the base; hold = ask, short press = photo, EXT0 deep-sleep wake", "on-base"),
         ("Base passive buzzer", "A3 = D3 (GPIO4) = `PIN_BUZZER`", "already wired on the base (cuttable trace); beep cues are off by default (`cues_mask` bit 2)", "on-base"),
         ("Base Grove I²C #1", "Grove – Haptic Motor (Seeed 105020011)", "DRV2605L 0x5A + factory-attached ERM; one Grove cable; `HAPTIC_MOTOR_LRA 0` → `drv2605_init(false)`", "slate (Grove)"),
         ("Base Grove I²C #2", "Grove → STEMMA QT / Qwiic cable → LIS3DH breakout QT socket", "Adafruit 4528 or SparkFun PRT-15109; LIS3DH = Adafruit 2809 (0x18) or SparkFun SEN-29529 (0x19); WHO_AM_I 0x33, detected at boot", "slate (Grove/QT)"),
-        ("LIS3DH `INT` through-hole", "base breakout header **D8** (GPIO7) = `PIN_IMU_INT`", "male-male jumper; the breakout end is a press-fit pin / hammer-header pin / IC hook. **Optional**: with `MCRING_XIAO_BASE` the firmware polls the latched click source every 25 ms; only tap-to-wake from deep sleep needs the wire", "purple"),
+        ("LIS3DH `INT` through-hole", "base breakout header **D8** (GPIO7) = `PIN_IMU_INT`", "male-male jumper; the breakout end is a press-fit pin / hammer-header pin / IC hook. **Optional**: with `MCRING_XIAO_BASE` the firmware polls the latched click source every 25 ms and ignores D8 (`PIN_IMU_INT` parked: without the wire D8 floats — it is also the SD clock — and would wake the ring at random). Tap-to-wake from deep sleep needs the wire **and** `pio run -e xiao_esp32s3_sense_base_tapwake` (`-DMCRING_IMU_INT_WIRED`); without both the ring wakes on the button only", "purple"),
         ("Base JST 2.0 LiPo socket", "LiPo 1S **≥ 400 mAh**, JST-PH, with PCM (Adafruit 3898 / 1578)", "the base charges at up to 460 mA — too much for the 100 mAh ring cell (Adafruit 1570, 1 C = 100 mA); check red = + against the silkscreen", "dark red / black"),
         ("Base microSD slot", "— (leave empty)", "CS = D2 (GPIO3) → `PIN_HAPTIC` is parked at −1 in this build; SPI assumed on D8/D9/D10 (shared with INT1 / touch / I²S DIN)", "—"),
         ("Base OLED 0x3C, RTC 0x51", "— (unused)", "share the I²C bus; no clash with 0x5A / 0x18 / 0x19; RTC INT routing not verified — leave its jumper open", "—"),
-        ("Base Grove A0/D0", "— (n/c)", "A0 = GPIO1 = `PIN_BATTERY_ADC`: a 100 k/100 k divider could be built on a breadboard from here, but the cell's + is only on the JST pigtail → not in the kit; STATUS shows battery 255 % (unknown)", "grey"),
+        ("Base Grove A0/D0", "— (n/c)", "A0 = GPIO1: `PIN_BATTERY_ADC` is parked at −1 in this build (an open pin reads noise, which could fire LOW_BATTERY); STATUS shows battery 255 % (unknown). A 100 k/100 k divider could be built on a breadboard from here (then add `-DMCRING_BATT_DIVIDER_WIRED`), but the cell's + is only on the JST pigtail → not in the kit", "grey"),
         ("Base Grove UART (D7 RX, D6 TX)", "**optional** MAX98357A `BCLK` (D7 / GPIO44), `LRC` (D6 / GPIO43), `VIN` (3V3), `GND`", "'Grove to 4-pin male jumper' cable (Seeed 110990210) into female jumpers / the amp's press-fit pins; the base silkscreen says which Grove pin is D6 and which D7 — swap BCLK/LRC if silent. Never plug a UART Grove *device* here", "teal / red / black, dashed"),
         ("Base breakout header D10 (GPIO9)", "**optional** MAX98357A `DIN`", "male-male jumper; `PIN_AUX` is −1 on the XIAO (air-puff experiment parked)", "teal, dashed"),
         ("MAX98357A `SD`", "`VIN` (3V3)", "left-channel mode; the breakout's own pull-up ((L+R)/2) works too — mono is written into both slots", "red, dashed"),
-        ("MAX98357A `+ / −` terminal block", "10 mm 8 Ω speaker (PUI AS01008MR-2-R) or Adafruit 3923", "screw terminal is pre-soldered on Adafruit 3006 since 2024-06; polarity irrelevant; GAIN open = 9 dB → keep volume ≤ 200", "brown"),
+        ("MAX98357A `+ / −` terminal block", "8 Ω speaker with leads: Adafruit 3923 (1 W mini oval)", "its ~30 mm leads end in a Molex PicoBlade plug: snip the plug off and strip ~5 mm of each lead (wire stripper, no solder) into the screw terminal, which is pre-soldered on Adafruit 3006 since 2024-06; polarity irrelevant; GAIN open = 9 dB → keep volume ≤ 200. Not the PUI AS01008MR-2-R: that 10 mm stage-1 part has solder pads", "brown"),
         ("XIAO BAT+/BAT− pads, 5V pin, D9", "—", "unused: the cell lives in the base; nothing on 5V; D9 (touch) is the base's SD MISO — no touch pad on this rig", "—"),
     ]
     md = ["# Stage-0 bench wiring — NO-SOLDER variant (XIAO ESP32S3 Sense in the Expansion Board Base)", "",
@@ -395,7 +409,7 @@ def write_md() -> None:
           "unverified items: `docs/research/04-no-solder-sourcing.md`.", "",
           "**Joint count: 0.** The pre-soldered XIAO seats in the base, the base already carries the button, buzzer, LiPo socket and charger, "
           "the haptic driver comes with its motor attached on a Grove module, the accelerometer is a STEMMA QT board fed from a Grove→QT cable, "
-          "and the one interrupt wire is a jumper into the base's female breakout header. The optional speaker amp is the only part whose "
+          "and the one (optional) interrupt wire is a jumper into the base's female breakout header. The optional speaker amp is the only part whose "
           "header holes are unsoldered (its speaker terminal block is pre-soldered) — press-fit pins, five joints at a makerspace, or wait for "
           "stage 1 where the amp is on the board.", "",
           "## Connections", "", "| From | To | Detail | Colour in the drawing |", "|---|---|---|---|"]
@@ -411,7 +425,9 @@ def write_md() -> None:
            "| `PIN_HAPTIC` | 3 (D2, DRV EN) | −1 | D2 is the base's microSD chip-select; the Grove module's EN is tied on-module |",
            "| `HAPTIC_MOTOR_LRA` | 1 | 0 | Grove Haptic Motor is an ERM → `drv2605_init(false)`; autocal still runs |",
            "| `IMU_POLL_MS` | 0 | 25 | the LIS3DH latches its click interrupt, so polling `CLICK_SRC` catches taps when INT1 is not jumpered |",
-           "| `BOARD_NAME` | `xiao-esp32s3-sense` | `xiao-esp32s3-sense+base` | the boot log tells you which build is running |",
+           "| `PIN_IMU_INT` | 7 (D8) | −1; 7 with `-DMCRING_IMU_INT_WIRED` (env `xiao_esp32s3_sense_base_tapwake`) | without the jumper D8 floats (it is the SD clock line): no ISR and no EXT1 wake on it, the LIS3DH is powered down in deep sleep and the button wakes the ring |",
+           "| `PIN_BATTERY_ADC` | 1 (A0) | −1; 1 with `-DMCRING_BATT_DIVIDER_WIRED` | A0 is an open Grove pin on this rig; a floating ADC could report a bogus low battery |",
+           "| `BOARD_NAME` | `xiao-esp32s3-sense` | `xiao-esp32s3-sense+base` (`…+base+tapwake`) | the boot log tells you which build is running |",
            "", "The IMU driver itself needs no flag: `imu_init()` reads WHO_AM_I at 0x18/0x19 and uses the LIS2DW12 (0x44) or the LIS3DH (0x33) back-end "
            "(`src/imu_lis3dh.cpp`). `trigger.cpp` sees the LIS2DW12 `TAP_SRC` bit layout for both.", "",
            "## Parts", "",
@@ -422,28 +438,29 @@ def write_md() -> None:
            "* Adafruit **Grove → STEMMA QT / Qwiic cable** (4528) or SparkFun PRT-15109",
            "* male-male jumper wires (INT → D8; D10 → DIN); optionally one hammer-header strip (Adafruit 3662) for press-fit pins",
            "* LiPo 1S **≥ 400 mAh** JST-PH with PCM (Adafruit 3898 or 1578) — not the 100 mAh ring cell on this charger",
-           "* optional speaker path: Adafruit MAX98357A (3006, terminal block pre-soldered), a 10 mm 8 Ω speaker (PUI AS01008MR-2-R or Adafruit 3923), "
+           "* optional speaker path: Adafruit MAX98357A (3006, terminal block pre-soldered), an 8 Ω speaker with leads (Adafruit 3923 — snip its PicoBlade plug), "
            "a 'Grove to 4-pin male jumper' cable (Seeed 110990210) for the Grove-UART socket, female-female jumpers",
            "* USB-C data cable; Bluetooth headphones paired to the laptop/phone (that is where answers come out — the ring speaker is optional)", "",
            "## Check before power-on", "",
            "1. XIAO orientation in the base socket: USB-C toward the base's USB end, D0 at the base's D0 silkscreen. A reversed board is dead.",
-           "2. Sense board fully clicked onto both B2B connectors; camera FPC latched.",
+           "2. Sense board fully clicked onto both B2B connectors; camera FPC latched. The header side of the pre-soldered XIAO is **unverified**: the §1.5 first photo must show the room, not the base PCB.",
            "3. LiPo: red = + on the base's JST silkscreen (a Seeed forum thread reports reversed pigtails on early units; never force a plug). Cell ≥ 400 mAh — the charger is 460 mA.",
            "4. Grove Haptic Motor and the Grove→QT cable sit in the two **I²C** sockets, not in UART (= I²S D6/D7) or A0/D0.",
-           "5. LIS3DH INT jumper → **D8** only (never 3V3 / 5V). Leaving it off is allowed: the firmware polls; only deep-sleep tap-wake is lost.",
+           "5. LIS3DH INT jumper → **D8** only (never 3V3 / 5V). Leaving it off is allowed: the firmware polls, and the default build ignores D8 (button-only wake). With the jumper fitted, flash `-e xiao_esp32s3_sense_base_tapwake` for tap-to-wake from deep sleep.",
            "6. microSD slot empty (CS = D2, SPI shares D8/D9/D10).",
            "7. Nothing on the 5V header pin. Amp (optional) VIN = 3V3, SD → VIN, GAIN open.",
            "8. Speaker leads only in the amp's +/− terminal block.",
            "9. First power from USB with the cell unplugged, then plug the cell: the base's charge LED lights.",
-           "10. Boot log: `fw 0.1.0 (xiao-esp32s3-sense+base)`, `I imu: LIS3DH ready at 0x18 …`, `I drv: DRV2605L ready (ERM)`, `autocal ok`; status flags `0x56` "
-           "(camera + IMU + haptic + speaker); `batt=0mV(255%)` is expected (no divider).",
+           "10. Boot log: `fw 0.1.0 (xiao-esp32s3-sense+base)`, `I imu: LIS3DH ready at 0x18 …`, `I drv: DRV2605L ready (ERM)`, `autocal ok`; status flags `0x5e` "
+           "(camera + IMU + mic + haptic + speaker); `batt=0mV(255%)` is expected (no divider).",
            "11. Deep sleep with the base fitted is milliamps (OLED, RTC, charger, no camera power gate): use the soldered rig or stage 1 for sleep numbers.",
-           "12. Flash with `-e xiao_esp32s3_sense_base`. The stock `xiao_esp32s3_sense` env still boots but drives the ERM with the LRA profile "
+           "12. Flash with `-e xiao_esp32s3_sense_base` (or `…_base_tapwake` with the INT jumper). The stock `xiao_esp32s3_sense` env still boots but drives the ERM with the LRA profile "
            "(`autocal FAILED`) and toggles D2 — the base's SD CS — as the haptic enable.", "",
            "## Not verified (fetch of the base's schematic was blocked)", "",
            "* whether the base's charger feeds the XIAO's BAT pads or only the 5V/VIN pin (the XIAO's own `BAT` pads are unused either way);",
            "* the base's SD SPI pins (assumed D8/D9/D10 = the XIAO's SPI) and the RTC INT jumper;",
            "* whether Adafruit 3662 hammer-header pins hold in the 1.0 mm holes of Adafruit/SparkFun breakouts;",
+           "* the header orientation of the pre-soldered XIAO Sense (102010635): pins on the side opposite the Sense board is assumed (docs/research/04 §A1 marks it unverified) — if they are on the B2B side, the camera faces the base PCB;",
            "* list prices (October 2026 snippets): `hardware/bom/stage0-devkit-solderless.csv`.",
            ""]
     with open(os.path.join(HERE, "wiring_stage0_solderless.md"), "w", encoding="utf-8") as f:

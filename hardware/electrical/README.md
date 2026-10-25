@@ -162,15 +162,17 @@ carry all of them.
 21. **Design for assembly — the owner never solders.** The board is ordered assembled (JLCPCB Standard PCBA,
     both sides, or PCBWay; `docs/10-ordering-assembled-boards.md`) and the four off-board parts plug in:
     * `J1` BAT, `J3` CHG, `J4` LRA, `J5` SPK = **Molex Pico-EZmate 78171-0002** (1.20 mm pitch, 2 circuits,
-      vertical SMT, side friction locks, **1.55 mm mated**; housing 78172-0002; cable 36920-0201 = two pigtails
-      when cut in half; alternative JST ACH BM02B-ACHSS-GAN-ETF, 1.4 mm, different land pattern). KiCad footprint
+      vertical SMT, side friction locks, **1.55 mm mated**; housing 78172-0002; cable 36920-0203 (300 mm) = two
+      150 mm pigtails when cut in half — the charging pigtail W2 needs ≈ 85 mm per wire (`hardware/cad/fit_report.md`),
+      so the 100 mm 36920-0201 only serves the cell, LRA and speaker; alternative JST ACH BM02B-ACHSS-GAN-ETF, 1.4 mm, different land pattern). KiCad footprint
       `Connector_Molex:Molex_Pico-EZmate_78171-0002_1x02-1MP_P1.20mm_Vertical` (name to VERIFY in the installed
       library). They sit on the TOP in a 4.8 mm strip the board grew on the right (`hardware/pcb/floorplan.md` §2b:
       board 26.5 × **22.8**), each with a 2.4 × 1.1 mm wire notch in the board edge beside it; neither family fits
       the 1.15 mm bottom envelope.
     * Off-board: `BT1` cell (tabs toward +y), `M1` LRA, `LS1` speaker, `CP1`/`CP2` band contacts, and the pigtails
-      `W1`–`W4` (28 AWG, plug one end, bare the other — terminated to the parts by a cable shop, solder-seal
-      sleeves or PCBWay's harness service; the band contacts take the silver conductive pen, ≤ 25 mA path).
+      `W1`–`W4` (28 AWG, plug one end, bare the other — terminated to the parts by a cable shop or PCBWay's harness
+      service; solder-seal sleeves only on flying leads (the LRA, a leaded speaker variant), **never on the cell** (hot air ≈ 25 mm from a LiPo
+      pouch, `docs/10` §7); the band contacts take the silver conductive pen, ≤ 25 mA path).
     * Not on LCSC, so **consigned** to the assembler: U1 ESP32-S3-MINI-1U-N4R2, the three TPS22916, the four
       78171-0002. Every other on-board part is sourced; parts with a known C-number carry an `LCSC` field
       (`export_cpl.py` writes them into the JLCPCB BOM, the rest are matched in JLCPCB's BOM tool).
@@ -315,7 +317,7 @@ PDF before ordering.
 | 17 | **MAX98357A 16-TQFN pin numbers**: 1 DIN, 2 GAIN_SLOT, 3 GND, 4 SD_MODE, 5/6 N.C., 7/8 VDD, 9 OUTP, 10 OUTN, 11 GND, 12/13 N.C., 14 LRCLK, 15 GND, 16 BCLK, EP not internally connected *(web: datasheet pin-description snippets; the top-view figure itself could not be fetched)*; package 3 × 3 × 0.75 mm, Maxim code T1633+4C; KiCad `QFN-16-1EP_3x3mm_P0.5mm` EP size variant | every U10 node; the floorplan allows 0.8 mm height |
 | 18 | **MAX98357A SD_MODE thresholds** (< 0.16 V shutdown, 0.16–0.77 (L+R)/2, 0.77–1.4 right, > 1.4 V left, internal 100 kΩ pull-down) and **gain table** (100 k→GND 15, GND 12, float 9, VDD 6, 100 k→VDD 3 dB) *(web: ADI design note "Optimize Cost, Size, and Performance with MAX98357 WLP", Adafruit/DFRobot guides)*; that SD_MODE tied to VDD is an allowed static configuration and the mode is read as the rail rises; quiescent 2.4 mA, shutdown ~0.5 µA (third-party); gain tolerance (±0.5 dB assumed) | SD_MODE = VAMP, R21 = 100k (3 dB; 0R = the 6 dB bench option) |
 | 19 | **MAX98357A digital inputs with VDD = 0**: the Absolute Maximum Ratings table could not be read. If BCLK/DIN/LRCLK/SD_MODE/GAIN_SLOT are rated to GND +6 V *independent of VDD* (as on other ADI I²S amps) there is no diode to VDD and R22–R24 can be 0 Ω; if they are rated VDD + 0.3 V, the fitted 1 kΩ bounds the back-feed to ≤ 2.6 mA per pin and the firmware must still park IO35–37 low while `AMP_PWR_EN` is low (§7). Bench check either way: VAMP with the amp off right after a stream has stopped (should read 0 V, not 1.5–2.6 V) | U10, R22–R24, audio_out.cpp |
-| 21 | **Molex Pico-EZmate 78171-0002**: 2-circuit header outline 4.2 × 4.5 mm (derived from the published 3-circuit 5.4 × 4.5), 1.55 mm mated height *(web: Molex part page)*, which end of the housing the 78172-0002 plug's wires leave (the floorplan points it at the board-edge notch), the KiCad footprint name, and the 36920-0201 / 68801-4146 cable availability (0 stock / "being discontinued" at the research snapshot — the JST ACH BM02B-ACHSS-GAN-ETF + ASACHSACH28W jumpers are the in-stock fallback, with a different land pattern) | J1, J3, J4, J5; `hardware/pcb/floorplan.py` CONN / NOTCH |
+| 21 | **Molex Pico-EZmate 78171-0002**: 2-circuit header outline 4.2 × 4.5 mm (derived from the published 3-circuit 5.4 × 4.5), 1.55 mm mated height *(web: Molex part page)*, which end of the housing the 78172-0002 plug's wires leave (the floorplan points it at the board-edge notch), the KiCad footprint name, and the cable availability (36920-0201 100 mm: 0 stock at the research snapshot; 68801-4146: "being discontinued"; 36920-0203 300 mm, the one the BOM now names because W2 needs ≈ 85 mm per wire: 279 at DigiKey UK, October 2026 search snippet — the JST ACH BM02B-ACHSS-GAN-ETF + ASACHSACH28W305 jumpers are the in-stock fallback, with a different land pattern) | J1, J3, J4, J5; `hardware/pcb/floorplan.py` CONN / NOTCH |
 | 20 | **PUI AS01008MR-2-R** outline Ø10.0 × 2.9 mm max seated height *(web: distributor listing: 8 Ω ± 15 %, 300 mW rated / 500 mW max, 86 dB, fo 1.2 kHz, top port, solder-pad terminals)* — the PUI drawing (terminal position, front/back venting) sets the pocket in the CAD; `board_params.json` `speaker_mm.thickness` carries 2.9; confirm which signal/duration the rated and maximum powers refer to (the 3 dB gain choice keeps a full-scale tone at the rated figure) | LS1, enclosure speaker pocket, R21 |
 
 ## 7. Firmware follow-ups implied by this design

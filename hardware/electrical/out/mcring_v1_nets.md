@@ -168,10 +168,10 @@
 | U9 | TPS22916CYFPR | TPS22916CYFPR | `mcring:TPS22916_DSBGA-4_YFP` | 4 | Outputs |
 | U10 | MAX98357AETE+T | MAX98357AETE+T | `Package_DFN_QFN:QFN-16-1EP_3x3mm_P0.5mm_EP1.7x1.7mm` | 17 | Outputs |
 | U11 | TPS22916CYFPR | TPS22916CYFPR | `mcring:TPS22916_DSBGA-4_YFP` | 4 | Outputs |
-| W1 \*off-board | Pico-EZmate 2-ckt pigtail | 36920-0201 (cut in half) | `offboard:Pigtail_PicoEZmate_2ckt` | 2 | Power |
-| W2 \*off-board | Pico-EZmate 2-ckt pigtail | 36920-0201 (cut in half) | `offboard:Pigtail_PicoEZmate_2ckt` | 2 | Power |
-| W3 \*off-board | Pico-EZmate 2-ckt pigtail | 36920-0201 (cut in half) | `offboard:Pigtail_PicoEZmate_2ckt` | 2 | Sensors |
-| W4 \*off-board | Pico-EZmate 2-ckt pigtail | 36920-0201 (cut in half) | `offboard:Pigtail_PicoEZmate_2ckt` | 2 | Outputs |
+| W1 \*off-board | Pico-EZmate 2-ckt pigtail | 36920-0203 (300 mm, cut in half) | `offboard:Pigtail_PicoEZmate_2ckt` | 2 | Power |
+| W2 \*off-board | Pico-EZmate 2-ckt pigtail | 36920-0203 (300 mm, cut in half) | `offboard:Pigtail_PicoEZmate_2ckt` | 2 | Power |
+| W3 \*off-board | Pico-EZmate 2-ckt pigtail | 36920-0203 (300 mm, cut in half) | `offboard:Pigtail_PicoEZmate_2ckt` | 2 | Sensors |
+| W4 \*off-board | Pico-EZmate 2-ckt pigtail | 36920-0203 (300 mm, cut in half) | `offboard:Pigtail_PicoEZmate_2ckt` | 2 | Outputs |
 
 ## Pin-by-pin
 

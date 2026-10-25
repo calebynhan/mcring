@@ -25,7 +25,7 @@
     8.1,
     5.6
   ],
-  "notes": "Coordinates from the board's FRONT-LEFT corner seen from the top: x along the finger (0 = front/camera edge, board_length = back/antenna edge), y across the finger (0 = left edge where the switch is). Design-for-assembly board: 22.8 wide (18.0 + a 4.8 mm TOP-side connector strip on the RIGHT). Module ESP32-S3-MINI-1U 15.4x15.4x2.4 at module_xy (1.3 mm from the LEFT edge, not centred) with its u.FL end flush with the back edge; the u.FL pigtail leaves over the back edge and runs down the inside of the bay's back wall to the flex antenna, which stays >= antenna_keepout_beyond_edge_mm (5) from the cell, the LRA and any other metal. top_max_height is the mated u.FL plug (2.9), the module shield is 2.4, the four Pico-EZmate headers (connectors_top_mm) are 1.55 mated; the lid may be lower over the front strip (x < 11.1: tallest part there is FPC1 at 2.0). Bottom parts max 1.15 (SOT-23/VSSOP) - allow >= 0.35 clearance to the cell. Mic MK1 is a bottom-port part mounted on the BOTTOM side at mic_xy; its 0.6 mm port goes through the board, so the lid needs a ~0.8 mm hole straight above mic_xy. LED D1 is on top at led_xy under a 1.0-1.5 mm thinned window (~3 mm). Switch SW1 body 3.0x2.5x1.2 on the top side, plunger pointing out of the left edge at x = switch_offset; wall slot switch_slot_mm (3.4 x 1.6) centred z = board_top+0.6. Touch (touch_mm): the electrode is a 4x5 copper-foil pad on the LID UNDERSIDE at touchpad_xy under the 0.8 mm dimple; TPAD1 on the board is the landing for a conductive-foam / spring contact that the lid compresses from 3.6 to 3.2 mm (= top_parts + lid_clearance). The 8 test pads (test_pads_top_mm) are on the TOP side so the board can be flashed and probed while seated in the bay. FPC connector FPC1 (Hirose FH12 flip-lock ZIF, bottom contact) on top at x 0.5-4.5, centred on the finger axis y = W/2; the camera head sits in a pod in front of the board (see stackup.svg / pod_mm). PLUG-IN PARTS: the cell (J1), the charging-pad pigtail (J3), the LRA (J4) and the optional speaker (J5) plug into 2-pin Molex Pico-EZmate headers on the TOP in the right strip (y 17.2-21.7); each header has a 1.4 x 1.1 wire notch in the RIGHT board edge beside it (edge_notches_mm) through which the pigtail drops into the sub-board cavity. The cell lies with its tabs toward +y (cell_tab_edge) so its lead channel runs from the pocket's +y edge to the wall under J1. The charging wires come up from the two Ø1.1 channels beside the -y wall and run in a 1.2 x 0.8 groove cut into the sub-board FLOOR (floor_wire_groove_mm) forward, across the board between the cell and LRA pockets and along the +y edge to the J3 notch. Only the piezo pads BZ1a/b (optional, DNP) and the aux pads J2a/b (bench experiment) remain bare pads on the bottom (wire_pads_bottom_mm). The optional 10 mm speaker (speaker_mm) is OFF-BOARD in a pocket in the signet's RIGHT (+y) wall, grille facing +y, its pigtail entering the sub-board cavity through that wall and rising through the J5 notch; the amp (U10) and its load switch (U11) are bottom-side parts in the back-left block. stack_mm and pod_mm carry the enclosure's as-built numbers (cell pocket 3.4 deep, lid top 11.1, pod roof flush with the lid, bore 4.6).",
+  "notes": "Coordinates from the board's FRONT-LEFT corner seen from the top: x along the finger (0 = front/camera edge, board_length = back/antenna edge), y across the finger (0 = left edge where the switch is). Design-for-assembly board: 22.8 wide (18.0 + a 4.8 mm TOP-side connector strip on the RIGHT). Module ESP32-S3-MINI-1U 15.4x15.4x2.4 at module_xy (1.3 mm from the LEFT edge, not centred) with its u.FL end flush with the back edge; the u.FL pigtail leaves over the back edge and runs down the inside of the bay's back wall to the flex antenna, which stays >= antenna_keepout_beyond_edge_mm (5) from the cell, the LRA and any other metal. top_max_height is the mated u.FL plug (2.9), the module shield is 2.4, the four Pico-EZmate headers (connectors_top_mm) are 1.55 mated; the lid may be lower over the front strip (x < 11.1: tallest part there is FPC1 at 2.0). Bottom parts max 1.15 (SOT-23/VSSOP) - allow >= 0.35 clearance to the cell. Mic MK1 is a bottom-port part mounted on the BOTTOM side at mic_xy; its 0.6 mm port goes through the board, so the lid needs a ~0.8 mm hole straight above mic_xy. LED D1 is on top at led_xy under a 1.0-1.5 mm thinned window (~3 mm). Switch SW1 body 3.0x2.5x1.2 on the top side, plunger pointing out of the left edge at x = switch_offset; wall slot switch_slot_mm (3.4 x 1.6) centred z = board_top+0.6. Touch (touch_mm): the electrode is a 4x5 copper-foil pad on the LID UNDERSIDE at touchpad_xy under the 0.8 mm dimple; TPAD1 on the board is the landing for a conductive-foam / spring contact that the lid compresses from 3.6 to 3.2 mm (= top_parts + lid_clearance). The 8 test pads (test_pads_top_mm) are on the TOP side so the board can be flashed and probed while seated in the bay. FPC connector FPC1 (Hirose FH12 flip-lock ZIF, bottom contact) on top at x 0.5-4.5, centred on the finger axis y = W/2; the camera head sits in a pod in front of the board (see stackup.svg / pod_mm). PLUG-IN PARTS: the cell (J1), the charging-pad pigtail (J3), the LRA (J4) and the optional speaker (J5) plug into 2-pin Molex Pico-EZmate headers on the TOP in the right strip (y 17.2-21.7); each header has a 2.4 x 1.1 wire notch in the RIGHT board edge beside it (edge_notches_mm) through which the pigtail drops into the sub-board cavity. The cell lies with its tabs toward +y (cell_tab_edge) so its lead channel runs from the pocket's +y edge to the wall under J1. The charging wires come up from the two Ø1.1 channels beside the -y wall and run in a 1.2 x 0.8 groove cut into the sub-board FLOOR (floor_wire_groove_mm) forward, across the board between the cell and LRA pockets and along the +y edge to the J3 notch. Only the piezo pads BZ1a/b (optional, DNP) and the aux pads J2a/b (bench experiment) remain bare pads on the bottom (wire_pads_bottom_mm). The optional 10 mm speaker (speaker_mm) is OFF-BOARD in a pocket in the signet's RIGHT (+y) wall, grille facing +y, its pigtail entering the sub-board cavity through that wall and rising through the J5 notch; the amp (U10) and its load switch (U11) are bottom-side parts in the back-left block. stack_mm and pod_mm carry the enclosure's as-built numbers (cell pocket 3.4 deep, lid top 11.1, pod roof flush with the lid, bore 4.6).",
   "switch_xy_mm": [
     8.0,
     1.45
@@ -195,7 +195,7 @@
         21.8,
         22.8
       ],
-      "note": "Pico-EZmate header on the board TOP in the right strip; the speaker pigtail comes through the wall opening into the sub-board cavity and up through the 1.4 x 1.1 edge notch beside J5"
+      "note": "Pico-EZmate header on the board TOP in the right strip; the speaker pigtail comes through the wall opening into the sub-board cavity and up through the 2.4 x 1.1 edge notch beside J5"
     },
     "wire_exit": "two 28 AWG pigtail wires from the speaker's back terminals, -y through the wall opening into the sub-board cavity, up the J5 edge notch (board x 21.8) to the J5 header on the board top (<= 10 mm)",
     "antenna_clearance_note": "speaker back-left corner to the flex antenna: >= 5.3 along x plus the +y offset of the pocket — the CAD fit check measures the 3-D gap (keep-out 5.0)",
@@ -216,8 +216,8 @@
       "mpn": "78171-0002",
       "manufacturer": "Molex",
       "housing": "78172-0002",
-      "cable": "36920-0201 (100 mm, 28 AWG, plug both ends: cut in half = two pigtails)",
-      "alt_mpn": "BM02B-ACHSS-GAN-ETF (JST ACH, 1.4 mm, housing ACHR-02V-S, jumpers ASACHSACH28W51..305)",
+      "cable": "36920-0203 (300 mm, 28 AWG, plug both ends: cut in half = two 150 mm pigtails; the charging pigtail needs ≈ 85 mm per wire, so the 100 mm 36920-0201 only serves the cell / LRA / speaker)",
+      "alt_mpn": "BM02B-ACHSS-GAN-ETF (JST ACH, 1.4 mm, housing ACHR-02V-S, jumpers ASACHSACH28W51..305; W305 for the charging pigtail)",
       "feeds": "LRA M1 (Ø8 x 2.5 in the floor pocket under the front-right of the board)",
       "nets": "LRA_P / LRA_N (U5 OUT+/OUT-)",
       "wire_exit": "+y (toward the right board edge)",
@@ -249,8 +249,8 @@
       "mpn": "78171-0002",
       "manufacturer": "Molex",
       "housing": "78172-0002",
-      "cable": "36920-0201 (100 mm, 28 AWG, plug both ends: cut in half = two pigtails)",
-      "alt_mpn": "BM02B-ACHSS-GAN-ETF (JST ACH, 1.4 mm, housing ACHR-02V-S, jumpers ASACHSACH28W51..305)",
+      "cable": "36920-0203 (300 mm, 28 AWG, plug both ends: cut in half = two 150 mm pigtails; the charging pigtail needs ≈ 85 mm per wire, so the 100 mm 36920-0201 only serves the cell / LRA / speaker)",
+      "alt_mpn": "BM02B-ACHSS-GAN-ETF (JST ACH, 1.4 mm, housing ACHR-02V-S, jumpers ASACHSACH28W51..305; W305 for the charging pigtail)",
       "feeds": "charging-pad pigtail to the two inner-band contacts CP1/CP2 (floor wire groove from the -y channel exits)",
       "nets": "CHG_PAD / GND",
       "wire_exit": "+y (toward the right board edge)",
@@ -282,8 +282,8 @@
       "mpn": "78171-0002",
       "manufacturer": "Molex",
       "housing": "78172-0002",
-      "cable": "36920-0201 (100 mm, 28 AWG, plug both ends: cut in half = two pigtails)",
-      "alt_mpn": "BM02B-ACHSS-GAN-ETF (JST ACH, 1.4 mm, housing ACHR-02V-S, jumpers ASACHSACH28W51..305)",
+      "cable": "36920-0203 (300 mm, 28 AWG, plug both ends: cut in half = two 150 mm pigtails; the charging pigtail needs ≈ 85 mm per wire, so the 100 mm 36920-0201 only serves the cell / LRA / speaker)",
+      "alt_mpn": "BM02B-ACHSS-GAN-ETF (JST ACH, 1.4 mm, housing ACHR-02V-S, jumpers ASACHSACH28W51..305; W305 for the charging pigtail)",
       "feeds": "cell BT1 (301012, tabs toward +y, lead channel from the pocket's +y edge)",
       "nets": "VBAT / GND",
       "wire_exit": "+y (toward the right board edge)",
@@ -315,8 +315,8 @@
       "mpn": "78171-0002",
       "manufacturer": "Molex",
       "housing": "78172-0002",
-      "cable": "36920-0201 (100 mm, 28 AWG, plug both ends: cut in half = two pigtails)",
-      "alt_mpn": "BM02B-ACHSS-GAN-ETF (JST ACH, 1.4 mm, housing ACHR-02V-S, jumpers ASACHSACH28W51..305)",
+      "cable": "36920-0203 (300 mm, 28 AWG, plug both ends: cut in half = two 150 mm pigtails; the charging pigtail needs ≈ 85 mm per wire, so the 100 mm 36920-0201 only serves the cell / LRA / speaker)",
+      "alt_mpn": "BM02B-ACHSS-GAN-ETF (JST ACH, 1.4 mm, housing ACHR-02V-S, jumpers ASACHSACH28W51..305; W305 for the charging pigtail)",
       "feeds": "speaker LS1 in the right-wall pocket (its back is open to the bay above the floor)",
       "nets": "SPK_P / SPK_N (U10 OUTP/OUTN); optional group",
       "wire_exit": "+y (toward the right board edge)",

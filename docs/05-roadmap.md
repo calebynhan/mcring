@@ -13,7 +13,7 @@ silent mode. Projection is a v2 idea (last section).
 - [x] Desktop companion (bleak): `mcring talk` push-to-talk (keyboard or ring button, laptop or ring mic, OS/server voice, `--ring-speaker`), `say`, `events`, `config`; no-hardware `ask --audio`
 - [x] Phone companion (Expo dev client): events, ring-mic / phone-mic push-to-talk, transcript UI, phone TTS or server mp3 → headphones, ring-speaker streaming, settings → `SET_CONFIG`
 - [x] `docs/08-projection-v2.md` feasibility note (v2 scoping only)
-- [ ] **Order the stage-0 BOM** (`hardware/bom/stage0-devkit.csv`) + a MAX98357A breakout and an 8 Ω 10 mm speaker for the `AUDIO_OUT` bench test
+- [ ] **Order the stage-0 BOM** (`hardware/bom/stage0-devkit.csv`, or the zero-solder `stage0-devkit-solderless.csv`) + a MAX98357A breakout and an 8 Ω 10 mm speaker for the `AUDIO_OUT` bench test
 - [ ] Flash (`pio run -e xiao_esp32s3_sense -t upload`); first `mcring talk` turn with the ring button; record round-trip and BLE throughput in `docs/benchmarks.md`
 - [ ] Pair Bluetooth headphones to the laptop/phone and confirm the answer routes there with nothing configured on the ring (F4)
 - [ ] Phone-mic mode: measure `BUTTON_DOWN` → recording-started latency on iOS and Android (app foreground and background)
@@ -27,9 +27,9 @@ silent mode. Projection is a v2 idea (last section).
 ## Stage 1 — oversized wearable ring (1–3 months)
 
 - [ ] Decide ESP32-S3-MINI-1U (keep firmware) vs. nRF52840 (future-proof) for the ring board
-- [ ] Hardware pass: assign `PIN_I2S_BCLK/LRCLK/DOUT` (+ optional `SPEAKER_EN`) for `mcring_v1` in `config_audio.h` / `hardware/pinmap.md`; place the MAX98357A and a 10 mm speaker with a sound port in the shell; decide whether the speaker ships at all on stage 1
-- [ ] Schematic + layout from `hardware/schematic-notes.md` / `hardware/electrical` (KiCad), order 2-layer boards + assembly of the fine-pitch parts
-- [ ] Speaker port in the CadQuery enclosure model `hardware/cad/mcring_stage1.py` (the mic port is already modelled; see `hardware/cad/README.md`); re-run its fit check with the OV2640 head and a 301012 cell
+- [x] Speaker hardware: MAX98357A + 10 mm speaker on IO34–37, gated amp rail, pocket and grille in the signet's right wall (`hardware/electrical`, `hardware/cad`)
+- [ ] KiCad layout from `hardware/electrical/out/mcring_v1.net` + `hardware/pcb/floorplan.md` (26.5 × 22.8 mm, plug-in Pico-EZmate connectors), then order the board **assembled** per `docs/10-ordering-assembled-boards.md` (CPL + JLC BOM from `hardware/pcb/export_cpl.py`); confirm the Pico-EZmate footprint and wire-exit side on the Molex drawing first
+- [ ] Print `hardware/cad/out/mcring_stage1_*.stl` and fit-check with real parts (the model's fit check passes; real tolerances decide)
 - [ ] Load-switched camera rail; verify < 30 µA sleep; speaker amp shut down (`SD`) between answers
 - [ ] Double-tap threshold tuning on-finger (double tap = hands-free ask, so false positives start a recording); false-positive log
 - [ ] One day of real use on 40 mAh: ≥ 30 questions with answers in headphones; separately measure how many speaker answers the cell affords

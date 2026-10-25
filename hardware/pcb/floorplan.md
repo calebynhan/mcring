@@ -69,7 +69,7 @@ pulsing EN, bench-powering from VBAT/GND and the cradle/nCHG check never need th
 ### 2b. Plug-in connectors (right strip, y 17.2–21.7)
 
 Four **Molex Pico-EZmate 78171-0002** (1.20 mm pitch, 2 circuits, vertical SMT header, side friction locks, **1.55 mm
-mated**; mating housing 78172-0002, pre-made cable 36920-0201 (100 mm, 28 AWG, plug both ends: cut in half = two pigtails); alternative BM02B-ACHSS-GAN-ETF (JST ACH, 1.4 mm, housing ACHR-02V-S, jumpers ASACHSACH28W51..305)). Header outline
+mated**; mating housing 78172-0002, pre-made cable 36920-0203 (300 mm, 28 AWG, plug both ends: cut in half = two 150 mm pigtails; the charging pigtail needs ≈ 85 mm per wire, so the 100 mm 36920-0201 only serves the cell / LRA / speaker); alternative BM02B-ACHSS-GAN-ETF (JST ACH, 1.4 mm, housing ACHR-02V-S, jumpers ASACHSACH28W51..305; W305 for the charging pigtail)). Header outline
 4.2 along the pin row × 4.5 in the plug/wire direction (from the published 3-circuit 5.4 × 4.5 — **verify against the Molex
 drawing**, including which end the plug's wires leave: they must point at the notch). The headers sit 0.5 mm beyond the
 module's right row (fan the module's side pads out under the module and via down) and 1.1 mm from the right edge; each has a

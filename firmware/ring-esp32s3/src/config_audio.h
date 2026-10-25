@@ -67,18 +67,28 @@
 //   * haptics = Seeed Grove Haptic Motor 105020011 (DRV2605L + factory-attached ERM, one Grove plug) → ERM drive
 //     profile (HAPTIC_MOTOR_LRA 0); the module's EN is tied on-module, nothing to drive;
 //   * D2 = GPIO3 is the base's microSD chip-select → PIN_HAPTIC is parked so the firmware never toggles that line;
-//   * the LIS3DH's INT1 reaches D8 through a clip / press-fit pin that a bench build may skip → the tap source is
-//     also polled (IMU_POLL_MS); without the wire only tap-to-wake from deep sleep is lost;
-//   * I²S speaker pins are unchanged (D6/D7 = the base's Grove-UART socket, D10 on the breakout header); the
-//     battery sits in the base's JST socket, so PIN_BATTERY_ADC reads nothing unless the divider is built (255 % =
-//     unknown in STATUS). Everything else (camera, mic, LED, BLE) is the stock XIAO Sense map.
+//   * the LIS3DH's INT1 reaches D8 only through an optional clip / press-fit jumper, and nothing else drives D8 (it is
+//     the base's and the Sense board's microSD clock line) → taps are polled (IMU_POLL_MS) and PIN_IMU_INT is parked:
+//     no ISR and no EXT1 wake on a line that may float (a floating D8 would wake the ring at random, and every EXT1
+//     wake starts an ask). Tap-to-wake from deep sleep is opt-in: fit the jumper AND build with -DMCRING_IMU_INT_WIRED
+//     (platformio env `xiao_esp32s3_sense_base_tapwake`). Without it the LIS3DH is powered down in deep sleep and the
+//     ring wakes on the button only;
+//   * the battery sits in the base's JST socket and A0 (PIN_BATTERY_ADC) is an open Grove pin → parked, so STATUS
+//     reports 255 % = unknown instead of a floating-ADC reading (which could fire LOW_BATTERY). A divider wired to A0
+//     is opt-in with -DMCRING_BATT_DIVIDER_WIRED.
+//   * I²S speaker pins are unchanged (D6/D7 = the base's Grove-UART socket, D10 on the breakout header).
+//     Everything else (camera, mic, LED, BLE) is the stock XIAO Sense map.
 // ---------------------------------------------------------------------------
 #if defined(MCRING_XIAO_BASE)
   #if !defined(BOARD_XIAO_ESP32S3_SENSE)
     #error "MCRING_XIAO_BASE is a variant of BOARD_XIAO_ESP32S3_SENSE (platformio env xiao_esp32s3_sense_base)"
   #endif
   #undef  BOARD_NAME
-  #define BOARD_NAME        "xiao-esp32s3-sense+base"
+  #if defined(MCRING_IMU_INT_WIRED)
+    #define BOARD_NAME      "xiao-esp32s3-sense+base+tapwake"
+  #else
+    #define BOARD_NAME      "xiao-esp32s3-sense+base"
+  #endif
   #undef  PIN_BUTTON
   #define PIN_BUTTON         2     // base user button → D1 (GPIO2) to GND; RTC GPIO → EXT0 deep-sleep wake as before
   #undef  PIN_BUZZER
@@ -87,6 +97,14 @@
   #define PIN_HAPTIC        -1     // D2 (GPIO3) is the base's microSD CS; haptics are I²C-only (RTP + STANDBY), like mcring_v1
   #define HAPTIC_MOTOR_LRA   0     // Grove Haptic Motor = ERM → drv2605_init(false) in main.cpp
   #define IMU_POLL_MS       25     // poll the latched tap source every 25 ms (≈ 0.25 % of the I²C bus) — INT1 → D8 optional
+  #if !defined(MCRING_IMU_INT_WIRED)
+    #undef  PIN_IMU_INT
+    #define PIN_IMU_INT     -1     // D8 may float (no jumper): no ISR, no EXT1 tap-wake; LIS3DH off in deep sleep
+  #endif
+  #if !defined(MCRING_BATT_DIVIDER_WIRED)
+    #undef  PIN_BATTERY_ADC
+    #define PIN_BATTERY_ADC -1     // A0 is an open Grove pin on this rig: battery_mv() = 0 → STATUS 255 % (unknown)
+  #endif
 #endif
 #ifndef HAPTIC_MOTOR_LRA
   #define HAPTIC_MOTOR_LRA   1     // every other build drives the 8 mm LRA closed-loop (autocal at boot)

@@ -831,6 +831,31 @@ class Model:
             signet_width=self.Wo, signet_width_at_speaker=(self.Wo + self.spk["bump"]) if self.spk else self.Wo,
         )
 
+    def charging_wire_runs(self):
+        """Length of each W2 wire from its band window to the J3 plug, along the modelled path and with no slack:
+        the rib groove round the band (window centre -> where the slab channel starts), the slanted Ø1.1 channel
+        through the slab, the floor groove (channel exit -> first leg -> the rest of the path to the J3 notch) and
+        the climb from the groove bottom up the notch to the top of the mated header. Needs build_shell()."""
+        if not (self.groove and self.chan):
+            return {}
+        p = self.p
+        rg = self.R + p["band_wall"] + p["pad_rib_h"] - p["pad_groove_d"] / 2      # rib-groove centre radius
+        path = [tuple(q) for q in self.groove["path"]]
+        poly = lambda pts: sum(math.dist(a, b) for a, b in zip(pts, pts[1:]))
+        hdr = self.conns.get(self.groove.get("feeds", "J3"), {}).get("mated_height", 1.55)
+        rise = (self.z_board_top + hdr) - (self.z_floor - self.groove["depth"])
+        runs = {}
+        for (wx, phi_end), name in zip(((self.rib_x[0], 180 - p["pad_angle"]), (self.rib_x[1], 180 + p["pad_angle"])),
+                                       ("-Y pad (rib A)", "+Y pad (rib B, round the bottom)")):
+            p0, p1 = self.chan[wx]
+            phi0 = math.degrees(math.atan2(-p0[1], p0[2]))                          # channel start, from +Z
+            arc = rg * math.radians(phi_end - phi0)
+            chan = math.dist(p0, p1)
+            ex, ey = self.L / 2 - wx, p1[1] + self.W / 2                            # channel exit in board xy
+            floor = abs(path[0][1] - ey) + abs(ex - path[1][0]) + poly(path[1:])
+            runs[name] = dict(arc=arc, channel=chan, floor=floor, rise=rise, total=arc + chan + floor + rise)
+        return runs
+
     def component_masses(self):
         m = dict(COMPONENT_MASS_G)
         if self.spk:
@@ -948,6 +973,16 @@ def write_report(m, path, args):
             L.append(f"| {ref} ({c['short']}) | {c['feeds']} | {c['cx']}, {c['cy']} | x {c['notch']['cx']}, {c['notch']['w']} x {c['notch']['d']} | "
                      f"X {m.bx(pm['x1']):.2f}..{m.bx(pm['x0']):.2f}, Y {m.by(pm['y0']):.2f}..{min(m.by(pm['y1']), m.Wi / 2 - 0.05):.2f}, Z {m.z_board_top - R:.2f}..{m.z_board_top + pm['height'] - R:.2f} above the skin | {paths.get(ref, '')} |")
         L.append("")
+        runs = m.charging_wire_runs()
+        if runs:
+            longest = max(r["total"] for r in runs.values())
+            cut = 5 * math.ceil((longest + 10) / 5)
+            L.append("**Charging pigtail (W2) wire runs** along the modelled path, window centre → mated J3 plug, no slack "
+                     "(band rib groove + slab channel + floor groove + climb up the notch to the header top):\n")
+            for name, r in runs.items():
+                L.append(f"* {name}: {r['arc']:.1f} + {r['channel']:.1f} + {r['floor']:.1f} + {r['rise']:.1f} = **{r['total']:.1f} mm**")
+            L.append(f"\nCut W2 to **≥ {cut} mm per wire** (longest run + 10 mm for the bend into the plug and the trim at the window). "
+                     "Half of a 100 mm 36920-0201 (≈ 50 mm) does not reach; half of a 300 mm 36920-0203 (≈ 150 mm) does.\n")
     L.append("## Placeholder vs shell / lid intersection volumes (mm³, must be 0)\n")
     L.append("| placeholder | ∩ shell | ∩ lid |\n|---|---|---|")
     for n in f["shell"]:

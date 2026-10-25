@@ -178,8 +178,9 @@ would put the magnet 0.7 mm from the antenna plane, the band wall has the finger
   **lead groove** 6 wide × 1.0 deep in its back wall (Y 8.45..9.45, from 1 mm above the pocket bottom up to the floor),
   so terminals in the lower half of the disc have room for the solder blobs and the leads. The sealed alternative in
   `speaker_mm.back_volume` (a 1.2 mm back wall with a wire slot + vents, bump 4.3) is not modelled.
-* **Leads**: the speaker's pigtail (W4, two 28 AWG wires ending in a Pico-EZmate plug, attached to the terminals by the
-  cable shop or with solder-seal sleeves — never on the board) goes on **before** the speaker goes in; rotate the
+* **Leads**: the speaker's pigtail (W4, two 28 AWG wires ending in a Pico-EZmate plug, attached to the terminals by a
+  cable shop or PCBWay's harness service — the AS01008MR-2-R has solder-pad terminals, so a solder-seal sleeve only
+  works on a leaded variant; never on the board) goes on **before** the speaker goes in; rotate the
   speaker so the terminals face the sub-board cavity (just above floor level, i.e. between 3 and 1 o'clock when seen
   from +Y); the wires run −Y into the cavity under the board's +Y edge (board edge at Y 11.4, wall at 11.7, cavity
   4.6..6.1 above the skin), ≈ 3.4 mm to the J5 notch at board x 21.8, and up the wall gap to the J5 header on the board
@@ -237,7 +238,9 @@ would put the magnet 0.7 mm from the antenna plane, the band wall has the finger
    Ø1.1 channels that surface under the board beside the −Y wall at board x 14.75 / 16.75 (channel B, X −3.5, +Y window
    → CHG+ = J3 pin 1; channel A, X −1.5, −Y window → CHG− = J3 pin 2), where the 1.2 × 0.8 floor groove picks the two
    wires up and carries them round to the J3 notch — thread the W2 pigtail's bare ends through the groove and the
-   channels before fitting the cell, with the plug held up out of the bay. Fill the rib grooves with resin/epoxy
+   channels before fitting the cell, with the plug held up out of the bay. W2 must be **≥ 85 mm per wire**: the
+   modelled runs are ≈ 61 mm (−Y window) and ≈ 73.5 mm (+Y window, round the bottom) from window to mated plug
+   (`fit_report.md`, "Charging pigtail (W2) wire runs"), so it is half of a 300 mm 36920-0203, not of the 100 mm cable. Fill the rib grooves with resin/epoxy
    afterwards (they face the palm; an enclosed tunnel this size would not print clean or thread).
 6. Antenna: glue the flex antenna to the inside of the back wall in the 2 mm cavity, route the pigtail down behind the
    board edge; keep both away from the cell and the LRA.

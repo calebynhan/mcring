@@ -95,7 +95,7 @@ LID_ELECTRODE = dict(w=4.0, h=5.0, dielectric=0.8,
 # 1b. Wire-to-board connectors (TOP side, right strip) — the design-for-assembly change
 # ----------------------------------------------------------------------------------------------
 # Molex Pico-EZmate 78171-0002: 1.20 mm pitch, 2 circuits, vertical SMT header with side friction locks,
-# mated height 1.55 mm (Molex part page; the mating housing is 78172-0002, pre-made 28 AWG cables 36920-0201 /
+# mated height 1.55 mm (Molex part page; the mating housing is 78172-0002, pre-made 28 AWG cables 36920-0203 /
 # 68801-4146). Header outline: the 3-circuit part is listed as 5.4 long x 4.5 deep, so the 2-circuit header is
 # 4.2 (along the pin row) x 4.5 (plug / wire direction) — VERIFY against the Molex drawing before layout,
 # together with which end of the 4.5 mm the plug's wires leave (placed here toward +y = the board edge).
@@ -103,8 +103,8 @@ LID_ELECTRODE = dict(w=4.0, h=5.0, dielectric=0.8,
 # ACHR-02V-S, pre-made ASACHSACH28W jumpers) — different land pattern, same courtyard budget.
 # Neither fits the BOTTOM (1.15 mm envelope); on the TOP they are the 1.55 mm "mated" box the lid check sees.
 CONN = dict(w=4.2, h=4.5, mated_height=1.55, pitch=1.2, mpn="78171-0002", manufacturer="Molex",
-            series="Pico-EZmate", housing="78172-0002", cable="36920-0201 (100 mm, 28 AWG, plug both ends: cut in half = two pigtails)",
-            alt_mpn="BM02B-ACHSS-GAN-ETF (JST ACH, 1.4 mm, housing ACHR-02V-S, jumpers ASACHSACH28W51..305)")
+            series="Pico-EZmate", housing="78172-0002", cable="36920-0203 (300 mm, 28 AWG, plug both ends: cut in half = two 150 mm pigtails; the charging pigtail needs ≈ 85 mm per wire, so the 100 mm 36920-0201 only serves the cell / LRA / speaker)",
+            alt_mpn="BM02B-ACHSS-GAN-ETF (JST ACH, 1.4 mm, housing ACHR-02V-S, jumpers ASACHSACH28W51..305; W305 for the charging pigtail)")
 CONN_GAP_MODULE = 0.5                       # connector courtyard -> module courtyard (fan-out room for the module's right row)
 CONN_Y0 = MODULE_Y1 + CONN_GAP_MODULE       # 17.2
 CONN_CY = CONN_Y0 + CONN["h"] / 2           # 19.45  (connectors span y 17.2 .. 21.7)
@@ -837,7 +837,7 @@ SPEAKER = {
                    "the speaker out so its back sits 0.2 outside the old face (bump 4.3 mm)",
     "connector": {"ref": "J5", "top_xy": [_J5[1], CONN_CY], "notch_xy": [_J5[1], W],
                   "note": "Pico-EZmate header on the board TOP in the right strip; the speaker pigtail comes through the wall "
-                          "opening into the sub-board cavity and up through the 1.4 x 1.1 edge notch beside J5"},
+                          f"opening into the sub-board cavity and up through the {NOTCH['w']} x {NOTCH['d']} edge notch beside J5"},
     "wire_exit": "two 28 AWG pigtail wires from the speaker's back terminals, -y through the wall opening into the "
                  f"sub-board cavity, up the J5 edge notch (board x {_J5[1]}) to the J5 header on the board top (<= 10 mm)",
     "antenna_clearance_note": "speaker back-left corner to the flex antenna: >= 5.3 along x plus the +y offset of the pocket "
@@ -1031,7 +1031,7 @@ def write_params(stack_info: dict) -> dict:
             "finger axis y = W/2; the camera head sits in a pod in front of the board (see stackup.svg / pod_mm). "
             "PLUG-IN PARTS: the cell (J1), the charging-pad pigtail (J3), the LRA (J4) and the optional speaker (J5) "
             "plug into 2-pin Molex Pico-EZmate headers on the TOP in the right strip (y 17.2-21.7); each header has a "
-            "1.4 x 1.1 wire notch in the RIGHT board edge beside it (edge_notches_mm) through which the pigtail drops "
+            f"{NOTCH['w']} x {NOTCH['d']} wire notch in the RIGHT board edge beside it (edge_notches_mm) through which the pigtail drops "
             "into the sub-board cavity. The cell lies with its tabs toward +y (cell_tab_edge) so its lead channel runs "
             "from the pocket's +y edge to the wall under J1. The charging wires come up from the two Ø1.1 channels "
             "beside the -y wall and run in a 1.2 x 0.8 groove cut into the sub-board FLOOR (floor_wire_groove_mm) "

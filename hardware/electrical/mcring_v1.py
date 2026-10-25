@@ -146,11 +146,12 @@ PAD2x12 = "mcring:PAD_Wire_2x1.2mm_P2.0mm"
 # locks, 1.55 mm mated height (Molex). KiCad 7/8 ships the land pattern under this name (VERIFY in the
 # installed library); the floorplan budgets a 4.2 x 4.5 mm outline (from the published 3-ckt 5.4 x 4.5) with
 # the plug's wires leaving toward the board edge — confirm both on the Molex drawing. Mates with the
-# 78172-0002 housing; the 36920-0201 cable (100 mm, 28 AWG, plug both ends) cut in half gives two pigtails.
+# 78172-0002 housing; the 36920-0203 cable (300 mm, 28 AWG, plug both ends) cut in half gives two 150 mm pigtails —
+# the charging pigtail W2 needs ≈ 85 mm per wire (hardware/cad/fit_report.md), so half of a 100 mm 36920-0201 is too short.
 # Alternative family with the same role (different land pattern): JST ACH BM02B-ACHSS-GAN-ETF, 1.4 mm.
 CONN2 = "Connector_Molex:Molex_Pico-EZmate_78171-0002_1x02-1MP_P1.20mm_Vertical"
 CONN2_MPN, CONN2_MFR = "78171-0002", "Molex"
-CONN2_FIELDS = {"Alt MPN": "BM02B-ACHSS-GAN-ETF (JST ACH, 1.4 mm; re-footprint)", "Mates": "78172-0002 housing / 36920-0201 cable",
+CONN2_FIELDS = {"Alt MPN": "BM02B-ACHSS-GAN-ETF (JST ACH, 1.4 mm; re-footprint)", "Mates": "78172-0002 housing / 36920-0203 cable",
                 "Sourcing": "not on LCSC — consign to the assembler (DigiKey/Mouser) or JLCPCB Global Sourcing"}
 PIGTAIL = "offboard:Pigtail_PicoEZmate_2ckt"
 
@@ -186,10 +187,11 @@ def CONN(ref, short, pins, desc, sheet):
 
 
 def PIGTAIL_PART(ref, short, pins, desc, sheet):
-    """Off-board 2-wire pigtail ending in the 78172-0002 plug: half of a 36920-0201 cable (bare end to the part)."""
-    return Part(ref, "Pico-EZmate 2-ckt pigtail", PIGTAIL, mpn="36920-0201 (cut in half)", manufacturer="Molex",
+    """Off-board 2-wire pigtail ending in the 78172-0002 plug: half of a 36920-0203 cable (bare end to the part)."""
+    return Part(ref, "Pico-EZmate 2-ckt pigtail", PIGTAIL, mpn="36920-0203 (300 mm, cut in half)", manufacturer="Molex",
                 pins=pins, offboard=True, sheet=sheet,
-                fields={"Alt MPN": "68801-4146 (152 mm pigtail, one plug) / ASACHSACH28W102 for the JST ACH alternative"},
+                fields={"Alt MPN": "68801-4146 (152 mm pigtail, one plug) / 36920-0201 (100 mm) halves for W1/W3/W4 only / "
+                                   "ASACHSACH28W305 (305 mm) for the JST ACH alternative"},
                 description=f"{short}: 28 AWG pre-crimped pigtail, plug into {desc}")
 
 
@@ -292,22 +294,24 @@ def build() -> Netlist:
     nl.add(Part("BT1", "301012 LiPo 30 mAh", "offboard:Cell_301012_3x10x12mm", mpn="301012 (30 mAh, with PCM)",
                 manufacturer="generic — see hardware/bom/stage1-ring.csv", pins={"1": "+", "2": "-"}, offboard=True,
                 description="3 x 10 x 12 mm LiPo cell with PCM, 1C max charge; leads terminated in the W1 Pico-EZmate plug "
-                            "(cable shop / solder-seal sleeve, docs/10) and plugged into J1 — no solder on the board",
+                            "by the cell seller, a cable shop or PCBWay (never hot air or flame near the pouch, docs/10 §7) and plugged "
+                            "into J1 — no solder on the board",
                 sheet="Power"))
-    nl.add(PIGTAIL_PART("W1", "BAT", {"1": "BAT+", "2": "BAT-"}, "J1; bare end to the cell's two leads", "Power"))
+    nl.add(PIGTAIL_PART("W1", "BAT", {"1": "BAT+", "2": "BAT-"}, "J1; bare end to the cell's two leads (≈ 25 mm, joint made by the supplier)", "Power"))
     # Charging pads: J3 is the second Pico-EZmate header; its pigtail W2 runs down the right-edge notch, through the
     # floor wire groove to the two Ø1.1 channels in the band and ends on the inner-band contacts CP1/CP2 (off-board).
     # J3 pin 1 (CHG_PAD) is also the bring-up VBUS entry point (README §4).
     nl.add(CONN("J3", "CHG", {"1": "CHG+", "2": "CHG-"},
                 "charging-pad header (top side, right strip); pin 1 = CHG_PAD (+5 V from the cradle, bring-up VBUS entry), "
                 "pin 2 = GND return", "Power"))
-    nl.add(PIGTAIL_PART("W2", "CHG", {"1": "CHG+", "2": "CHG-"}, "J3; bare ends to CP1/CP2 through the band channels", "Power"))
+    nl.add(PIGTAIL_PART("W2", "CHG", {"1": "CHG+", "2": "CHG-"}, "J3; bare ends to CP1/CP2 through the band channels (≈ 85 mm per wire)", "Power"))
     for ref, net_desc in (("CP1", "+5 V from the pogo cradle"), ("CP2", "GND return")):
         nl.add(Part(ref, "charging contact 3x2 mm ENIG", "offboard:Pad_ENIG_3x2mm", pins={"1": "PAD"}, offboard=True,
                     manufacturer="PCB coupon or brass insert", mpn="",
                     description=f"inner-band pogo contact, 3 x 2 mm ENIG, flush, >= 3 mm from the other pad; "
-                                f"{net_desc}; the W2 pigtail's bare end is bonded to it with silver conductive pen "
-                                f"(<= 25 mA path) or soldered by the cable shop (docs/10)", sheet="Power"))
+                                f"{net_desc}; the W2 pigtail's bare end is bonded to it with silver conductive pen after "
+                                f"threading (<= 25 mA path; a contact fitted beforehand cannot pass the Ø1.1 band "
+                                f"channel, docs/10 §7)", sheet="Power"))
     # Charging input protection: D3 (series Schottky) blocks a ring seated the wrong way round in a 2-pin
     # cradle (CHG_PAD = -5 V would otherwise forward-bias a unidirectional TVS and drive the BQ25100 IN to
     # -0.7 V, abs. min -0.3 V); D2 is therefore the BIDIRECTIONAL 5 V TVS so it does not conduct at -5 V.
@@ -450,7 +454,7 @@ def build() -> Netlist:
                 description="8 x 2.5 mm coin LRA, 240 Hz, 1.25 Vrms max (set RATED_V/OD_CLAMP for 1.25 Vrms @ 240 Hz, "
                             "docs/07-build-guide.md §1.8); off-board in the floor pocket, leads -> W3 plug -> J4",
                 sheet="Sensors"))
-    nl.add(PIGTAIL_PART("W3", "LRA", {"1": "LRA+", "2": "LRA-"}, "J4; bare end to the LRA's two leads", "Sensors"))
+    nl.add(PIGTAIL_PART("W3", "LRA", {"1": "LRA+", "2": "LRA-"}, "J4; bare end to the LRA's two leads (≈ 25 mm)", "Sensors"))
     # LIS2DW12 LGA-12 pin numbers VERIFY (DS12303 Table 2); pins 5-8 all tie to GND regardless.
     nl.add(Part("U6", "LIS2DW12TR", "Package_LGA:LGA-12_2x2mm_P0.5mm", mpn="LIS2DW12TR", manufacturer="ST",
                 pins={"1": "SCL/SPC", "2": "CS", "3": "SA0/SDO", "4": "SDA/SDI/SDO", "5": "RES", "6": "GND",
@@ -596,7 +600,7 @@ def build() -> Netlist:
                             "NdFeB magnet, solder pads; in the enclosure's speaker pocket (board_params.json "
                             "speaker_mm), its leads -> W4 plug -> J5; polarity irrelevant (single driver)",
                 sheet="Outputs"))
-    nl.add(PIGTAIL_PART("W4", "SPK", {"1": "OUTP", "2": "OUTN"}, "J5; bare end to the speaker's two terminals", "Outputs"))
+    nl.add(PIGTAIL_PART("W4", "SPK", {"1": "OUTP", "2": "OUTN"}, "J5; bare end to the speaker's two terminals (≈ 15 mm)", "Outputs"))
 
     nl.connect("3V3", "U11", "VIN")          # bulk C2/C3 sit on the same net next to the buck
     nl.connect_many("GND", ("U11", "GND"), ("U10", "3"), ("U10", "11"), ("U10", "15"), ("U10", "EP"),
