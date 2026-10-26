@@ -46,6 +46,7 @@ answer through its own small speaker.
 
 | Path | Contents |
 |---|---|
+| `docs/ring-anatomy.html` | interactive 3D model of the stage-1 ring: orbit, explode, section cut, click any part for its part number and job ([published copy](https://claude.ai/artifact/9KUQfEg7CHZFahAvKjhaeG)); rebuild with `python3 tools/ring-viz/export_mesh.py` |
 | `docs/09-fundamentals.md` + `docs/fundamentals/` | the course that goes with the project: electronics, power, firmware, BLE, cameras, audio/haptics, PCB, CAD, software — each chapter tied to the repo files, with verified video/course/interactive links and exercises |
 | `docs/` | [vision & requirements](docs/01-vision-and-requirements.md), [architecture](docs/02-system-architecture.md), [hardware spec](docs/03-hardware-spec.md), [feasibility & risks](docs/04-feasibility-and-risks.md), [roadmap](docs/05-roadmap.md), [getting started](docs/06-getting-started.md), [build guide](docs/07-build-guide.md), [**projection v2 note**](docs/08-projection-v2.md); `docs/research/` three sourcing reports (cameras · MCU/radio/power · actuators/triggers) |
 | `protocol/` | [BLE GATT spec](protocol/ble-gatt.md) — control, status, transfer, feedback/cues, **events**, **audio-out**; packet layouts; JSON schemas; Morse timing (optional/legacy) |

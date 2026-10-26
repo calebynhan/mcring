@@ -1,0 +1,478 @@
+<title>mcring Ring Anatomy</title>
+<meta name="claude:viewport-fit-sides" content="cover">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Barlow+Condensed:wght@500;600;700&family=IBM+Plex+Sans:wght@400;500;600&family=IBM+Plex+Mono:wght@400;500&display=swap">
+<style>
+/* Layout: an inspection bench — the live CAD viewport on the left, a parts ledger like a drawing's title block on the right. */
+:root {
+  --bg: #e9edf0;
+  --panel: #f7f9fa;
+  --stage: #dfe5ea;
+  --ink: #18202a;
+  --muted: #56626e;
+  --line: #c7cfd6;
+  --accent: #b05f25;          /* PCB copper / ENIG */
+  --accent-ink: #ffffff;
+  --sel: rgba(176, 95, 37, .12);
+  --grid: #c3ccd4;
+  --display: "Barlow Condensed", "Arial Narrow", "Roboto Condensed", sans-serif;
+  --body: "IBM Plex Sans", "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+  --mono: "IBM Plex Mono", ui-monospace, "SFMono-Regular", Menlo, Consolas, monospace;
+}
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme="light"]) {
+    --bg: #101418; --panel: #161b21; --stage: #0c1014; --ink: #e3e8ec; --muted: #94a1ad;
+    --line: #29313a; --accent: #e3904f; --accent-ink: #1a1009; --sel: rgba(227, 144, 79, .14); --grid: #222a32;
+    color-scheme: dark;
+  }
+}
+:root[data-theme="dark"] {
+  --bg: #101418; --panel: #161b21; --stage: #0c1014; --ink: #e3e8ec; --muted: #94a1ad;
+  --line: #29313a; --accent: #e3904f; --accent-ink: #1a1009; --sel: rgba(227, 144, 79, .14); --grid: #222a32;
+  color-scheme: dark;
+}
+* { box-sizing: border-box; }
+html, body { height: 100%; }
+body { background: var(--bg); color: var(--ink); font-family: var(--body); font-size: 14px; line-height: 1.5; }
+.wrap { max-width: 1440px; margin: 0 auto; padding-block: 20px 28px;
+  padding-left: max(16px, env(safe-area-inset-left, 0px)); padding-right: max(16px, env(safe-area-inset-right, 0px));
+  display: grid; gap: 16px; }
+header.title { display: grid; grid-template-columns: minmax(0, 1fr) auto; gap: 12px 24px; align-items: end; }
+.eyebrow { font-family: var(--mono); font-size: 11.5px; letter-spacing: .08em; text-transform: uppercase; color: var(--muted); }
+h1 { font-family: var(--display); font-weight: 700; font-size: clamp(30px, 4.4vw, 48px); line-height: 1; letter-spacing: .01em; margin: 4px 0 6px; text-wrap: balance; }
+.lede { color: var(--muted); max-width: 64ch; margin: 0; }
+.titleblock { display: grid; grid-template-columns: repeat(4, auto); border: 1px solid var(--line); background: var(--panel); }
+.titleblock div { padding: 8px 14px; border-left: 1px solid var(--line); min-width: 0; }
+.titleblock div:first-child { border-left: 0; }
+.titleblock .k { font-family: var(--mono); font-size: 10.5px; letter-spacing: .07em; text-transform: uppercase; color: var(--muted); }
+.titleblock .v { font-family: var(--display); font-weight: 600; font-size: 20px; font-variant-numeric: tabular-nums; white-space: nowrap; }
+.main { display: grid; grid-template-columns: minmax(0, 1fr) 360px; gap: 16px; align-items: start; }
+.viewport { position: relative; border: 1px solid var(--line); background: var(--stage); height: min(78vh, 760px); min-height: 360px; overflow: hidden; }
+#gl { position: absolute; inset: 0; display: block; width: 100%; height: 100%; touch-action: none; cursor: grab; }
+#gl:active { cursor: grabbing; }
+.toolbar { position: absolute; left: 10px; right: 10px; top: 10px; display: flex; flex-wrap: wrap; gap: 8px; align-items: center; pointer-events: none; }
+.toolbar > * { pointer-events: auto; }
+.seg { display: inline-flex; border: 1px solid var(--line); background: var(--panel); }
+.seg button { font: 500 12.5px/1 var(--body); color: var(--ink); background: transparent; border: 0; border-left: 1px solid var(--line); padding: 8px 11px; cursor: pointer; }
+.seg button:first-child { border-left: 0; }
+.seg button[aria-pressed="true"] { background: var(--accent); color: var(--accent-ink); }
+.seg button:focus-visible, .ctl:focus-visible, .part:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
+.slider { display: inline-flex; align-items: center; gap: 8px; border: 1px solid var(--line); background: var(--panel); padding: 5px 10px; font-size: 12.5px; }
+.slider input { accent-color: var(--accent); }
+.slider input[type="range"] { width: 130px; }
+.slider input[type="checkbox"] { margin: 0; width: 15px; height: 15px; }
+.loading[hidden], .tip[hidden] { display: none; }
+.ctl { font: 500 12.5px/1 var(--body); color: var(--ink); background: var(--panel); border: 1px solid var(--line); padding: 8px 11px; cursor: pointer; }
+.legend-axes { position: absolute; left: 12px; bottom: 10px; font-family: var(--mono); font-size: 11px; color: var(--muted); display: flex; gap: 14px; flex-wrap: wrap; pointer-events: none; }
+.legend-axes b { color: var(--ink); font-weight: 500; }
+.tip { position: absolute; pointer-events: none; background: var(--panel); color: var(--ink); border: 1px solid var(--line); font: 500 12px/1.3 var(--body); padding: 5px 8px; white-space: nowrap; transform: translate(12px, 12px); }
+.loading { position: absolute; inset: 0; display: grid; place-items: center; color: var(--muted); font-family: var(--mono); font-size: 12px; }
+aside.ledger { display: grid; gap: 12px; min-width: 0; }
+.card { border: 1px solid var(--line); background: var(--panel); }
+.card h2 { font-family: var(--display); font-weight: 600; font-size: 13px; letter-spacing: .1em; text-transform: uppercase; color: var(--muted); margin: 0; padding: 9px 12px; border-bottom: 1px solid var(--line); }
+#info { padding: 12px; display: grid; gap: 8px; min-height: 170px; }
+#info .name { font-family: var(--display); font-weight: 700; font-size: 24px; line-height: 1.05; }
+#info .mpn { font-family: var(--mono); font-size: 12px; color: var(--accent); }
+#info p { margin: 0; }
+#info dl { margin: 0; display: grid; grid-template-columns: auto minmax(0, 1fr); gap: 3px 12px; font-size: 12.5px; }
+#info dt { color: var(--muted); font-family: var(--mono); font-size: 11px; text-transform: uppercase; letter-spacing: .05em; padding-top: 2px; }
+#info dd { margin: 0; font-variant-numeric: tabular-nums; min-width: 0; overflow-wrap: anywhere; }
+.groups { display: grid; }
+.group { border-top: 1px solid var(--line); }
+.group:first-child { border-top: 0; }
+.group h3 { margin: 0; padding: 8px 12px 4px; font: 600 11px/1.2 var(--mono); letter-spacing: .08em; text-transform: uppercase; color: var(--muted); }
+.part { display: grid; grid-template-columns: 14px minmax(0, 1fr) auto; align-items: center; gap: 10px; width: 100%; text-align: left; background: transparent; border: 0; padding: 6px 12px; color: var(--ink); font: 400 13px/1.3 var(--body); cursor: pointer; }
+.part:hover { background: var(--sel); }
+.part[aria-current="true"] { background: var(--sel); box-shadow: inset 3px 0 0 var(--accent); }
+.part .sw { width: 14px; height: 14px; border: 1px solid rgba(0,0,0,.25); }
+.part .dim { font-family: var(--mono); font-size: 11px; color: var(--muted); white-space: nowrap; }
+.part.off { opacity: .45; }
+.eye { font: 500 11px/1 var(--mono); color: var(--muted); background: transparent; border: 1px solid var(--line); padding: 3px 6px; cursor: pointer; }
+.note { font-size: 12.5px; color: var(--muted); padding: 10px 12px; display: grid; gap: 6px; }
+.note code { font-family: var(--mono); font-size: 11.5px; color: var(--ink); overflow-wrap: anywhere; }
+footer { color: var(--muted); font-size: 12.5px; max-width: 90ch; }
+@media (max-width: 960px) {
+  .main { grid-template-columns: minmax(0, 1fr); }
+  header.title { grid-template-columns: minmax(0, 1fr); }
+  .titleblock { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+  .titleblock div:nth-child(3) { border-left: 0; }
+  .titleblock div:nth-child(n+3) { border-top: 1px solid var(--line); }
+  .viewport { height: 62vh; }
+  .slider input[type="range"] { width: 96px; }
+}
+@media (prefers-reduced-motion: reduce) { * { scroll-behavior: auto; } }
+</style>
+
+<div class="wrap">
+  <header class="title">
+    <div>
+      <div class="eyebrow">mcring · stage 1 prototype · drawn from the CAD model</div>
+      <h1>The ring, part by part</h1>
+      <p class="lede">The oversized printed signet ring with every component in its modelled position. Drag to orbit, scroll or pinch to zoom, click a part to read what it does. Pull the explode slider to take it apart.</p>
+    </div>
+    <div class="titleblock" role="group" aria-label="Key figures">
+      <div><div class="k">Overall</div><div class="v">39.8 × 29.0 × 34.6 mm</div></div>
+      <div><div class="k">Band</div><div class="v">Ø20.0 ID · 22.4 OD</div></div>
+      <div><div class="k">Mass est.</div><div class="v">≈ 15.5 g</div></div>
+      <div><div class="k">Fit check</div><div class="v">0 collisions</div></div>
+    </div>
+  </header>
+
+  <div class="main">
+    <section class="viewport" aria-label="3D view of the ring">
+      <canvas id="gl"></canvas>
+      <div class="loading" id="loading">building the ring…</div>
+      <div class="toolbar">
+        <div class="seg" role="group" aria-label="Camera view">
+          <button type="button" data-view="iso" aria-pressed="true">Iso</button>
+          <button type="button" data-view="front">Front</button>
+          <button type="button" data-view="side">Side</button>
+          <button type="button" data-view="top">Top</button>
+        </div>
+        <div class="seg" role="group" aria-label="Shell display">
+          <button type="button" data-shell="solid" aria-pressed="false">Solid shell</button>
+          <button type="button" data-shell="ghost" aria-pressed="true">See-through</button>
+          <button type="button" data-shell="hide" aria-pressed="false">Hide shell</button>
+        </div>
+        <label class="slider" for="explode">Explode <input id="explode" type="range" min="0" max="100" value="0"></label>
+        <label class="slider" for="section"><input id="sectionOn" type="checkbox" aria-label="Section cut on"> Cut <input id="section" type="range" min="-15" max="17" value="0" step="0.5" aria-label="Section position"></label>
+        <button type="button" class="ctl" id="spin" aria-pressed="false">Turntable</button>
+      </div>
+      <div class="legend-axes" aria-hidden="true"><span><b>X</b> along the finger, camera forward</span><span><b>Y</b> across, speaker side +</span><span><b>Z</b> up, back of the hand</span></div>
+      <div class="tip" id="tip" hidden></div>
+    </section>
+
+    <aside class="ledger">
+      <div class="card">
+        <h2>Selected part</h2>
+        <div id="info" aria-live="polite"></div>
+      </div>
+      <div class="card">
+        <h2>Parts ledger</h2>
+        <div class="groups" id="groups"></div>
+      </div>
+      <div class="card">
+        <h2>How to read this</h2>
+        <div class="note">
+          <span>Electronics are drawn as their bounding blocks, the same simplified solids the fit check uses. The shell, lid and switch key are the real print geometry.</span>
+          <span>Source: <code>hardware/cad/mcring_stage1.py</code> reading <code>hardware/pcb/board_params.json</code>. Print files: <code>hardware/cad/out/*.stl</code>.</span>
+          <span>Nothing here has been printed or test-fitted with real parts yet.</span>
+        </div>
+      </div>
+    </aside>
+  </div>
+
+  <footer>Stage 1 is the wearable prototype: bigger than a commercial ring so an ESP32-S3 board, a 30 mAh cell and a speaker fit. Stage 2 targets an Oura-size 8 mm band around an nRF52840 and a curved 16–24 mAh cell; it has no CAD model yet.</footer>
+</div>
+
+<script src="https://cdn.jsdelivr.net/npm/three@0.128.0/build/three.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/three@0.128.0/examples/js/controls/OrbitControls.js"></script>
+<script id="mesh" type="application/json">__MESH__</script>
+<script>
+(function () {
+  "use strict";
+  // ---------------------------------------------------------------- part catalogue
+  var PARTS = {
+    shell:        { name: "Ring shell", group: "Printed parts", color: "#d9dde2", mpn: "SLA resin print · mcring_stage1_shell.stl",
+                    role: "Holds everything. The band sits on the finger; the signet on top is the electronics bay. It carries the lens bore, speaker grille, switch slot, charging-contact windows and the battery pocket.",
+                    facts: [["Band", "Ø20.0 mm inside, 22.4 mm outside, 1.2 mm wall"], ["Signet", "31.5 × 25.8 mm bay, lid top 11.1 mm above the skin"], ["Walls", "≥ 1.2 mm except where the fit report notes"]] },
+    lid:          { name: "Lid", group: "Printed parts", color: "#c4cad1", mpn: "SLA resin print · mcring_stage1_lid.stl",
+                    role: "Snaps over the bay. A thinned window lets the status LED glow through, a small tube carries the microphone port, and 0.8 mm of resin covers the touch pad.",
+                    facts: [["Thickness", "1.2 mm"], ["Clearance", "0.3 mm over the tallest part (u.FL plug)"]] },
+    key:          { name: "Switch key", group: "Printed parts", color: "#9aa4ae", mpn: "SLA resin print · mcring_stage1_key.stl",
+                    role: "A small printed plunger in the left wall that presses the side switch. Short press takes a photo, hold to ask.",
+                    facts: [["Travel", "pushes the Omron B3U plunger"]] },
+    PCB:          { name: "Main board", group: "Brain & radio", color: "#1e5a3c", mpn: "2-layer FR-4, 0.6 mm, ENIG",
+                    role: "Carries every chip. Ordered fully assembled (JLCPCB Standard PCBA), so nothing on it is hand-soldered.",
+                    facts: [["Size", "26.5 × 22.8 × 0.6 mm"], ["Placed parts", "73 (10 top, 63 bottom)"], ["Netlist", "hardware/electrical/out/mcring_v1.net"]] },
+    module:       { name: "ESP32-S3 module", group: "Brain & radio", color: "#b6bec7", mpn: "Espressif ESP32-S3-MINI-1U-N4R2",
+                    role: "The computer and the Bluetooth radio. Runs firmware/ring-esp32s3: reads the camera and mic, streams to the phone over BLE, plays audio and cues.",
+                    facts: [["Size", "15.4 × 15.4 × 2.4 mm"], ["Memory", "4 MB flash, 2 MB PSRAM"], ["Antenna", "u.FL plug at the back edge"]] },
+    antenna:      { name: "Flex antenna", group: "Brain & radio", color: "#d6a13c", mpn: "Molex 146153-0050 (2.4 GHz)",
+                    role: "The Bluetooth antenna, glued to the back wall of the bay, as far from the battery and speaker magnet as the ring allows.",
+                    facts: [["Keep-out", "5 mm from metal parts"], ["Gap to speaker", "6.7 mm"]] },
+    pigtail:      { name: "Antenna cable", group: "Brain & radio", color: "#30353b", mpn: "u.FL / MHF1 pigtail, ≤ 30 mm",
+                    role: "Connects the module's u.FL plug to the flex antenna. It snaps on, no solder.",
+                    facts: [] },
+    bottom_parts: { name: "Underside chips", group: "Brain & radio", color: "#4a7d62", mpn: "BQ25100 · TPS62840 · DRV2605L · LIS2DW12 · MAX98357A · TPS22916 ×3",
+                    role: "The battery charger, 3.3 V regulator, haptic driver, accelerometer for double-tap, speaker amplifier, power switches and about 45 tiny passives, all on the underside.",
+                    facts: [["Height limit", "≤ 1.15 mm"], ["Tap wake", "LIS2DW12 interrupt on IO7"]] },
+    top_parts:    { name: "Top-side extras", group: "Brain & radio", color: "#7a8a97", mpn: "100 µF bulk capacitor · touch contact · test pads",
+                    role: "The big capacitor that absorbs the ESP32's 300 mA bursts, the touch-pad contact block under the lid, and the flashing test pads.",
+                    facts: [] },
+    camera:       { name: "Camera head", group: "Camera", color: "#2a2e35", mpn: "OV2640 on a 24-pin 0.5 mm flex",
+                    role: "Looks forward along the finger through the lens bore in the pod. Produces a JPEG on-chip, so a photo is 8–15 KB at 320 × 240.",
+                    facts: [["Head", "8.5 mm square + Ø4.5 mm lens barrel"], ["Bus", "8-bit DVP to the module"], ["Power", "switched off between photos"]] },
+    camera_FPC:   { name: "Camera flex", group: "Camera", color: "#c98a2e", mpn: "24-way polyimide flex",
+                    role: "Leaves the top of the camera head, folds back on itself and slides into the connector on the board.",
+                    facts: [["Fold", "180°, ≈ 0.3 mm radius"]] },
+    FPC1:         { name: "Camera connector", group: "Camera", color: "#e7e1d3", mpn: "Hirose FH12, 24-pin 0.5 mm ZIF",
+                    role: "Zero-insertion-force latch: the flex slides in and the latch closes. No solder.",
+                    facts: [["Height", "2.0 mm"]] },
+    mic:          { name: "Microphone", group: "Voice & feedback", color: "#5c6bc0", mpn: "TDK T3902 (PDM)",
+                    role: "Hears your question when you hold the button and the ring mic is selected. Its port goes through the board to a 0.8 mm hole in the lid.",
+                    facts: [["Size", "3.5 × 2.65 × 0.98 mm"], ["Audio", "16 kHz mono, compressed to ADPCM for BLE"]] },
+    speaker:      { name: "Speaker (optional)", group: "Voice & feedback", color: "#3f5f8f", mpn: "PUI Audio AS01008MR-2-R, 8 Ω",
+                    role: "Speaks Claude's answer out loud when you aren't wearing headphones. It sits in a pocket in the right wall behind a five-hole grille.",
+                    facts: [["Size", "Ø10 × 2.9 mm"], ["Amp", "MAX98357A, gated off when silent"], ["Energy", "a 10 s answer ≈ 0.33 mAh"]] },
+    LRA:          { name: "Haptic motor", group: "Voice & feedback", color: "#8b96a1", mpn: "INEED LRA0825BC-0167F",
+                    role: "Taps your finger: one tick for listening, two for answer ready, a buzz for errors.",
+                    facts: [["Size", "Ø8 × 2.5 mm"], ["Resonance", "240 Hz, driven by the DRV2605L"]] },
+    LED:          { name: "Status light", group: "Voice & feedback", color: "#ff7a3a", mpn: "WS2812B-2020 RGB",
+                    role: "Glows through the lid window for the same cues as the motor. Its power rail switches off when it is dark to save the battery.",
+                    facts: [["Size", "2.0 × 2.0 mm"]] },
+    switch:       { name: "Side switch", group: "Voice & feedback", color: "#7c5cc4", mpn: "Omron B3U-3000P",
+                    role: "The button. Short press takes a photo; hold to ask a question.",
+                    facts: [["Size", "3.0 × 2.5 × 1.2 mm"]] },
+    cell:         { name: "Battery", group: "Power", color: "#a7b4c2", mpn: "301012 LiPo, 30 mAh, with protection circuit",
+                    role: "Powers the ring. About a week at 30 questions a day when answers play on the phone; two to three days if every answer uses the ring speaker.",
+                    facts: [["Size", "3 × 10 × 12 mm"], ["Charge", "25 mA via BQ25100 from two inner-band contacts"]] },
+    plugs:        { name: "Plug-in connectors", group: "Power", color: "#f2c14e", mpn: "4 × Molex Pico-EZmate 78171-0002",
+                    role: "The battery, haptic motor, speaker and charging contacts each plug into the board, so final assembly is plugging in and closing the lid.",
+                    facts: [["Mated height", "1.55 mm"]] }
+  };
+  var ORDER = ["Printed parts", "Brain & radio", "Camera", "Voice & feedback", "Power"];
+  // explode directions in mm (CAD frame); the board stack lifts as one unit
+  var B = 7;
+  var EXPLODE = {
+    shell: [0, 0, 0], lid: [0, 0, 22], key: [0, -9, 0],
+    PCB: [0, 0, B], bottom_parts: [0, 0, B - 3], mic: [0, 0, B - 3],
+    module: [0, 0, B + 8], top_parts: [0, 0, B + 4], LED: [0, 0, B + 5], FPC1: [0, 0, B + 4],
+    plugs: [0, 4, B + 4], switch: [0, -5, B + 2],
+    camera: [16, 0, 2], camera_FPC: [9, 0, B + 2],
+    cell: [0, -24, -2], LRA: [0, 24, -2], speaker: [0, 14, 0],
+    antenna: [-12, 0, 0], pigtail: [-7, 0, B + 2]
+  };
+
+  // ---------------------------------------------------------------- helpers
+  function css(name) { return getComputedStyle(document.documentElement).getPropertyValue(name).trim(); }
+  function b64ToBuf(b64) { var s = atob(b64), n = s.length, u = new Uint8Array(n); for (var i = 0; i < n; i++) u[i] = s.charCodeAt(i); return u.buffer; }
+  function fmt(n) { return (Math.round(n * 10) / 10).toFixed(1); }
+
+  var loading = document.getElementById("loading");
+  if (!window.THREE || !THREE.OrbitControls) { loading.textContent = "The 3D library did not load. Check your connection and reload."; return; }
+
+  var data = JSON.parse(document.getElementById("mesh").textContent);
+  var canvas = document.getElementById("gl");
+  var renderer = new THREE.WebGLRenderer({ canvas: canvas, antialias: true, alpha: false });
+  renderer.setPixelRatio(Math.min(window.devicePixelRatio || 1, 2));
+  renderer.localClippingEnabled = true;
+  var scene = new THREE.Scene();
+  var camera = new THREE.PerspectiveCamera(30, 1, 0.5, 2000);
+  camera.up.set(0, 0, 1);
+
+  scene.add(new THREE.HemisphereLight(0xffffff, 0x445566, 0.85));
+  var key = new THREE.DirectionalLight(0xffffff, 0.75); key.position.set(60, -80, 120); scene.add(key);
+  var rim = new THREE.DirectionalLight(0xffffff, 0.35); rim.position.set(-90, 70, 40); scene.add(rim);
+
+  // overall bounds -> centre
+  var bmin = [1e9, 1e9, 1e9], bmax = [-1e9, -1e9, -1e9];
+  Object.keys(data.parts).forEach(function (k) { var b = data.parts[k].bb; for (var i = 0; i < 3; i++) { bmin[i] = Math.min(bmin[i], b[i]); bmax[i] = Math.max(bmax[i], b[i + 3]); } });
+  var centre = new THREE.Vector3((bmin[0] + bmax[0]) / 2, (bmin[1] + bmax[1]) / 2, (bmin[2] + bmax[2]) / 2);
+
+  var clipPlane = new THREE.Plane(new THREE.Vector3(0, -1, 0), 0);
+  var meshes = {}, pickables = [];
+  Object.keys(data.parts).forEach(function (k) {
+    var info = PARTS[k] || { name: k, group: "Other", color: "#999999", role: "", facts: [] };
+    var d = data.parts[k];
+    var g = new THREE.BufferGeometry();
+    g.setAttribute("position", new THREE.BufferAttribute(new Float32Array(b64ToBuf(d.v)), 3));
+    g.setIndex(new THREE.BufferAttribute(new Uint32Array(b64ToBuf(d.i)), 1));
+    g.computeVertexNormals();
+    var printed = info.group === "Printed parts";
+    var mat = new THREE.MeshStandardMaterial({ color: new THREE.Color(info.color), roughness: printed ? 0.55 : 0.45, metalness: (k === "module" || k === "cell" || k === "LRA") ? 0.35 : 0.05, side: THREE.DoubleSide });
+    var m = new THREE.Mesh(g, mat);
+    m.userData.key = k;
+    var edges = new THREE.LineSegments(new THREE.EdgesGeometry(g, 28), new THREE.LineBasicMaterial({ color: 0x000000, transparent: true, opacity: printed ? 0.18 : 0.28 }));
+    m.add(edges);
+    scene.add(m);
+    meshes[k] = { mesh: m, mat: mat, edges: edges, info: info, data: d, visible: true, printed: printed };
+    pickables.push(m);
+  });
+
+  // ground grid under the ring
+  var grid = new THREE.GridHelper(200, 40);
+  grid.rotation.x = Math.PI / 2; grid.position.set(centre.x, centre.y, bmin[2] - 6);
+  grid.material.transparent = true; grid.material.opacity = 0.5;
+  scene.add(grid);
+
+  var controls = new THREE.OrbitControls(camera, canvas);
+  controls.target.copy(centre);
+  controls.enableDamping = true; controls.dampingFactor = 0.08;
+  controls.minDistance = 25; controls.maxDistance = 400;
+
+  // ---------------------------------------------------------------- theme
+  function applyTheme() {
+    scene.background = new THREE.Color(css("--stage") || "#dfe5ea");
+    var gc = new THREE.Color(css("--grid") || "#c3ccd4");
+    grid.material.color = gc;
+    if (grid.material.vertexColors) grid.material.vertexColors = false;
+    grid.material.needsUpdate = true;
+    var dark = (new THREE.Color(css("--stage"))).getHSL({}).l < 0.3;
+    Object.keys(meshes).forEach(function (k) { meshes[k].edges.material.color.set(dark ? 0xffffff : 0x000000); meshes[k].edges.material.opacity = dark ? 0.16 : (meshes[k].printed ? 0.18 : 0.28); });
+  }
+  applyTheme();
+  try { matchMedia("(prefers-color-scheme: dark)").addEventListener("change", applyTheme); } catch (e) {}
+  new MutationObserver(applyTheme).observe(document.documentElement, { attributes: true, attributeFilter: ["data-theme"] });
+
+  // ---------------------------------------------------------------- shell modes, explode, section
+  var shellMode = "ghost", explodeT = 0, sectionOn = false;
+  function updateMaterials() {
+    Object.keys(meshes).forEach(function (k) {
+      var o = meshes[k], mat = o.mat;
+      var isShell = o.printed;
+      mat.clippingPlanes = sectionOn ? [clipPlane] : null;
+      o.edges.material.clippingPlanes = sectionOn ? [clipPlane] : null;
+      var hidden = !o.visible || (isShell && shellMode === "hide");
+      o.mesh.visible = !hidden;
+      if (isShell && shellMode === "ghost") { mat.transparent = true; mat.opacity = 0.16; mat.depthWrite = false; }
+      else { mat.transparent = false; mat.opacity = 1; mat.depthWrite = true; }
+      mat.emissive = new THREE.Color(k === selected ? (css("--accent") || "#b05f25") : "#000000");
+      mat.emissiveIntensity = k === selected ? 0.45 : 0;
+      mat.needsUpdate = true;
+    });
+  }
+  function applyExplode() {
+    var t = explodeT * explodeT * (3 - 2 * explodeT);
+    Object.keys(meshes).forEach(function (k) {
+      var e = EXPLODE[k] || [0, 0, 0];
+      meshes[k].mesh.position.set(e[0] * t, e[1] * t, e[2] * t);
+    });
+  }
+
+  // ---------------------------------------------------------------- views
+  var VIEWS = { iso: [1, -1.15, 0.8], front: [1, 0, 0.12], side: [0, -1, 0.12], top: [0.001, -0.001, 1] };
+  var reduceMotion = false; try { reduceMotion = matchMedia("(prefers-reduced-motion: reduce)").matches; } catch (e) {}
+  var anim = null;
+  function setView(name, instant) {
+    var v = VIEWS[name], dir = new THREE.Vector3(v[0], v[1], v[2]).normalize();
+    var aspect = camera.aspect || 1.4;
+    var dist = 128 * Math.max(1, 1.3 / aspect);
+    var to = centre.clone().add(dir.multiplyScalar(dist));
+    if (instant || reduceMotion) { camera.position.copy(to); controls.target.copy(centre); controls.update(); return; }
+    anim = { from: camera.position.clone(), to: to, t0: performance.now(), dur: 650 };
+  }
+  document.querySelectorAll("[data-view]").forEach(function (b) {
+    b.addEventListener("click", function () {
+      document.querySelectorAll("[data-view]").forEach(function (x) { x.setAttribute("aria-pressed", String(x === b)); });
+      setView(b.getAttribute("data-view"));
+    });
+  });
+  document.querySelectorAll("[data-shell]").forEach(function (b) {
+    b.addEventListener("click", function () {
+      shellMode = b.getAttribute("data-shell");
+      document.querySelectorAll("[data-shell]").forEach(function (x) { x.setAttribute("aria-pressed", String(x === b)); });
+      updateMaterials(); renderLedger();
+    });
+  });
+  var explodeEl = document.getElementById("explode");
+  explodeEl.addEventListener("input", function () { explodeT = explodeEl.value / 100; applyExplode(); });
+  var sectionEl = document.getElementById("section"), sectionOnEl = document.getElementById("sectionOn");
+  function applySection() { sectionOn = sectionOnEl.checked; clipPlane.constant = parseFloat(sectionEl.value); updateMaterials(); }
+  sectionOnEl.addEventListener("change", applySection);
+  sectionEl.addEventListener("input", function () { if (!sectionOnEl.checked) { sectionOnEl.checked = true; } applySection(); });
+  var spinBtn = document.getElementById("spin");
+  spinBtn.addEventListener("click", function () { controls.autoRotate = !controls.autoRotate; controls.autoRotateSpeed = 1.6; spinBtn.setAttribute("aria-pressed", String(controls.autoRotate)); });
+
+  // ---------------------------------------------------------------- selection + ledger
+  var selected = null;
+  var infoEl = document.getElementById("info"), groupsEl = document.getElementById("groups");
+  function dims(k) { var b = meshes[k].data.bb; return fmt(b[3] - b[0]) + " × " + fmt(b[4] - b[1]) + " × " + fmt(b[5] - b[2]); }
+  function el(tag, cls, text) { var e = document.createElement(tag); if (cls) e.className = cls; if (text != null) e.textContent = text; return e; }
+  function renderInfo() {
+    infoEl.textContent = "";
+    if (!selected) {
+      infoEl.appendChild(el("div", "name", "Pick a part"));
+      infoEl.appendChild(el("p", null, "Click any part in the view or the ledger below. Each entry gives the real part number, its size in the model and why it is in the ring."));
+      return;
+    }
+    var o = meshes[selected], i = o.info;
+    infoEl.appendChild(el("div", "name", i.name));
+    infoEl.appendChild(el("div", "mpn", i.mpn));
+    infoEl.appendChild(el("p", null, i.role));
+    var dl = el("dl");
+    var rows = [["Modelled", dims(selected) + " mm"]].concat(i.facts || []);
+    rows.forEach(function (r) { dl.appendChild(el("dt", null, r[0])); dl.appendChild(el("dd", null, r[1])); });
+    infoEl.appendChild(dl);
+  }
+  function renderLedger() {
+    groupsEl.textContent = "";
+    ORDER.forEach(function (gname) {
+      var keys = Object.keys(meshes).filter(function (k) { return meshes[k].info.group === gname; });
+      if (!keys.length) return;
+      var g = el("div", "group"); g.appendChild(el("h3", null, gname));
+      keys.forEach(function (k) {
+        var o = meshes[k];
+        var row = el("div"); row.style.display = "grid"; row.style.gridTemplateColumns = "minmax(0,1fr) auto"; row.style.alignItems = "center"; row.style.paddingRight = "10px";
+        var b = el("button", "part" + (o.visible ? "" : " off")); b.type = "button";
+        b.setAttribute("aria-current", String(selected === k));
+        var sw = el("span", "sw"); sw.style.background = o.info.color; b.appendChild(sw);
+        b.appendChild(el("span", null, o.info.name));
+        b.appendChild(el("span", "dim", dims(k)));
+        b.addEventListener("click", function () { select(selected === k ? null : k); });
+        var eye = el("button", "eye", o.visible ? "hide" : "show"); eye.type = "button";
+        eye.setAttribute("aria-label", (o.visible ? "Hide " : "Show ") + o.info.name);
+        eye.addEventListener("click", function () { o.visible = !o.visible; updateMaterials(); renderLedger(); });
+        row.appendChild(b); row.appendChild(eye); g.appendChild(row);
+      });
+      groupsEl.appendChild(g);
+    });
+  }
+  function select(k) { selected = k; updateMaterials(); renderInfo(); renderLedger(); }
+
+  // picking + hover tooltip
+  var ray = new THREE.Raycaster(), ndc = new THREE.Vector2(), tip = document.getElementById("tip");
+  function pick(ev) {
+    var r = canvas.getBoundingClientRect();
+    ndc.x = ((ev.clientX - r.left) / r.width) * 2 - 1; ndc.y = -((ev.clientY - r.top) / r.height) * 2 + 1;
+    ray.setFromCamera(ndc, camera);
+    var hits = ray.intersectObjects(pickables.filter(function (m) { return m.visible; }), false);
+    for (var i = 0; i < hits.length; i++) {
+      var k = hits[i].object.userData.key, o = meshes[k];
+      if (o.printed && shellMode === "ghost") continue;     // see through the ghosted shell
+      if (sectionOn && clipPlane.distanceToPoint(hits[i].point) < 0) continue;
+      return { key: k, x: ev.clientX - r.left, y: ev.clientY - r.top };
+    }
+    return null;
+  }
+  var down = null;
+  canvas.addEventListener("pointerdown", function (ev) { down = { x: ev.clientX, y: ev.clientY }; });
+  canvas.addEventListener("pointerup", function (ev) {
+    if (!down) return; var moved = Math.hypot(ev.clientX - down.x, ev.clientY - down.y); down = null;
+    if (moved > 5) return;
+    var h = pick(ev); select(h ? h.key : null);
+  });
+  canvas.addEventListener("pointermove", function (ev) {
+    if (ev.pointerType !== "mouse") return;
+    var h = pick(ev);
+    if (h) { tip.hidden = false; tip.textContent = meshes[h.key].info.name; tip.style.left = h.x + "px"; tip.style.top = h.y + "px"; }
+    else tip.hidden = true;
+  });
+  canvas.addEventListener("pointerleave", function () { tip.hidden = true; });
+
+  // ---------------------------------------------------------------- size + loop
+  function resize() {
+    var w = canvas.clientWidth, h = canvas.clientHeight;
+    if (!w || !h) return;
+    renderer.setSize(w, h, false); camera.aspect = w / h; camera.updateProjectionMatrix();
+  }
+  new ResizeObserver(resize).observe(canvas);
+  resize();
+  setView("iso", true);
+  updateMaterials(); applyExplode(); renderLedger(); renderInfo();
+  loading.hidden = true;
+
+  function frame(now) {
+    if (anim) {
+      var t = Math.min(1, (now - anim.t0) / anim.dur), e = t * t * (3 - 2 * t);
+      camera.position.lerpVectors(anim.from, anim.to, e); controls.target.copy(centre);
+      if (t >= 1) anim = null;
+    }
+    controls.update();
+    renderer.render(scene, camera);
+    requestAnimationFrame(frame);
+  }
+  requestAnimationFrame(frame);
+})();
+</script>
