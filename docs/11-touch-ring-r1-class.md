@@ -124,6 +124,44 @@ product:
    the steel band and the finger underneath don't swamp the signal. Leave a clear epoxy window
    in the band for the PPG if it is fitted.
 
+### 4.1.1 What an R1-style zirconia shell would cost
+
+The R1 (and the Oura Ring 4 Ceramic) uses a zirconia exterior over a metal liner. Zirconia
+shells are made by ceramic injection molding (CIM): a molded "green" part is debound and
+sintered, shrinking about 20–25 % linearly
+([patent data](https://image-ppubs.uspto.gov/dirsearch-public/print/downloadPdf/5326518)), then
+ground and polished. Shrinkage that large means **every ring size needs its own mold**.
+
+| Cost item | Zirconia shell + metal liner | Resin/PC arc + 316L band (our plan) |
+|---|---|---|
+| Tooling, per size | $5k–20k typical, $5k–50k range for CIM ([JHMIM](https://jhmim.com/ceramic-injection-molding-for-b2b-manufacturing/)) | ~$2k–10k plastic mold (Est.) |
+| Tooling, 3 sizes / 10 sizes (R1) | $15k–60k / $50k–200k | $6k–30k / — |
+| Feedstock per ring (~3.5 g sintered, 5–8 g per shot at $50–80/kg, zirconia being the premium tier) | $0.25–0.65 | cents |
+| Molding, debinding, sintering | $0.5–1.5 (Est.) | — |
+| Grinding and polishing (the biggest per-part cost) | $1.5–5 (Est.) | — |
+| Yield loss (cracks, warp in thin shells) | × 1.1–1.4 (Est.) | small |
+| Metal liner + bonding | $1–3 (Est.) | (the 316L band itself) |
+| **Per ring at 10k+/year, excl. tooling** | **≈ $4–12** | **≈ $1.5–4** |
+
+Per ring including tooling for 3 sizes: **≈ $23–80 at 1,000 rings, $7–20 at 10,000, $4–13 at
+100,000** (Est.). So ceramic adds about **$3–8 per ring at volume** (roughly $10–40 at retail
+after the usual markup) but is uneconomic below ~10k units. Oura charged $150 more for its
+ceramic Ring 4 than for titanium at launch ([Bloomberg](https://www.bloomberg.com/news/articles/2025-10-01/oura-debuts-499-oura-ring-4-ceramic-with-improved-sweat-scratch-resistance)):
+the premium is positioning, not parts.
+
+What it buys: scratch-proof colour through the material, and a touch surface that couples
+*better* than plastic (zirconia's dielectric constant is roughly 20–30 against 2–4 for plastics,
+general materials data). What it costs besides money: zirconia is about 6 g/cm³ (5× PC), brittle
+under point impact, can't be resized, and needs thicker walls (Oura Ceramic is 3.51 mm vs 2.88 mm
+titanium, [9to5Google](https://9to5google.com/2025/10/01/oura-launches-ceramic-version-of-ring-4/)).
+The high permittivity also detunes the BLE antenna, so tune it with the shell in place.
+
+Prototype routes: a 3D-printed zirconia shell (ceramic SLA/LCM service bureaus quote per part;
+expect roughly $100–300 each, Est.), or a stock ceramic ring with an inlay channel ($8–14,
+[Woodcraft](https://www.woodcraft.com/products/easy-inlay-comfort-ring-core-turning-kit-8-mm-width),
+[Opal & Findings](https://www.opalandfindings.com/products/ceramic-ring-white-8mm)) in place of
+the steel blank, to judge feel and weight.
+
 ### 4.2 Charging: contacts instead of NFC
 
 The R1's NFC charging is elegant: the ring is fully sealed and needs only a tag chip and a coil.
