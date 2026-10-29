@@ -60,6 +60,18 @@ silent mode. Projection is a v2 idea (last section).
 - [ ] Simulated ring (software peripheral emitting events and accepting `AUDIO_OUT`) for CI of the companion apps
 - [ ] Silent-pattern mode (optional): "yes/no/digits" ultra-short Morse and a per-user abbreviation dictionary, if anyone asks for it
 
+## Side track — R1-class touch ring (exploration)
+
+Scope, costs and reasoning: [`docs/11-touch-ring-r1-class.md`](11-touch-ring-r1-class.md); BOM:
+`hardware/bom/touch-ring.csv`.
+
+- [x] Teardown-level analysis of the Even R1 (parts, gestures, G2 link) and a costed cheaper design
+- [ ] Phase A: wear a Colmi R02 (Gadgetbridge) next to a chest strap for a week; decide whether the PPG is populated
+- [ ] Phase B: XIAO nRF52840 Sense + IQS7211E eval kit: BLE HID + `EVENTS` (touch long press = `BUTTON_DOWN`/`BUTTON_UP`), accelerometer tap confirmation, gesture logging; ≥ 95 % correct over 100 trials per gesture
+- [ ] Add `TAP` / `SWIPE` / `TAP_HOLD` events to `protocol/ble-gatt.md` and the shared codecs once phase B settles the gesture set
+- [ ] Qualify a second touch-IC source (IQS7211E lead time)
+- [ ] Phase C: oversized wearable on a resin band with pogo charging; measure real battery life with a PPK2
+
 ## v2 — projection from the ring (not scheduled)
 
 The idea: Claude projects visuals through the ring onto a wall or your palm. There is no concrete

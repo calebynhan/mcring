@@ -48,7 +48,7 @@ answer through its own small speaker.
 |---|---|
 | `docs/ring-anatomy.html` | interactive 3D model of the stage-1 ring: orbit, explode, section cut, click any part for its part number and job ([published copy](https://claude.ai/artifact/9KUQfEg7CHZFahAvKjhaeG)); rebuild with `python3 tools/ring-viz/export_mesh.py` |
 | `docs/09-fundamentals.md` + `docs/fundamentals/` | the course that goes with the project: electronics, power, firmware, BLE, cameras, audio/haptics, PCB, CAD, software — each chapter tied to the repo files, with verified video/course/interactive links and exercises |
-| `docs/` | [vision & requirements](docs/01-vision-and-requirements.md), [architecture](docs/02-system-architecture.md), [hardware spec](docs/03-hardware-spec.md), [feasibility & risks](docs/04-feasibility-and-risks.md), [roadmap](docs/05-roadmap.md), [getting started](docs/06-getting-started.md), [build guide](docs/07-build-guide.md), [**projection v2 note**](docs/08-projection-v2.md); `docs/research/` three sourcing reports (cameras · MCU/radio/power · actuators/triggers) |
+| `docs/` | [vision & requirements](docs/01-vision-and-requirements.md), [architecture](docs/02-system-architecture.md), [hardware spec](docs/03-hardware-spec.md), [feasibility & risks](docs/04-feasibility-and-risks.md), [roadmap](docs/05-roadmap.md), [getting started](docs/06-getting-started.md), [build guide](docs/07-build-guide.md), [**projection v2 note**](docs/08-projection-v2.md), [**touch ring (R1-class) note**](docs/11-touch-ring-r1-class.md); `docs/research/` three sourcing reports (cameras · MCU/radio/power · actuators/triggers) |
 | `protocol/` | [BLE GATT spec](protocol/ble-gatt.md) — control, status, transfer, feedback/cues, **events**, **audio-out**; packet layouts; JSON schemas; Morse timing (optional/legacy) |
 | `firmware/ring-esp32s3/` | PlatformIO firmware (stage 0/1): button/double-tap/touch with **event notifications**, ring-mic push-to-talk (≤ 8 s ADPCM), capture + reliable chunked transfer, **I2S speaker playback** of a phone-streamed ADPCM answer, haptic/LED/beep cues, deep sleep; legacy pattern player |
 | `firmware/ring-nrf52840/` | Zephyr skeleton (stage 2): same GATT service/transfer/feedback, camera HAL stub — predates the voice pivot (no EVENTS / AUDIO_OUT yet) |
@@ -117,6 +117,19 @@ is the sourced feasibility note: full raster projection is not plausible at ring
 heat, eye safety), an aimed Class-1 laser pointer on the existing aux channel is, and the
 decision checklist says what v1 must prove first. It is on the [roadmap](docs/05-roadmap.md) as a
 v2 item, not in v1.
+
+## Side track: an R1-class touch ring
+
+How cheaply could we build what the $249 [Even Realities R1](https://www.evenrealities.com/smart-ring)
+does (a touchpad ring for smart glasses, plus health tracking)?
+[`docs/11-touch-ring-r1-class.md`](docs/11-touch-ring-r1-class.md) breaks down the R1's actual
+parts, recovered by community firmware reverse engineering (an estimated $20–35 of parts), and a
+cheaper design: the same nRF52840 and touch IC, a resin/PC touch arc on a steel band instead of
+ceramic, pogo contacts instead of NFC charging, and only the health metrics that are cheap and
+accurate. Estimated BOM is about $10–16 controller-only and $12–20 with health
+([`hardware/bom/touch-ring.csv`](hardware/bom/touch-ring.csv)). A touch long press maps onto the
+existing `BUTTON_DOWN`/`BUTTON_UP` events, so the voice ask works with the current companions.
+Native control of Even G2 glasses is the one R1 feature it does not reproduce.
 
 ## License
 
