@@ -272,6 +272,14 @@ Unverified; it depends on what the Hub WebView allows.
 
 Phases A and B don't depend on each other and can run in parallel.
 
+**AliExpress build sheet for phase C:** [`touch-ring-build.html`](touch-ring-build.html)
+([published copy](https://claude.ai/artifact/3Jt2drFtZ5xueGAW8G7UEY)) has the to-scale assembly drawings,
+the wiring schematic and the full shopping list
+([`hardware/bom/touch-ring-aliexpress.csv`](../hardware/bom/touch-ring-aliexpress.csv)). It uses
+a XIAO nRF52840 Sense and an MPR121 module instead of the IQS7211E, because neither the
+IQS7211E nor a breakout for it is sold on AliExpress. Regenerate it with
+`python3 hardware/touch-ring/build_sheet.py`.
+
 ## 9. Risks and open questions
 
 - **IQS7211E supply.** Qualify a second touch option during phase B: another Azoteq slider part,

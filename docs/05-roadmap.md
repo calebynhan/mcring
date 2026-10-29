@@ -70,7 +70,8 @@ Scope, costs and reasoning: [`docs/11-touch-ring-r1-class.md`](11-touch-ring-r1-
 - [ ] Phase B: XIAO nRF52840 Sense + IQS7211E eval kit: BLE HID + `EVENTS` (touch long press = `BUTTON_DOWN`/`BUTTON_UP`), accelerometer tap confirmation, gesture logging; ≥ 95 % correct over 100 trials per gesture
 - [ ] Add `TAP` / `SWIPE` / `TAP_HOLD` events to `protocol/ble-gatt.md` and the shared codecs once phase B settles the gesture set
 - [ ] Qualify a second touch-IC source (IQS7211E lead time)
-- [ ] Phase C: oversized wearable on a resin band with pogo charging; measure real battery life with a PPK2
+- [ ] Phase C: oversized wearable from AliExpress modules per [`touch-ring-build.html`](touch-ring-build.html) (XIAO nRF52840 Sense + MPR121 in a printed pod on an adjustable ring blank); measure real battery life with a PPK2
+- [ ] Phase C: CadQuery model of the 34 × 25 × 10 mm pod (USB-C slot, lid, floor hole for the health wires) next to `hardware/cad/mcring_stage1.py`
 
 ## v2 — projection from the ring (not scheduled)
 

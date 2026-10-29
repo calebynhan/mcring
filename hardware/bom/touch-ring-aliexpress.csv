@@ -1,0 +1,23 @@
+item,section,qty,part,search_aliexpress,check_in_listing,usd_each_low,usd_each_high,used_for
+1,ring,2,Seeed XIAO nRF52840 Sense,Seeed XIAO nRF52840 Sense,"The Sense version (IMU + PDM mic on board), from Seeed's official store. One goes in the ring, one stays on the breadboard; 1 is enough if you don't mind moving it",15,20,"BLE, gesture logic, tap check (IMU), LiPo charger, USB-C charge + flash"
+2,ring,2,MPR121 capacitive touch module,MPR121 capacitive touch module,"Runs at 3.3 V; board about 31 x 21 mm or smaller (the pod is sized for that); ADDR pin broken out",1.5,4,Reads the four copper electrodes (tap / swipe / hold)
+3,ring,1,Copper foil tape with conductive adhesive (5 mm),copper foil tape conductive adhesive 5mm,"Conductive adhesive, solderable, 5 mm wide",1,3,Electrodes E0-E3 under the lid
+4,ring,2,LiPo 401020 3.7 V with protection board,401020 lipo battery 3.7V,"4 x 10 x 20 mm; at least 50 mAh (the XIAO charges at 50 mA by default, keep it at or under 1C); protection board fitted; bare leads",2,4,Power
+5,ring,1,Adjustable ring blank with flat pad (pack),adjustable ring blank flat pad stainless steel 20mm,"Stainless steel (not plated brass); adjustable band; flat pad 18-20 mm",1,3,The band the pod is glued to
+6,ring,1,Double-sided foam tape 0.5 mm,double sided foam tape 0.5mm,0.5 mm thick (not 1-2 mm),1,2,Insulates the MPR121 from the XIAO and battery
+7,ring,1,30 AWG silicone wire (2+ colours),30AWG silicone wire,"30 AWG, silicone insulation",2,4,All internal wiring
+8,ring,1,Kapton tape 10 mm,kapton tape 10mm,10 mm wide,1,3,Insulating the cell and solder joints
+9,ring,1,UV resin (clear) with UV torch,UV resin clear with UV lamp,"Clear; cures hard; comes with a small UV torch",2,6,Fixing parts in the pod; sealing the lid and sensor window
+10,ring,1,Magnetic USB-C cable with data,magnetic USB C cable data,"Says it supports data (not charge-only), so you can still flash through it; small USB-C tip",3,6,Snap-on charging without wearing out the USB-C port
+11,health,2,MAX30102 heart-rate sensor module,MAX30102 heart rate sensor module,"Smallest board you can find; I2C pull-ups to 3.3 V (many purple boards pull up to 1.8 V, which the XIAO won't read)",1,3,Optional: night-time heart rate / HRV on the palm side
+12,health,1,10 kOhm NTC thermistor B3950 (pack),NTC 10K 3950 thermistor MF52,"10 kOhm at 25 C, B = 3950, small bead",1,2,Optional: skin-temperature trend
+13,health,1,10 kOhm resistors (pack),10k resistor 1/8W,Any 1 % pack,1,2,Optional: top half of the NTC divider
+14,check,1,Colmi R02 smart ring,Colmi R02 smart ring,"Model R02 from the Colmi store; reviews mentioning the QRing app (the hardware Gadgetbridge supports)",15,25,Optional: test whether cheap ring health data is accurate before building the add-on
+15,check,1,Bluetooth chest-strap heart-rate monitor,Bluetooth heart rate monitor chest strap,Standard BLE heart-rate profile with RR-interval (HRV) support,20,35,Optional: the reference to compare the Colmi and the MAX30102 against
+16,bench,1,Half-size breadboard + male-male jumpers,half breadboard jumper wire kit,Half-size board and male-male jumpers,3,6,Testing everything before it goes in the ring
+17,bench,1,DRV2605L haptic module + 8 mm coin vibration motors,DRV2605L haptic module,"Plus a few 8-10 mm coin ERM motors (search: coin vibration motor 8mm). Bench only, doesn't fit the pod. I2C address 0x5A, which is why the MPR121 goes to 0x5B",3,6,Trying the haptic recognition tick
+18,bench,1,2.54 mm male pin headers,2.54mm male pin header,Any strip,1,2,Only if the bench XIAO comes without headers
+19,tools,1,USB-C soldering iron,Pinecil soldering iron,"Pinecil or TS101 class, fine conical tip",25,60,Skip if you own one
+20,tools,1,0.5 mm solder + flux pen,0.5mm solder wire flux pen,0.5 mm solder; no-clean flux,3,6,Skip if you own them
+21,tools,1,Multimeter,digital multimeter,Continuity beeper,10,20,Checking polarity and shorts before connecting the cell
+22,tools,1,Fine tweezers + flush cutters,precision tweezers flush cutter,ESD-safe tweezers,3,8,Skip if you own them
