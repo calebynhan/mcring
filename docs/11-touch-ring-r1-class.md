@@ -305,18 +305,18 @@ Unverified; it depends on what the Hub WebView allows.
 |---|---|---|---|
 | **A. Health reality check** (1 week) | Colmi R02 + Gadgetbridge, worn next to a chest strap or an ECG-validated device you already have | ~$20–35 | Is cheap-ring HR/HRV good enough to bother with? Decides whether the PPG gets populated |
 | **B. Bench controller** (2–3 weeks) | XIAO nRF52840 Sense (about £16, [Pi Hut](https://thepihut.com/products/seeed-xiao-ble-nrf52840-sense); on-board IMU for tap confirmation) + an Azoteq IQS7211E evaluation kit (the sister IQS7211A kit is $49, [Future](https://futureelectronics.com/p/development-tools--dev-tools-sensors/iqs7211aev02a-s-azoteq-5187564)); firmware: HID + `EVENTS` + gesture logging | ~$70–100 | Gesture accuracy target (≥ 95 %), HID on iOS/Android/desktop, a voice ask through the existing app |
-| **C. Oversized wearable** (1 month) | Same parts on a small board riding on a resin band (reuse the stage-1 CAD and pogo charging) | ~$60–120 per ring at 5 units | On-finger touch through 0.8 mm resin, real battery life, a week of daily use |
-| **D. Oura-size flex** (multi-spin) | Stage-2 flex without the camera and mic: slider electrodes on the outer layer, shield inside, optional PPG window | ~$200–500 per prototype (as in `stage2-oura-size.csv`) | Fit, IP68 by potting, final BOM and quotes |
+| **C. In-band ring** (1–2 months, likely 2 flex spins) | Everything inside an 8.4 × 2.9 mm band: one 52.8 × 6.6 mm two-layer flex (JLCPCB, assembled) with a u-blox ANNA-B402 module (nRF52833, antenna built in, 6.5 × 6.5 × 1.2 mm), IQS7211E, LIS2DW12, BQ25100 and a 3.0 V LDO; a curved 15–20 mAh cell (LPCV160722 class, 1.6 × 7 × 22 mm); a printed U-channel shell potted with clear epoxy; two gold charge pins and a pogo dock | ≈ $25–60 per ring in parts ($115–300 for a first batch of 5), plus ~$30–60 for the dock and programmer | Fit, touch through the 0.63 mm wall, Bluetooth range from inside the band, real battery life, IP68 by potting |
 
-Phases A and B don't depend on each other and can run in parallel.
+Phases A and B don't depend on each other and can run in parallel; B is also where the firmware
+for C gets written while the flex is being made. Nothing sits on top of the ring: an oversized
+"pod" prototype was drawn and dropped.
 
-**AliExpress build sheet for phase C:** [`touch-ring-build.html`](touch-ring-build.html)
-([published copy](https://claude.ai/artifact/3Jt2drFtZ5xueGAW8G7UEY)) has the to-scale assembly drawings,
-the wiring schematic and the full shopping list
-([`hardware/bom/touch-ring-aliexpress.csv`](../hardware/bom/touch-ring-aliexpress.csv)). It uses
-a XIAO nRF52840 Sense and an MPR121 module instead of the IQS7211E, because neither the
-IQS7211E nor a breakout for it is sold on AliExpress. Regenerate it with
-`python3 hardware/touch-ring/build_sheet.py`.
+**Build sheet for phase C:** [`touch-ring-build.html`](touch-ring-build.html)
+([published copy](https://claude.ai/artifact/3Jt2drFtZ5xueGAW8G7UEY)) has the to-scale end view,
+cuts across the band, the flex laid flat, the wiring schematic and the parts list
+([`hardware/bom/touch-ring-parts.csv`](../hardware/bom/touch-ring-parts.csv)). The chips come
+from JLCPCB/LCSC and DigiKey/Mouser; AliExpress covers the dock, programmer, consumables and
+tools. Regenerate it with `python3 hardware/touch-ring/build_sheet.py`.
 
 ## 9. Risks and open questions
 
