@@ -12,6 +12,7 @@ to an adjustable stainless ring blank, with four copper-tape electrodes under th
 | [`out/ring-end-view.svg`](out/ring-end-view.svg) | End view looking along the finger |
 | [`out/ring-top-view.svg`](out/ring-top-view.svg) | Lid from above: electrode layout and swipe direction |
 | [`out/ring-wiring.svg`](out/ring-wiring.svg) | Wiring schematic |
+| [`out/ring-drawing-sheet.png`](out/ring-drawing-sheet.png) | All four drawings on one image (rendered from the SVGs) |
 | [`../../docs/touch-ring-build.html`](../../docs/touch-ring-build.html) | All of the above on one page, with a tick-off shopping list ([published copy](https://claude.ai/artifact/3Jt2drFtZ5xueGAW8G7UEY)) |
 
 ```bash
